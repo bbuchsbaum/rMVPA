@@ -73,8 +73,13 @@ than an error.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-  # Requires repmap_design with seed features
-  # model <- repmap_model(dataset, design, repmap_des, key_var=~ImageID)
-} # }
+ds <- gen_sample_dataset(D = c(4, 4, 4), nobs = 12, blocks = 3, nlevels = 2)
+items <- as.character(sort(unique(ds$design$train_design$.rownum)))
+seed_feats <- matrix(rnorm(length(items) * 4), nrow = length(items),
+                     dimnames = list(items, NULL))
+repmap_des <- repmap_design(items = items, seed_features = seed_feats)
+model <- repmap_model(ds$dataset, ds$design, repmap_des, key_var = ~ .rownum,
+                      rank = 2)
+class(model)
+#> [1] "repmap_model" "model_spec"   "list"        
 ```

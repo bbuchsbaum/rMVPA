@@ -243,26 +243,48 @@ set \\g\\.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-# Build encoding predictors and declare feature sets
-fs_enc <- feature_sets(X_enc, blocks(low = 100, mid = 100, high = 100, sem = 100))
+set.seed(1)
+# Toy encoding (train, 30 TRs) and recall (test, 20 TRs) data, 27 voxels
+dset <- gen_sample_dataset(c(3, 3, 3), nobs = 30, external_test = TRUE,
+                           ntest_obs = 20)$dataset
 
-# Build recall predictors from a soft alignment posterior gamma
-fs_rec <- expected_features(fs_enc, gamma, drop_null = TRUE, renormalize = FALSE)
+# Build encoding predictors and declare feature sets
+X_enc <- matrix(rnorm(30 * 6), 30, 6)
+fs_enc <- feature_sets(X_enc, blocks(low = 2, mid = 2, sem = 2))
+
+# Build recall predictors from a soft alignment posterior gamma (recall x encoding)
+gamma <- matrix(runif(20 * 30), 20, 30)
+gamma <- gamma / rowSums(gamma)
+fs_rec <- expected_features(fs_enc, gamma, drop_null = FALSE, renormalize = FALSE)
 
 # Create design and model spec
+recall_runs <- rep(1:2, each = 10)
 des <- feature_sets_design(fs_enc, fs_rec, block_var_test = recall_runs)
 ms <- grouped_ridge_da_model(
   dataset = dset,
   design = des,
   mode = "coupled",
-  lambdas = c(low = 10, mid = 10, high = 10, sem = 10),
+  lambdas = c(low = 10, mid = 10, sem = 10),
   alpha_recall = 0.2,
   rho = 5,
   compute_delta_r2 = TRUE,
   return_diagnostics = TRUE
 )
 
+region_mask <- neuroim2::NeuroVol(array(1, c(3, 3, 3)),
+                                  neuroim2::space(dset$mask))
 res <- run_regional(ms, region_mask)
-} # }
+#> INFO [2026-10-07 05:01:47] 
+#> MVPA Iteration Complete
+#> - Total ROIs: 1
+#> - Processed: 1
+#> - Skipped: 0
+#> INFO [2026-10-07 05:01:47] run_regional: 1 ROIs processed (success=1, errors=0)
+res$performance_table
+#> # A tibble: 1 × 8
+#>   roinum recall_r2_full recall_mse_full target_r2_full target_mse_full
+#>    <int>          <dbl>           <dbl>          <dbl>           <dbl>
+#> 1      1        -0.0928            1.08        -0.0928            1.08
+#> # ℹ 3 more variables: delta_r2_low <dbl>, delta_r2_mid <dbl>,
+#> #   delta_r2_sem <dbl>
 ```

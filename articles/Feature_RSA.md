@@ -35,9 +35,9 @@ Use Feature-Based RSA when:
   correlation, R² — rather than choosing one a priori.
 
 If you only have a model RDM (no feature matrix) and want a per-trial
-similarity score with built-in across-block masking, see
-[`vignette("Vector_RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/Vector_RSA.md).
-If you want to test multiple model RDMs as regressors and read out
+similarity score with built-in across-block masking, see [Vector-Based
+RSA](https://bbuchsbaum.github.io/rMVPA/articles/Vector_RSA.html). If
+you want to test multiple model RDMs as regressors and read out
 coefficients, see
 [`vignette("RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/RSA.md).
 If you want a whole-brain, covariance-aware reduced-rank model that
@@ -432,12 +432,12 @@ than .01 at the median or .03 at the lower decile.
 
 | Estimator / selector | Median ms | Speedup vs PLS LOO | MSE ratio | Pattern delta | RDM delta |
 |:---|---:|---:|---:|---:|---:|
-| PLS LOO | 206.50 | 1.0 | 1.000 | 0.0000 | 0.0000 |
-| PLS blocked | 12.00 | 12.1 | 1.000 | 0.0000 | 0.0000 |
-| Ridge GCV | 2.62 | 46.8 | 0.877 | 0.0022 | 0.0026 |
-| Ridge analytic LOO | 10.83 | 10.7 | 0.887 | 0.0018 | 0.0021 |
-| Ridge blocked | 15.83 | 10.2 | 0.888 | 0.0018 | 0.0018 |
-| glmnet ridge blocked CV | 1402.00 | 0.1 | 2.624 | -0.0100 | -0.0126 |
+| PLS LOO | 119.50 | 1.0 | 1.000 | 0.0000 | 0.0000 |
+| PLS blocked | 11.00 | 10.7 | 1.000 | 0.0000 | 0.0000 |
+| Ridge GCV | 2.93 | 41.0 | 0.877 | 0.0022 | 0.0026 |
+| Ridge analytic LOO | 10.58 | 11.2 | 0.887 | 0.0018 | 0.0021 |
+| Ridge blocked | 12.00 | 9.8 | 0.888 | 0.0018 | 0.0018 |
+| glmnet ridge blocked CV | 923.50 | 0.1 | 2.624 | -0.0100 | -0.0126 |
 
 Twenty-seed dense-linear characterization on Apple M3 Max. Accuracy
 columns are relative to PLS LOO; timings are descriptive. {.table}
@@ -483,16 +483,19 @@ enough to *predict* the next held-out trial.
 
 ## What’s next
 
-- [`vignette("Vector_RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/Vector_RSA.md)
-  — per-trial RSA scores with built-in across-block masking, when you
-  have a single reference RDM.
-- [`vignette("Feature_RSA_Advanced_Workflows")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Advanced_Workflows.md)
+- [Vector-Based
+  RSA](https://bbuchsbaum.github.io/rMVPA/articles/Vector_RSA.html) —
+  per-trial RSA scores with built-in across-block masking, when you have
+  a single reference RDM.
+- [Feature-RSA Advanced
+  Workflows](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Advanced_Workflows.html)
   — workflow extensions: returning predicted RDM vectors, cross-ROI
   representational connectivity from feature-RSA fits, multi-scenario
   evaluation.
-- [`vignette("Feature_RSA_Connectivity")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.md)
-  and
-  [`vignette("Feature_RSA_Domain_Adaptation")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Domain_Adaptation.md)
+- [Feature-RSA Connectivity: ROI-to-ROI Generalization and Offset
+  Control](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.html)
+  and [Feature-RSA Across States: Domain Adaptation from Encoding to
+  Recall](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Domain_Adaptation.html)
   — connectivity and cross-state extensions of the same model.
 - [`?feature_rsa_design`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_design.md),
   [`?feature_rsa_model`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_model.md)

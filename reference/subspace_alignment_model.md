@@ -56,8 +56,21 @@ A model spec of class \`subspace_alignment_model\` for use with
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-  ds <- gen_sample_dataset(c(5,5,5), 20, external_test=TRUE)
-  model <- subspace_alignment_model(ds$dataset, ds$design, d=10)
-} # }
+ds <- gen_sample_dataset(c(4, 4, 4), 24, nlevels = 3, blocks = 3,
+                         external_test = TRUE)
+model <- subspace_alignment_model(ds$dataset, ds$design, d = 5)
+region_mask <- neuroim2::NeuroVol(array(1, c(4, 4, 4)),
+                                  neuroim2::space(ds$dataset$mask))
+res <- run_regional(model, region_mask)
+#> INFO [2026-10-07 05:02:36] 
+#> MVPA Iteration Complete
+#> - Total ROIs: 1
+#> - Processed: 1
+#> - Skipped: 0
+#> INFO [2026-10-07 05:02:36] run_regional: 1 ROIs processed (success=1, errors=0)
+res$performance_table
+#> # A tibble: 1 × 5
+#>   roinum Accuracy    AUC d_used alignment_frob
+#>    <int>    <dbl>  <dbl>  <dbl>          <dbl>
+#> 1      1    0.292 -0.115      5           2.13
 ```

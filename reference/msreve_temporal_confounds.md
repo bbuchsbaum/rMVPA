@@ -52,8 +52,17 @@ a named list of K x K matrices aligned to levels(mvpa_design\$Y)
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-  spec <- list(lag=list(kernel="exp", lambda=3))
-  conf <- msreve_temporal_confounds(mvpa_design, time_idx=1:100, spec)
-} # }
+ds <- gen_sample_dataset(D = c(4, 4, 4), nobs = 24, nlevels = 4, blocks = 3)
+spec <- list(lag = list(kernel = "exp", lambda = 3),
+             hrf = list(kind = "hrf", TR = 2))
+conf <- msreve_temporal_confounds(ds$design,
+                                  time_idx = seq(0, by = 2, length.out = 24),
+                                  spec = spec)
+lapply(conf, dim)
+#> $lag
+#> [1] 4 4
+#> 
+#> $hrf
+#> [1] 4 4
+#> 
 ```

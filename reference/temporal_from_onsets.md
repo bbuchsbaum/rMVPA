@@ -49,8 +49,6 @@ A dist object or matrix representing temporal relationships
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-  onsets <- c(0, 2.5, 5.0, 7.5, 10.0)
-  temp_rdm <- temporal_from_onsets(onsets, kernel="exp", lambda=3)
-} # }
+onsets <- c(0, 2.5, 5.0, 7.5, 10.0)
+temp_rdm <- temporal_from_onsets(onsets, kernel = "exp", lambda = 3)
 ```

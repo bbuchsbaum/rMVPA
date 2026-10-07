@@ -2,8 +2,9 @@
 
 This is the third pattern-model article. Fit a discovery model with
 [`vignette("Pattern_Model")`](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Model.md),
-confirm each subject on independent rows with
-[`vignette("Pattern_Confirmation")`](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Confirmation.md),
+confirm each subject on independent rows with [Confirming a frozen
+pattern
+model](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Confirmation.html),
 then pool those confirmed loadings here.
 
 Group analysis starts from independently estimated subject loadings and
@@ -70,8 +71,8 @@ subjects <- lapply(seq_len(12), function(s) {
 ```
 
 For real run-dependent observations, choose a suitable block error model
-in each subject’s confirmation; see
-[`vignette("Pattern_Confirmation")`](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Confirmation.md).
+in each subject’s confirmation; see [Confirming a frozen pattern
+model](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Confirmation.html).
 A group model does not repair biased subject estimates or
 discovery/confirmation leakage.
 

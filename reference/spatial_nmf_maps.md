@@ -190,8 +190,18 @@ overridden) so bootstrap/CV refits use the faster defaults too.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-  # Requires list of NeuroVol objects per group
-  # result <- spatial_nmf_maps(group_A_vols, group_B_vols, k=5)
-} # }
+set.seed(1)
+sp <- neuroim2::NeuroSpace(c(5, 5, 2))
+mask <- neuroim2::LogicalNeuroVol(array(TRUE, c(5, 5, 2)), sp)
+make_maps <- function(n) {
+  lapply(seq_len(n), function(i) neuroim2::NeuroVol(array(runif(50), c(5, 5, 2)), sp))
+}
+group_A_vols <- make_maps(6)
+group_B_vols <- make_maps(6)
+result <- spatial_nmf_maps(group_A_vols, group_B_vols, mask = mask, k = 2)
+#> INFO [2026-10-07 05:02:35] spatial_nmf_maps: fitting NMF (n=12, p=50, k=2, lambda=0)
+#> INFO [2026-10-07 05:02:35] spatial_nmf_maps: NMF fit complete (converged=TRUE, iterations=14)
+#> INFO [2026-10-07 05:02:35] spatial_nmf_maps: parallel=FALSE (explicit=FALSE)
+length(result$components)
+#> [1] 2
 ```

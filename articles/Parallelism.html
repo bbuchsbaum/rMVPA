@@ -12,6 +12,8 @@
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
 <script src="../extra.js"></script><meta property="og:title" content="Choose a Safe Parallel Runtime for rMVPA">
+<link href="../albers.css" rel="stylesheet">
+<script>window.albersdownDefaults = window.albersdownDefaults || { family: "red", preset: "homage", style: "minimal" };</script><script src="../albers.js"></script>
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -56,7 +58,7 @@
       <h1>Choose a Safe Parallel Runtime for rMVPA</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/rMVPA/blob/master/vignettes/Parallelism.Rmd" class="external-link"><code>vignettes/Parallelism.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/rMVPA/blob/master/vignettes/articles/Parallelism.Rmd" class="external-link"><code>vignettes/articles/Parallelism.Rmd</code></a></small>
       <div class="d-none name"><code>Parallelism.Rmd</code></div>
     </div>
 
@@ -363,8 +365,8 @@ observation-aligned <code>block_var</code> in
 every outer fold. Inner centering and scaling are learned without the
 held-out block. <code>"pve"</code> and <code>"max"</code> are cheaper
 still, but they change the tuning estimand rather than accelerating the
-same validation scheme. See <code><a href="../articles/Feature_RSA.html">vignette("Feature_RSA")</a></code> for the
-selection contract.</p>
+same validation scheme. See <a href="https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA.html">Feature-Based
+RSA</a> for the selection contract.</p>
 <p>rMVPA now streams held-out segment errors, uses compact matrix-level
 PLS/PCR fits, and computes the final out-of-fold geometry once. A worker
 also drops the original quadratic similarity matrix <code>S</code> after
@@ -478,8 +480,8 @@ GB). Timings are descriptive, not thresholds.</caption>
 <col width="18%">
 <col width="18%">
 <col width="15%">
-<col width="21%">
-<col width="25%">
+<col width="20%">
+<col width="26%">
 </colgroup>
 <thead><tr class="header">
 <th align="left">Future plan</th>
@@ -492,75 +494,76 @@ GB). Timings are descriptive, not thresholds.</caption>
 <tr class="odd">
 <td align="left">sequential</td>
 <td align="left">default</td>
-<td align="right">5.875</td>
-<td align="left">5.705–6.160</td>
-<td align="right">12.444</td>
+<td align="right">1.326</td>
+<td align="left">1.004–1.441</td>
+<td align="right">12.531</td>
 </tr>
 <tr class="even">
 <td align="left">sequential</td>
 <td align="left">shard</td>
-<td align="right">4.211</td>
-<td align="left">4.183–4.642</td>
+<td align="right">1.201</td>
+<td align="left">0.966–1.603</td>
 <td align="right">0.101</td>
 </tr>
 <tr class="odd">
 <td align="left">multisession</td>
 <td align="left">default</td>
-<td align="right">9.452</td>
-<td align="left">9.081–9.639</td>
-<td align="right">12.444</td>
+<td align="right">4.551</td>
+<td align="left">4.190–5.820</td>
+<td align="right">12.531</td>
 </tr>
 <tr class="even">
 <td align="left">multisession</td>
 <td align="left">shard</td>
-<td align="right">6.710</td>
-<td align="left">6.566–6.856</td>
+<td align="right">4.621</td>
+<td align="left">3.686–5.195</td>
 <td align="right">0.101</td>
 </tr>
 <tr class="odd">
 <td align="left">multicore</td>
 <td align="left">default</td>
-<td align="right">6.276</td>
-<td align="left">6.269–7.411</td>
-<td align="right">12.444</td>
+<td align="right">2.325</td>
+<td align="left">2.116–2.873</td>
+<td align="right">12.531</td>
 </tr>
 <tr class="even">
 <td align="left">multicore</td>
 <td align="left">shard</td>
-<td align="right">3.589</td>
-<td align="left">3.249–3.672</td>
+<td align="right">1.871</td>
+<td align="left">1.260–2.451</td>
 <td align="right">0.101</td>
 </tr>
 <tr class="odd">
 <td align="left">mirai</td>
 <td align="left">default</td>
-<td align="right">13.457</td>
-<td align="left">12.940–13.911</td>
-<td align="right">12.444</td>
+<td align="right">6.843</td>
+<td align="left">6.756–10.372</td>
+<td align="right">12.531</td>
 </tr>
 <tr class="even">
 <td align="left">mirai</td>
 <td align="left">shard</td>
-<td align="right">10.217</td>
-<td align="left">9.968–11.436</td>
+<td align="right">7.774</td>
+<td align="left">6.341–7.848</td>
 <td align="right">0.101</td>
 </tr>
 </tbody>
 </table>
 <p>All eight paths produced identical canonical result vectors in every
 fixture repetition (<code>max_abs_result_error = 0</code>). The default
-frames totaled 13,048,800 bytes per run; shard frames totaled 105,712
-bytes, a 123-fold reduction for this design. This is direct evidence
+frames totaled 13,139,536 bytes per run; shard frames totaled 105,712
+bytes, a 124-fold reduction for this design. This is direct evidence
 about the transport structure measured by <code><a href="https://rdrr.io/r/utils/object.size.html" class="external-link">object.size()</a></code>,
 not a claim that physical RAM fell by exactly the same factor.</p>
-<p>Shard reduced the median time for every plan measured in this short
-local run, and the three-repetition timing ranges are separated for
-every pairing. Startup dominates the separate-session plans. Read that
-ordering as one machine on one afternoon rather than a property of the
-backends: multicore’s local timing does not override its safety
-constraints, and mirai’s fresh-process overhead here does not predict a
-long-lived mirai deployment. Re-run the driver on the target system
-before choosing on speed.</p>
+<p>Shard reduced the median time for multicore and sequential in this
+short local run, and raised it for mirai and multisession, and the
+three-repetition timing ranges overlap for every pairing. Startup
+dominates the separate-session plans. Read that ordering as one machine
+on one afternoon rather than a property of the backends: multicore’s
+local timing does not override its safety constraints, and mirai’s
+fresh-process overhead here does not predict a long-lived mirai
+deployment. Re-run the driver on the target system before choosing on
+speed.</p>
 <p>The receipt intentionally omits process-tree RSS as a publication
 claim. Summed RSS can double-count shared and copy-on-write pages, while
 socket and mirai workers may be detached from the controller’s

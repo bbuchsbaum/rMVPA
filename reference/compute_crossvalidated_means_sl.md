@@ -94,7 +94,14 @@ for condition k. If \`return_folds = TRUE\`: A list with two elements:
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-  # See vignette for cross-validated mean computation
-} # }
+# 4 conditions x 3 runs, 12 voxels
+des_df <- data.frame(cond = factor(rep(c("a", "b", "c", "d"), times = 6)),
+                     run  = rep(1:3, each = 8))
+mvdes <- mvpa_design(des_df, y_train = ~ cond, block_var = ~ run)
+cv <- blocked_cross_validation(des_df$run)
+sl_data <- matrix(rnorm(nrow(des_df) * 12), nrow(des_df), 12)
+U <- compute_crossvalidated_means_sl(sl_data, mvdes, cv,
+                                     estimation_method = "average")
+dim(U)
+#> [1]  4 12
 ```

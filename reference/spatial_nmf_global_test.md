@@ -157,10 +157,13 @@ the learned component space.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-  result <- spatial_nmf_global_test(
-    matrix(rnorm(100*10), 100, 10),
-    k = 3, nperm = 99
-  )
-} # }
+set.seed(1)
+X <- matrix(runif(20 * 30), 20, 30)   # non-negative subject-by-voxel data
+groups <- factor(rep(c("A", "B"), each = 10))
+result <- spatial_nmf_global_test(X = X, groups = groups, k = 2,
+                                  nfolds = 3, nperm = 19, seed = 1)
+#> INFO [2026-10-07 05:02:34] Spatial NMF global test: 19 permutations (labels, serial)
+#> INFO [2026-10-07 05:02:35] Spatial NMF global test: permutations complete.
+result$p_value
+#> [1] 0.4
 ```

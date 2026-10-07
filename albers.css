@@ -8,8 +8,30 @@
 @font-face { font-family: "Newsreader"; font-style: italic; font-weight: 400 500; font-display: swap; src: url("fonts/newsreader-italic.woff2") format("woff2"); }
 @font-face { font-family: "Space Grotesk"; font-style: normal; font-weight: 300 700; font-display: swap; src: url("fonts/space-grotesk.woff2") format("woff2"); }
 @font-face { font-family: "Hanken Grotesk"; font-style: normal; font-weight: 400 700; font-display: swap; src: url("fonts/hanken-grotesk.woff2") format("woff2"); }
+@font-face { font-family: "Hanken Grotesk"; font-style: italic; font-weight: 400 700; font-display: swap; src: url("fonts/hanken-grotesk-italic.woff2") format("woff2"); }
 @font-face { font-family: "Spline Sans Mono"; font-style: normal; font-weight: 400 500; font-display: swap; src: url("fonts/spline-sans-mono.woff2") format("woff2"); }
 @font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 400 500; font-display: swap; src: url("fonts/jetbrains-mono.woff2") format("woff2"); }
+
+@property --albers-measure {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 640px;
+}
+
+/* Metric-matched fallbacks: local system faces (with metric-compatible
+   Linux faces: Liberation Sans/Arimo for Arial, Gelasio for Georgia),
+   scaled per weight and style to the web fonts' measured widths, so text
+   set before the fonts arrive wraps as it will after. The direction's font
+   file carries them (a vignette embeds only its own). */
+@font-face { font-family: "Newsreader Fallback"; src: local("Georgia"), local("Gelasio"); size-adjust: 91.5%; }
+@font-face { font-family: "Newsreader Fallback"; font-style: italic; src: local("Georgia Italic"), local("Georgia-Italic"), local("Gelasio Italic"); size-adjust: 82.5%; }
+@font-face { font-family: "Newsreader Fallback"; font-weight: 600 700; src: local("Georgia Bold"), local("Georgia-Bold"), local("Gelasio Bold"); size-adjust: 83%; }
+@font-face { font-family: "Familjen Grotesk Fallback"; src: local("Arial"), local("ArialMT"), local("Liberation Sans"), local("Arimo"); size-adjust: 91%; }
+@font-face { font-family: "Familjen Grotesk Fallback"; font-weight: 600 700; src: local("Arial Bold"), local("Arial-BoldMT"), local("Liberation Sans Bold"), local("Arimo Bold"); size-adjust: 89%; }
+@font-face { font-family: "Hanken Grotesk Fallback"; src: local("Arial"), local("ArialMT"), local("Liberation Sans"), local("Arimo"); size-adjust: 100%; }
+@font-face { font-family: "Hanken Grotesk Fallback"; font-weight: 600 700; src: local("Arial Bold"), local("Arial-BoldMT"), local("Liberation Sans Bold"), local("Arimo Bold"); size-adjust: 94.3%; }
+@font-face { font-family: "Space Grotesk Fallback"; src: local("Arial"), local("ArialMT"), local("Liberation Sans"), local("Arimo"); size-adjust: 108.5%; }
+@font-face { font-family: "Space Grotesk Fallback"; font-weight: 600 700; src: local("Arial Bold"), local("Arial-BoldMT"), local("Liberation Sans Bold"), local("Arimo Bold"); size-adjust: 101.5%; }
 
 :root {
   /* Default direction = Homage (warm). `.preset-interaction` overrides to cool. */
@@ -17,29 +39,40 @@
   --bg: #efe7d6;
   --surface: #fbf7ee;
   --surface-strong: #f4eedf;
-  --muted: #7a7264;
+  --muted: #6b6355;
   --border: #e0d6c0;
-  --code-bg: #fbf7ee;
+  --code-bg: #f6f0e3;
   --code-fg: #332f28;
-  --code-border: #e0d6c0;
-  --tok-fun: #1f6f6b;
-  --tok-str: #8e2d1c;
-  --tok-num: #d98324;
-  --tok-com: #9a9078;
-  --tok-kw: #c24a2e;
+  --code-border: #e6dcc6;
+  --code-out: #5a5244;
+  --tok-fun: var(--A700);
+  --tok-str: var(--comp-ink);
+  --tok-num: var(--code-num);
+  --tok-com: #6c6250;
+  --tok-kw: #1f1b16;
+  --tok-arg: #5b5344;
+  --warn: #7a5300;
+  --danger: #b3261e;
+  --code-warn: var(--warn);
+  --code-err: var(--danger);
   --shadow-soft: 0 1px 3px rgba(9, 11, 15, 0.045);
   --shadow-card: 0 1px 5px rgba(9, 11, 15, 0.055);
-  --content: 78ch;
+  /* the measure in em, not ch: 66ch of Newsreader is 36.3em, but ch changes
+     when the web font replaces the fallback, and the column (and the whole
+     vignette grid) jumped sideways after first paint */
+  --content: 36.3em;
   --anchor-offset: 76px;
+  --fs-body: 17.5px;
+  --lh-body: 1.62;
 
   /* html_vignette (CRAN) page + sidebar geometry */
-  --vig-toc-width: 15rem;
-  --vig-gap: clamp(1.5rem, 2.4vw, 2.6rem);
-  --vig-pad-block: clamp(1.75rem, 3vw, 3rem);
-  --vig-pad-inline: clamp(1.2rem, 3vw, 2.6rem);
-  --font-body: "Newsreader", Georgia, "Times New Roman", serif;
-  --font-display: "Familjen Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-ui: "Space Grotesk", system-ui, sans-serif;
+  --vig-toc-width: 13.5rem;
+  --vig-gap: clamp(2rem, 3.4vw, 3.5rem);
+  --vig-pad-block: clamp(1.75rem, 3.4vw, 3.4rem);
+  --vig-pad-inline: clamp(1.2rem, 3.4vw, 3.2rem);
+  --font-body: "Newsreader", "Newsreader Fallback", Georgia, "Times New Roman", serif;
+  --font-display: "Familjen Grotesk", "Familjen Grotesk Fallback", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-ui: "Familjen Grotesk", "Familjen Grotesk Fallback", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "Spline Sans Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   --heading-weight: 700;
   --module: 4px;
@@ -53,37 +86,45 @@
 
   --rule-thin: 1px;
   --rule-strong: 2px;
-  --ribbon-opacity: 0.62;
-  --nav-dash-weight: 650;
-  --dash-weight: 600;
-  --dash-opacity: 0.82;
-  --subdash-opacity: 0.76;
+  --ribbon-opacity: 1;
+  --hr-opacity: 1;
   --overview-dash-weight: 620;
   --overview-dash-opacity: 0.86;
-  --hr-opacity: 0.42;
-  --table-divider-alpha: 72%;
-  --table-hover-alpha: 70%;
 
   /* Homage Red (default family) */
-  --A900: #c22b23;
-  --A700: #dc3925;
-  --A500: #e44926;
-  --A300: #e35b2d;
+  --A900: #760906;
+  --A700: #ae1703;
+  --A500: #d74a21;
+  --A300: #f7a885;
 
-  --accent-ink-light: var(--A900);
+  --accent-ink-light: var(--A700);
   --accent-ink-dark: var(--A300);
   --accent-ink: var(--accent-ink-light);
   --accent: var(--A500);
   --accent-strong: var(--A700);
-  --accent-hover: #a9351f;
-  --accent-tint: rgba(228, 73, 38, 0.09);
-  --accent-band: rgba(228, 73, 38, 0.14);
+  --accent-hover: #760906;
+  --accent-tint: rgba(215, 74, 33, 0.09);
+  --accent-band: rgba(215, 74, 33, 0.15);
 
-  /* Nested-square "Homage to the Square" marker. Core + mid rings follow the
-     active family (--A*); the outer ring is a per-direction signature hue. */
-  --sq-size: 0.46em;
-  --sq-ring: 0.12em;
-  --sq-outer: #e0a100;
+  /* "Homage to the Square" marker. The inner squares sit low, as in Albers's
+     paintings (equal side margins; top margin three times the bottom). Core +
+     mid follow the active family; the outer square is a per-direction hue. */
+  --sq-size: 0.62em;
+  --comp: #de9d16;
+  --comp-ink: #745004;
+  --comp-light: #e5b568;
+  --sq-outer: var(--comp);
+  /* code literals: numbers on the third hue, opposite the family/complement
+     pair; strings on dark code grounds */
+  --code-num: #2e6a8a;
+  --code-num-light: #77b4d6;
+  --code-str-light: #ded07d;
+  --code-fun-warm: #ff8675;
+  --code-str-warm: #c18703;
+  --code-num-warm: #76a5c1;
+  --code-fun-night: #fdaa85;
+  --code-str-night: #ebaa2d;
+  --code-num-night: #eb603a;
 }
 
 /* Re-resolve family-indirected tokens at <body>, where .palette-* sets the --A
@@ -91,159 +132,251 @@
    so these must live on body (not :root) to follow the active family instead of
    baking in the default-red value. */
 body {
-  --accent-ink: var(--A900);
+  --code-warn: var(--warn);
+  --code-err: var(--danger);
+  --sq-outer: var(--comp);
+  --tok-fun: var(--A700);
+  --tok-str: var(--comp-ink);
+  --tok-num: var(--code-num);
+  --accent-ink: var(--A700);
   --accent: var(--A500);
   --accent-strong: var(--A700);
   --sq-core: var(--A900);
   --sq-mid: var(--A500);
+  /* Title plate, outside -> in. Homage: light ground, darkening inward. */
+  --plate-1: var(--sq-outer);
+  --plate-2: var(--A300);
+  --plate-3: var(--A500);
+  --plate-4: var(--A900);
+}
+
+
+
+/* Interaction: the inverse study -- dark outside, a luminous core. */
+body.preset-interaction {
+  --plate-1: var(--A900);
+  --plate-2: var(--A700);
+  --plate-3: var(--A500);
+  --plate-4: var(--comp);
 }
 
 /* -- Intensity modes ------------------------------------------------------ */
-/* Apply on body/container: .style-minimal or .style-assertive */
+/* Apply on body/container: .style-minimal (default), .style-balanced or
+   .style-assertive */
 .style-minimal {
-  --rule-strong: 1px;
-  --ribbon-opacity: 0.46;
-  /* quieter, smaller nested-square marker */
-  --sq-size: 0.4em;
-  --sq-ring: 0.1em;
-  --nav-dash-weight: 600;
-  --subdash-opacity: 0.64;
-  --overview-dash-weight: 560;
-  --overview-dash-opacity: 0.74;
-  --hr-opacity: 0.3;
-  --table-divider-alpha: 58%;
-  --table-hover-alpha: 52%;
+  --sq-size: 0.58em;
+}
+
+.style-balanced {
+  --rule-strong: 2.5px;
+  --sq-size: 0.65em;
 }
 
 .style-assertive {
   --rule-strong: 3px;
-  --ribbon-opacity: 0.82;
-  /* bolder, larger nested-square marker */
-  --sq-size: 0.56em;
-  --sq-ring: 0.17em;
-  --nav-dash-weight: 720;
-  --subdash-opacity: 0.9;
-  --overview-dash-weight: 680;
-  --overview-dash-opacity: 0.94;
-  --hr-opacity: 0.62;
-  --table-divider-alpha: 90%;
-  --table-hover-alpha: 92%;
+  --sq-size: 0.72em;
 }
 
 /* -- Palette families ---------------------------------------------------- */
 /* ALBERS_TOKENS_FAMILIES_START */
 .palette-red {
-  --A900: #C22B23;
-  --A700: #DC3925;
-  --A500: #E44926;
-  --A300: #E35B2D;
-  --accent-hover: #A9351F;
-  --accent-tint: rgba(228, 73, 38, 0.09);
-  --accent-band: rgba(228, 73, 38, 0.14);
+  --A900: #760906;
+  --A700: #AE1703;
+  --A500: #D74A21;
+  --A300: #F7A885;
+  --accent-hover: #760906;
+  --accent-tint: rgba(215, 74, 33, 0.09);
+  --accent-band: rgba(215, 74, 33, 0.15);
+  --comp: #DE9D16;
+  --comp-ink: #745004;
+  --comp-light: #E5B568;
+  --comp-deep: #9E6800;
+  --code-num: #2E6A8A;
+  --code-num-light: #77B4D6;
+  --code-str-light: #DED07D;
+  --code-fun-warm: #FF8675;
+  --code-str-warm: #C18703;
+  --code-num-warm: #76A5C1;
+  --code-fun-night: #FDAA85;
+  --code-str-night: #EBAA2D;
+  --code-num-night: #EB603A;
 }
 
 .palette-lapis {
-  --A900: #1B2A74;
-  --A700: #20399C;
-  --A500: #2C4FCC;
-  --A300: #4968D6;
-  --accent-hover: #1A377F;
-  --accent-tint: rgba(44, 79, 204, 0.10);
-  --accent-band: rgba(44, 79, 204, 0.15);
+  --A900: #213480;
+  --A700: #3154B9;
+  --A500: #507ADF;
+  --A300: #A2BEF5;
+  --accent-hover: #213480;
+  --accent-tint: rgba(80, 122, 223, 0.09);
+  --accent-band: rgba(80, 122, 223, 0.15);
+  --comp: #E69825;
+  --comp-ink: #7A4D04;
+  --comp-light: #EBB16C;
+  --comp-deep: #A96500;
+  --code-num: #2C725B;
+  --code-num-light: #77BBA1;
+  --code-str-light: #EBB16C;
+  --code-fun-warm: #8FAAFD;
+  --code-str-warm: #C98211;
+  --code-num-warm: #76AC97;
+  --code-fun-night: #A4C1FC;
+  --code-str-night: #C47D02;
+  --code-num-night: #6189F0;
 }
 
 .palette-ochre {
-  --A900: #6F5200;
-  --A700: #8B6700;
-  --A500: #B48900;
-  --A300: #D7A700;
-  --accent-hover: #7A5C00;
-  --accent-tint: rgba(180, 137, 0, 0.10);
-  --accent-band: rgba(180, 137, 0, 0.16);
+  --A900: #513801;
+  --A700: #7A5604;
+  --A500: #A47807;
+  --A300: #DEB95C;
+  --accent-hover: #513801;
+  --accent-tint: rgba(164, 120, 7, 0.09);
+  --accent-band: rgba(164, 120, 7, 0.15);
+  --comp: #BA93FB;
+  --comp-ink: #634590;
+  --comp-light: #C8AEFA;
+  --comp-deep: #8562C5;
+  --code-num: #17726D;
+  --code-num-light: #6BBBB6;
+  --code-str-light: #C8AEFA;
+  --code-fun-warm: #DBA426;
+  --code-str-warm: #A17EDC;
+  --code-num-warm: #6DACA7;
+  --code-fun-night: #EFBC24;
+  --code-str-night: #B287F5;
+  --code-num-night: #B58629;
 }
 
 .palette-teal {
-  --A900: #0D4A4A;
-  --A700: #0F5E5E;
-  --A500: #127373;
-  --A300: #2F8C8C;
-  --accent-hover: #0F6060;
-  --accent-tint: rgba(18, 115, 115, 0.10);
-  --accent-band: rgba(18, 115, 115, 0.15);
+  --A900: #044746;
+  --A700: #0A6C69;
+  --A500: #2E918C;
+  --A300: #8DCCC5;
+  --accent-hover: #044746;
+  --accent-tint: rgba(46, 145, 140, 0.09);
+  --accent-band: rgba(46, 145, 140, 0.15);
+  --comp: #F9875E;
+  --comp-ink: #8E3B1C;
+  --comp-light: #FBA587;
+  --comp-deep: #BE5530;
+  --code-num: #67598C;
+  --code-num-light: #AFA1D8;
+  --code-str-light: #FBA587;
+  --code-fun-warm: #5CC3B2;
+  --code-str-warm: #DA724D;
+  --code-num-warm: #A297C3;
+  --code-fun-night: #7BD7CE;
+  --code-str-night: #EB7A51;
+  --code-num-night: #3C9D9A;
 }
 
 .palette-green {
-  --A900: #1B5E20;
-  --A700: #2E7D32;
-  --A500: #388E3C;
-  --A300: #66BB6A;
-  --accent-hover: #2E7D32;
-  --accent-tint: rgba(56, 142, 60, 0.10);
-  --accent-band: rgba(56, 142, 60, 0.15);
+  --A900: #204727;
+  --A700: #386B3A;
+  --A500: #5E904D;
+  --A300: #AEC98E;
+  --accent-hover: #204727;
+  --accent-tint: rgba(94, 144, 77, 0.09);
+  --accent-band: rgba(94, 144, 77, 0.15);
+  --comp: #E28DAE;
+  --comp-ink: #863A5B;
+  --comp-light: #F6A0C1;
+  --comp-deep: #A9597A;
+  --code-num: #3E668F;
+  --code-num-light: #84AFDC;
+  --code-str-light: #F6A0C1;
+  --code-fun-warm: #A0BA5C;
+  --code-str-warm: #D56C97;
+  --code-num-warm: #80A2C6;
+  --code-fun-night: #A9DB61;
+  --code-str-night: #DB87A8;
+  --code-num-night: #70A25F;
 }
 
 .palette-violet {
-  --A900: #4A148C;
-  --A700: #6A1B9A;
-  --A500: #8E24AA;
-  --A300: #BA68C8;
-  --accent-ink-dark: #D59AE7;
-  --accent-hover: #71208D;
-  --accent-tint: rgba(142, 36, 170, 0.11);
-  --accent-band: rgba(142, 36, 170, 0.16);
+  --A900: #4E2B62;
+  --A700: #754590;
+  --A500: #956CB3;
+  --A300: #CAB2E1;
+  --accent-hover: #4E2B62;
+  --accent-tint: rgba(149, 108, 179, 0.09);
+  --accent-band: rgba(149, 108, 179, 0.15);
+  --comp: #C9A90C;
+  --comp-ink: #695701;
+  --comp-light: #D4BD67;
+  --comp-deep: #8B7300;
+  --code-num: #147078;
+  --code-num-light: #69BAC2;
+  --code-str-light: #D4BD67;
+  --code-fun-warm: #C79ADD;
+  --code-str-warm: #AF9102;
+  --code-num-warm: #6CABB1;
+  --code-fun-night: #D5B5F1;
+  --code-str-night: #BA9C13;
+  --code-num-night: #A579C6;
 }
 /* ALBERS_TOKENS_FAMILIES_END */
 
 /* -- Presets: ground / surface / ink variations --------------------------- */
 
 /* ALBERS_TOKENS_PRESETS_START */
-/* Homage direction — warm cream ground, Newsreader serif body, light code.
+/* Homage direction: warm cream ground, Newsreader serif body, light code.
    Matches the :root default; present so the class is explicit and idempotent. */
 .preset-homage {
   --bg: #efe7d6;
   --surface: #fbf7ee;
   --surface-strong: #f4eedf;
   --ink: #1f1b16;
-  --muted: #7a7264;
+  --muted: #6b6355;
   --border: #e0d6c0;
-  --code-bg: #fbf7ee;
+  --code-bg: #f6f0e3;
   --code-fg: #332f28;
-  --code-border: #e0d6c0;
-  --tok-fun: #1f6f6b;
-  --tok-str: #8e2d1c;
-  --tok-num: #d98324;
-  --tok-com: #9a9078;
-  --tok-kw: #c24a2e;
-  --font-body: "Newsreader", Georgia, "Times New Roman", serif;
-  --font-display: "Familjen Grotesk", system-ui, sans-serif;
-  --font-ui: "Space Grotesk", system-ui, sans-serif;
+  --code-border: #e6dcc6;
+  --code-out: #5a5244;
+  --tok-fun: var(--A700);
+  --tok-str: var(--comp-ink);
+  --tok-num: var(--code-num);
+  --tok-com: #6c6250;
+  --tok-kw: #1f1b16;
+  --tok-arg: #5b5344;
+  --font-body: "Newsreader", "Newsreader Fallback", Georgia, "Times New Roman", serif;
+  --font-display: "Familjen Grotesk", "Familjen Grotesk Fallback", system-ui, sans-serif;
+  --font-ui: "Familjen Grotesk", "Familjen Grotesk Fallback", system-ui, sans-serif;
   --font-mono: "Spline Sans Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
-  --sq-outer: #e0a100;
+  --sq-outer: var(--comp);
   --heading-weight: 700;
 }
 
-/* Interaction direction — cool grey ground, all-grotesk, dark code blocks. */
+/* Interaction direction: cool grey ground, all-grotesk, dark code blocks. */
 .preset-interaction {
-  --bg: #f1f2f4;
+  --bg: #eceef1;
   --surface: #ffffff;
-  --surface-strong: #f7f8fa;
+  --surface-strong: #f5f6f8;
   --ink: #15181e;
-  --muted: #7b8494;
-  --border: #e3e6eb;
-  --code-bg: #15181e;
-  --code-fg: #c9d0dc;
-  --code-border: #15181e;
-  --tok-fun: #7fa6f0;
-  --tok-str: #e9904f;
-  --tok-num: #9ad0a0;
-  --tok-com: #6b7484;
-  --tok-kw: #f4b43c;
-  --font-body: "Hanken Grotesk", system-ui, sans-serif;
-  --font-display: "Space Grotesk", system-ui, sans-serif;
-  --font-ui: "Hanken Grotesk", system-ui, sans-serif;
+  --muted: #5d6573;
+  --border: #e1e4e9;
+  --code-bg: color-mix(in oklab, var(--A900) 24%, #101217);
+  --code-fg: #d3d8e1;
+  --code-border: transparent;
+  --code-out: #aab3c2;
+  --tok-fun: var(--A300);
+  --tok-str: var(--code-str-light);
+  --tok-num: var(--code-num-light);
+  --tok-com: #8d96a6;
+  --tok-kw: #f3f4f6;
+  --tok-arg: #b4bccb;
+  --code-warn: #f0b847;
+  --code-err: #ff8b7b;
+  --font-body: "Hanken Grotesk", "Hanken Grotesk Fallback", system-ui, sans-serif;
+  --font-display: "Space Grotesk", "Space Grotesk Fallback", system-ui, sans-serif;
+  --font-ui: "Hanken Grotesk", "Hanken Grotesk Fallback", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
-  --sq-outer: var(--A300);
+  --sq-outer: var(--comp);
   --heading-weight: 600;
+  --fs-body: 16.5px;
+  --lh-body: 1.64;
+  --content: 35.84em;
 }
 
 /* Study preset */
@@ -252,10 +385,10 @@ body {
   --surface: #ffffff;
   --surface-strong: #fbfcfd;
   --ink: #17181a;
-  --muted: #68717d;
+  --muted: #5f6873;
   --border: #dde2e8;
   --code-bg: #f1f4f8;
-  --font-display: "Avenir Next", "Gill Sans", "Trebuchet MS", system-ui, sans-serif;
+  --font-display: "Familjen Grotesk", "Familjen Grotesk Fallback", system-ui, sans-serif;
   --heading-weight: 730;
 }
 
@@ -270,7 +403,7 @@ body {
   --code-bg: #e0e5ea;
   --shadow-soft: none;
   --shadow-card: none;
-  --font-display: "Franklin Gothic Medium", "Avenir Next", "Gill Sans", sans-serif;
+  --font-display: "Familjen Grotesk", "Familjen Grotesk Fallback", system-ui, sans-serif;
   --heading-weight: 760;
 }
 
@@ -280,187 +413,264 @@ body {
   --surface: #f3f1ef;
   --surface-strong: #efedeb;
   --ink: #1f1c19;
-  --muted: #66615d;
+  --muted: #5e5955;
   --border: #ccc7c3;
   --code-bg: #e3dfdc;
   --shadow-soft: 0 2px 7px rgba(0, 0, 0, 0.04);
   --shadow-card: 0 2px 9px rgba(0, 0, 0, 0.05);
-  --font-display: "Optima", "Avenir Next", "Gill Sans", sans-serif;
+  --font-display: "Familjen Grotesk", "Familjen Grotesk Fallback", system-ui, sans-serif;
   --heading-weight: 720;
 }
 
-/* Midnight preset */
+/* Midnight preset: the family's A900 sunk into ink, so the page itself is the
+   plate (oxblood-black for red, ultramarine-black for lapis). Code sits on
+   the deepest plate in the plate's own squares: functions the family's light
+   ring, numbers its deeper ring, strings the complement, where dark
+   Interaction keeps pale tints and a third hue. */
 .preset-midnight {
-  --bg: #0d1117;
-  --surface: #151b24;
-  --surface-strong: #1a212d;
+  --bg: color-mix(in oklab, var(--A900) 22%, #07080c);
+  --surface: color-mix(in oklab, var(--A900) 24%, #0e1016);
+  --surface-strong: color-mix(in oklab, var(--A900) 26%, #13161d);
   --ink: #e8e6e1;
-  --muted: #b2bac7;
-  --border: #2c3342;
-  --code-bg: #0f1520;
+  --muted: #b6b4ae;
+  --border: color-mix(in oklab, var(--A900) 30%, #262a33);
+  --code-bg: color-mix(in oklab, var(--A900) 30%, #04050a);
+  --code-fg: #dcdad3;
+  --code-border: color-mix(in oklab, var(--A900) 30%, #262a33);
+  --code-out: #b0aea7;
+  --tok-fun: var(--code-fun-night);
+  --tok-str: var(--code-str-night);
+  --tok-num: var(--code-num-night);
+  --tok-com: #a3a19a;
+  --tok-kw: #f3f2ee;
+  --tok-arg: #bdbab2;
+  --warn: #f0b429;
+  --danger: #ff8a73;
   --shadow-soft: 0 6px 20px rgba(0, 0, 0, 0.4);
   --shadow-card: 0 6px 24px rgba(0, 0, 0, 0.45);
-  --font-display: "Avenir Next", "Gill Sans", "Trebuchet MS", sans-serif;
+  --font-display: "Familjen Grotesk", "Familjen Grotesk Fallback", system-ui, sans-serif;
   --heading-weight: 740;
   --accent-ink: var(--accent-ink-dark);
+  color-scheme: dark;
 }
 /* ALBERS_TOKENS_PRESETS_END */
 
-/* -- Dark mode (system / Bootstrap) -------------------------------------- */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --ink: #ece8de;
-    --bg: #111315;
-    --surface: #171a1e;
-    --surface-strong: #1c2025;
-    --muted: #a7aeb8;
-    --border: #313844;
-    --code-bg: #181d24;
-    --shadow-soft: 0 6px 20px rgba(0, 0, 0, 0.35);
-    --shadow-card: 0 6px 24px rgba(0, 0, 0, 0.4);
-    --accent-ink: var(--accent-ink-dark);
-    --accent-hover: #f2b2a7;
-    --accent-tint: rgba(228, 73, 38, 0.2);
-    --accent-band: rgba(228, 73, 38, 0.25);
-  }
+/* -- Dark mode ------------------------------------------------------------ *
+ * albers.js resolves the theme (stored choice > pkgdown light-switch > OS
+ * preference) and stamps html[data-albers-theme]. pkgdown's own light-switch
+ * sets [data-bs-theme="dark"]; both routes land on the same tokens. Each
+ * direction keeps its temperature at night: Homage stays warm, Interaction
+ * stays cool. Selectors out-rank the body-level .preset-* classes.
+ * --------------------------------------------------------------------------- */
+html[data-albers-theme="dark"],
+html[data-bs-theme="dark"] {
+  color-scheme: dark;
+  --bg: #13110e;
 }
 
-[data-bs-theme="dark"] {
-  --ink: #ece8de;
-  --bg: #111315;
-  --surface: #171a1e;
-  --surface-strong: #1c2025;
-  --muted: #a7aeb8;
-  --border: #313844;
-  --code-bg: #181d24;
-  --shadow-soft: 0 6px 20px rgba(0, 0, 0, 0.35);
-  --shadow-card: 0 6px 24px rgba(0, 0, 0, 0.4);
-  --accent-ink: var(--accent-ink-dark);
-  --accent-hover: #f2b2a7;
-  --accent-tint: rgba(228, 73, 38, 0.2);
-  --accent-band: rgba(228, 73, 38, 0.25);
+html[data-albers-theme="dark"] body:not(.preset-midnight),
+html[data-bs-theme="dark"] body:not(.preset-midnight) {
+  --bg: #13110e;
+  --surface: #1b1814;
+  --surface-strong: #221e19;
+  --ink: #ece5d6;
+  --muted: #aaa190;
+  --border: #37312a;
+  --code-bg: #12100d;
+  --code-fg: #e4dccb;
+  --code-border: #37312a;
+  --code-out: #bdb4a2;
+  --tok-fun: var(--code-fun-warm);
+  --tok-str: var(--code-str-warm);
+  --tok-num: var(--code-num-warm);
+  --tok-com: #9c937f;
+  --tok-kw: #f4ede0;
+  --tok-arg: #c9c0ae;
+  --warn: #f0b429;
+  --danger: #ff8a73;
+  --sq-outer: var(--comp);
+  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --shadow-card: 0 10px 34px rgba(0, 0, 0, 0.4);
+}
+
+html[data-albers-theme="dark"]:has(body.preset-interaction),
+html[data-bs-theme="dark"]:has(body.preset-interaction) { --bg: #0d0f13; }
+
+html[data-albers-theme="dark"] body.preset-interaction,
+html[data-bs-theme="dark"] body.preset-interaction {
+  --bg: #0d0f13;
+  --surface: #14171c;
+  --surface-strong: #1a1e24;
+  --ink: #e6e8ec;
+  --muted: #9aa3b2;
+  --border: #292e37;
+  --code-bg: color-mix(in oklab, var(--A900) 18%, #07080b);
+  --code-fg: #d3d8e1;
+  --code-border: #292e37;
+  --code-out: #aab3c2;
+  --tok-fun: var(--A300);
+  --tok-str: var(--code-str-light);
+  --tok-num: var(--code-num-light);
+  --tok-com: #8d96a6;
+  --tok-kw: #f3f4f6;
+  --tok-arg: #b4bccb;
+  --sq-outer: var(--comp);
 }
 
 /* ALBERS_TOKENS_DARK_FAMILIES_START */
-body[data-bs-theme="dark"].palette-red,
-[data-bs-theme="dark"] body.palette-red {
-  --accent-ink: #FFB8A9;
-  --accent-hover: #FFD2C7;
-  --accent-tint: rgba(228, 73, 38, 0.24);
-  --accent-band: rgba(228, 73, 38, 0.30);
+html:has(body.preset-midnight.palette-red) { --bg: #1e0d0e; }
+html[data-albers-theme="dark"] body.palette-red,
+html[data-bs-theme="dark"] body.palette-red,
+body.preset-midnight.palette-red {
+  --accent-ink: #F7A885;
+  --accent-hover: #FACBB6;
+  --accent-tint: rgba(215, 74, 33, 0.18);
+  --accent-band: rgba(215, 74, 33, 0.26);
 }
 
-body[data-bs-theme="dark"].palette-lapis,
-[data-bs-theme="dark"] body.palette-lapis {
-  --accent-ink: #AAB9FF;
-  --accent-hover: #C6D0FF;
-  --accent-tint: rgba(73, 104, 214, 0.24);
-  --accent-band: rgba(73, 104, 214, 0.30);
+html:has(body.preset-midnight.palette-lapis) { --bg: #0c1223; }
+html[data-albers-theme="dark"] body.palette-lapis,
+html[data-bs-theme="dark"] body.palette-lapis,
+body.preset-midnight.palette-lapis {
+  --accent-ink: #A2BEF5;
+  --accent-hover: #C7D8F9;
+  --accent-tint: rgba(80, 122, 223, 0.18);
+  --accent-band: rgba(80, 122, 223, 0.26);
 }
 
-body[data-bs-theme="dark"].palette-ochre,
-[data-bs-theme="dark"] body.palette-ochre {
-  --accent-ink: #FFD46E;
-  --accent-hover: #FFE4A7;
-  --accent-tint: rgba(180, 137, 0, 0.24);
-  --accent-band: rgba(180, 137, 0, 0.31);
+html:has(body.preset-midnight.palette-ochre) { --bg: #15120e; }
+html[data-albers-theme="dark"] body.palette-ochre,
+html[data-bs-theme="dark"] body.palette-ochre,
+body.preset-midnight.palette-ochre {
+  --accent-ink: #DEB95C;
+  --accent-hover: #EBD59D;
+  --accent-tint: rgba(164, 120, 7, 0.18);
+  --accent-band: rgba(164, 120, 7, 0.26);
 }
 
-body[data-bs-theme="dark"].palette-teal,
-[data-bs-theme="dark"] body.palette-teal {
-  --accent-ink: #9BDCD9;
-  --accent-hover: #B8E8E5;
-  --accent-tint: rgba(47, 140, 140, 0.24);
-  --accent-band: rgba(47, 140, 140, 0.30);
+html:has(body.preset-midnight.palette-teal) { --bg: #0a1418; }
+html[data-albers-theme="dark"] body.palette-teal,
+html[data-bs-theme="dark"] body.palette-teal,
+body.preset-midnight.palette-teal {
+  --accent-ink: #8DCCC5;
+  --accent-hover: #BBE0DC;
+  --accent-tint: rgba(46, 145, 140, 0.18);
+  --accent-band: rgba(46, 145, 140, 0.26);
 }
 
-body[data-bs-theme="dark"].palette-green,
-[data-bs-theme="dark"] body.palette-green {
-  --accent-ink: #AFE7B1;
-  --accent-hover: #CAF0CB;
-  --accent-tint: rgba(102, 187, 106, 0.24);
-  --accent-band: rgba(102, 187, 106, 0.30);
+html:has(body.preset-midnight.palette-green) { --bg: #0d1512; }
+html[data-albers-theme="dark"] body.palette-green,
+html[data-bs-theme="dark"] body.palette-green,
+body.preset-midnight.palette-green {
+  --accent-ink: #AEC98E;
+  --accent-hover: #CEDFBB;
+  --accent-tint: rgba(94, 144, 77, 0.18);
+  --accent-band: rgba(94, 144, 77, 0.26);
 }
 
-body[data-bs-theme="dark"].palette-violet,
-[data-bs-theme="dark"] body.palette-violet {
-  --accent-ink: #DFB3EC;
-  --accent-hover: #ECCFF4;
-  --accent-tint: rgba(186, 104, 200, 0.24);
-  --accent-band: rgba(186, 104, 200, 0.31);
-}
-
-@media (prefers-color-scheme: dark) {
-  body.palette-red {
-    --accent-ink: #FFB8A9;
-    --accent-hover: #FFD2C7;
-    --accent-tint: rgba(228, 73, 38, 0.24);
-    --accent-band: rgba(228, 73, 38, 0.30);
-  }
-
-  body.palette-lapis {
-    --accent-ink: #AAB9FF;
-    --accent-hover: #C6D0FF;
-    --accent-tint: rgba(73, 104, 214, 0.24);
-    --accent-band: rgba(73, 104, 214, 0.30);
-  }
-
-  body.palette-ochre {
-    --accent-ink: #FFD46E;
-    --accent-hover: #FFE4A7;
-    --accent-tint: rgba(180, 137, 0, 0.24);
-    --accent-band: rgba(180, 137, 0, 0.31);
-  }
-
-  body.palette-teal {
-    --accent-ink: #9BDCD9;
-    --accent-hover: #B8E8E5;
-    --accent-tint: rgba(47, 140, 140, 0.24);
-    --accent-band: rgba(47, 140, 140, 0.30);
-  }
-
-  body.palette-green {
-    --accent-ink: #AFE7B1;
-    --accent-hover: #CAF0CB;
-    --accent-tint: rgba(102, 187, 106, 0.24);
-    --accent-band: rgba(102, 187, 106, 0.30);
-  }
-
-  body.palette-violet {
-    --accent-ink: #DFB3EC;
-    --accent-hover: #ECCFF4;
-    --accent-tint: rgba(186, 104, 200, 0.24);
-    --accent-band: rgba(186, 104, 200, 0.31);
-  }
+html:has(body.preset-midnight.palette-violet) { --bg: #15101d; }
+html[data-albers-theme="dark"] body.palette-violet,
+html[data-bs-theme="dark"] body.palette-violet,
+body.preset-midnight.palette-violet {
+  --accent-ink: #CAB2E1;
+  --accent-hover: #DFD1ED;
+  --accent-tint: rgba(149, 108, 179, 0.18);
+  --accent-band: rgba(149, 108, 179, 0.26);
 }
 /* ALBERS_TOKENS_DARK_FAMILIES_END */
 
+html[data-albers-theme="dark"] .albers-plate-mark { filter: brightness(0.86) saturate(0.92); }
+html[data-albers-theme="dark"] body.preset-interaction pre { border-color: #2c323c; }
+/* JetBrains Mono is wider than Spline Sans Mono: at 13px it fits the same 67
+   output columns (plus the prompt) in interaction's narrower text column */
+body.preset-interaction pre { font-size: calc(0.8rem * 13 / 14); }
+
+/* Semantic colours step away from a family whose accent they would echo:
+   the red family's danger is raspberry, the ochre family's caution is burnt
+   orange (each ~35-40 degrees of hue from the accent). */
+body.palette-red { --danger: #9a1d63; }
+body.palette-ochre { --warn: #9c470d; }
+body.preset-interaction.palette-red { --code-err: #f18db5; }
+body.preset-interaction.palette-ochre { --code-warn: #f2a26a; }
+html[data-albers-theme="dark"] body.palette-red:not(.preset-midnight),
+html[data-bs-theme="dark"] body.palette-red:not(.preset-midnight) { --danger: #f18db5; }
+html[data-albers-theme="dark"] body.palette-ochre:not(.preset-midnight),
+html[data-bs-theme="dark"] body.palette-ochre:not(.preset-midnight) { --warn: #f2a26a; }
+
+/* In dark mode the dark-ink family tones drive the marker so it stays luminous. */
+html[data-albers-theme="dark"] body,
+html[data-bs-theme="dark"] body {
+  --sq-core: var(--A300);
+  --sq-mid: var(--A500);
+}
+
 /* -- Base typography & layout -------------------------------------------- */
-:root { scrollbar-gutter: stable both-edges; }
+:root { scrollbar-gutter: stable; }
+
+html {
+  background-color: var(--bg);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
 
 html,
 body {
-  background-color: var(--bg);
   color: var(--ink);
   font-family: var(--font-body);
-  font-size: 17.5px;
-  line-height: 1.58;
-  letter-spacing: 0.01em;
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-kerning: normal;
+  font-optical-sizing: auto;
 }
+
+body { background-color: var(--bg); }
 
 /* The direction/preset classes live on <body>, but <html> paints any page area
    the body box doesn't cover (below a short body, or the gutter beside a
    constrained vignette card). <html> can't inherit the body's class, so mirror
-   each non-default ground onto it -- otherwise a non-Homage page falls back to
-   the Homage cream where the body doesn't reach. Homage is the :root default. */
-html:has(body.preset-interaction) { --bg: #f1f2f4; }
+   each non-default ground onto it. Homage is the :root default. */
+html:has(body.preset-interaction) { --bg: #eceef1; }
 html:has(body.preset-study) { --bg: #f7f9fb; }
 html:has(body.preset-structural) { --bg: #e6e9ed; }
 html:has(body.preset-adobe) { --bg: #ece9e7; }
-html:has(body.preset-midnight) { --bg: #0d1117; }
+html:has(body.preset-midnight) { --bg: color-mix(in oklab, var(--A900) 22%, #07080c); color-scheme: dark; }
+
+::selection { background: color-mix(in srgb, var(--A500) 26%, transparent); }
+
+/* albers.js holds a vignette's first paint until its theme classes are set */
+html.albers-loading body { opacity: 0; }
+/* (no fade in: its first frame was still transparent, so the page first
+   showed after whatever long task came next) */
+
+.albers-skip {
+  position: fixed;
+  left: 0.75rem;
+  top: 0.75rem;
+  transform: translateY(-200%);
+  z-index: 1050;
+  padding: 0.45rem 0.8rem;
+  background: var(--ink);
+  color: var(--surface) !important;
+  font: 600 0.85rem/1 var(--font-ui);
+  text-decoration: none !important;
+}
+.albers-skip:focus { transform: none; }
+[id="albers-content"]:focus,
+.albers-skip-target:focus { outline: none; }
+
+/* pkgdown / Bootstrap focus: the accent ring, not Bootstrap's pale glow */
+.btn:focus-visible,
+.form-control:focus-visible,
+.nav-link:focus-visible,
+.navbar-brand:focus-visible,
+.dropdown-item:focus-visible {
+  outline: 2px solid var(--accent-ink) !important;
+  outline-offset: 2px;
+  box-shadow: none !important;
+}
 
 /* -- Albers calibration: strict orthogonal UI ----------------------------- */
 .navbar .nav-link,
@@ -481,349 +691,1097 @@ blockquote,
 aside,
 .dropdown-menu,
 .popover,
-.page-content,
-.article,
-.reference,
-.template-home,
 .page-header {
   border-radius: 0 !important;
 }
 
-main,
-.content,
-.page-content,
-.vignette,
-.contents {
-  max-width: var(--content);
-  margin-inline: auto;
-  padding-inline: clamp(16px, 2.4vw, 34px);
-}
-
 /* -- html_vignette (CRAN) layout ----------------------------------------- *
  * rmarkdown::html_vignette renders content directly inside <body>, with a
- * top-level <div id="TOC"> and no .contents / .page-content / .main-container
- * wrapper. pkgdown wraps article content in .contents and uses a lowercase
- * #toc, so the rules above never matched the vignette DOM -- on CRAN the text
- * ran full-bleed and the TOC was an unstyled list at the top. The rules below
- * are scoped to the vignette DOM only: a <body> that has a direct-child #TOC
- * (or the optional .albers-vignette marker class). They are inert on the
- * pkgdown site, whose <body> has no direct #TOC child.
+ * top-level <div id="TOC"> and no wrapper. The rules below are scoped to that
+ * DOM only: a <body> with a direct-child #TOC or h1.title (or the optional
+ * .albers-vignette marker class). They are inert on pkgdown, whose <body> has
+ * neither. :where() keeps their specificity low.
  * --------------------------------------------------------------------------- */
-body.albers-vignette,
-body:has(> #TOC) {
+body:where(.albers-vignette, :has(> #TOC), :has(> h1.title)) {
   box-sizing: border-box;
   max-width: calc(var(--content) + 2 * var(--vig-pad-inline));
-  margin-inline: auto;
-  padding: var(--vig-pad-block) var(--vig-pad-inline);
+  margin: clamp(0px, 3vw, 2.5rem) auto;
+  padding: var(--vig-pad-block) var(--vig-pad-inline) calc(var(--vig-pad-block) * 1.4);
   background: var(--surface);
   border: var(--rule-thin) solid var(--border);
   box-shadow: var(--shadow-soft);
   position: relative;
 }
 
-/* Albers ribbon down the inner edge, echoing .page-content */
-body.albers-vignette::before,
-body:has(> #TOC)::before {
+/* A band of the family ramp across the top edge of the sheet */
+body:where(.albers-vignette, :has(> #TOC), :has(> h1.title))::before {
   content: "";
   position: absolute;
-  inset-block: 0;
-  inset-inline-start: 0;
-  width: var(--rule-strong);
-  background: var(--A500);
-  opacity: var(--ribbon-opacity);
+  inset-inline: calc(-1 * var(--rule-thin));
+  top: calc(-1 * var(--rule-thin));
+  height: 5px;
+  background: linear-gradient(90deg,
+    var(--A900) 0 25%, var(--A700) 25% 50%, var(--A500) 50% 75%, var(--sq-outer) 75% 100%);
   pointer-events: none;
 }
 
-body.albers-vignette > h1.title,
-body:has(> #TOC) > h1.title {
-  margin-top: 0;
+/* Title block */
+body:where(.albers-vignette, :has(> #TOC), :has(> h1.title)) > h1.title,
+.albers-titleblock h1.title {
+  margin: 0.4rem 0 0;
+  max-width: 30ch;
+  text-wrap: balance;
 }
 
-/* TOC as an Albers surface card (used in both 1- and 2-column modes) */
-body.albers-vignette > #TOC,
-body:has(> #TOC) > #TOC {
-  background: var(--surface-strong);
-  border: var(--rule-thin) solid var(--border);
-  border-left: var(--rule-strong) solid var(--A500);
-  padding: var(--space-4) var(--space-4) var(--space-4) var(--space-5);
-  margin-block: var(--space-5) var(--space-6);
-  font-size: 0.92em;
-  line-height: 1.4;
+h3.subtitle,
+p.subtitle {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 1.32rem;
+  font-weight: 400;
+  font-style: italic;
+  line-height: 1.35;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--muted);
+  margin: 0.45em 0 0;
+  padding: 0;
+  border: 0;
+  max-width: 44ch;
 }
 
-body.albers-vignette > #TOC ul,
-body:has(> #TOC) > #TOC ul {
+.preset-interaction h3.subtitle,
+.preset-interaction p.subtitle {
+  font-style: normal;
+  font-size: 1.18rem;
+  font-weight: 500;
+  color: var(--A700);
+}
+html[data-albers-theme="dark"] .preset-interaction :is(h3.subtitle, p.subtitle) { color: var(--A300); }
+/* interaction's tables set figures in the display grotesk, tabular */
+body.preset-interaction :is(td, th) { font-family: var(--font-display); font-variant-numeric: tabular-nums lining-nums; }
+/* pkgdown hyphenates prose on phones (em-/phasis); the vignette doesn't */
+main#main :is(p, li, dd) { hyphens: manual; }
+
+h3.subtitle::before,
+p.subtitle::before { content: none; }
+
+h4.author,
+h4.date,
+p.author,
+p.date {
+  display: inline-block;
+  font: 500 0.9rem/1.4 var(--font-ui);
+  font-style: normal;
+  letter-spacing: 0.005em;
+  text-transform: none;
+  color: var(--muted);
+  margin: 1.1rem 1.6rem 0 0;
+}
+
+.albers-byline p.author { color: var(--ink); }
+
+/* When albers.js has gathered the title block, it lays it out as a unit. */
+.albers-titleblock {
+  position: relative;
+  padding-bottom: 1.6rem;
+  margin-bottom: 2.2rem;
+  border-bottom: var(--rule-thin) solid var(--border);
+}
+
+/* Title plate: a "Homage to the Square" in the family's colours. Four nested
+   squares at 100/80/60/40% whose centres drop toward the base -- each inner
+   square's top margin is three times its bottom margin, as in Albers's panels. */
+.albers-plate-mark {
+  --plate: clamp(5.5rem, 11vw, 8.25rem);
+  width: var(--plate);
+  height: var(--plate);
+  flex: none;
+  background:
+    linear-gradient(var(--plate-4), var(--plate-4)) 50% 75% / 40% 40% no-repeat,
+    linear-gradient(var(--plate-3), var(--plate-3)) 50% 75% / 60% 60% no-repeat,
+    linear-gradient(var(--plate-2), var(--plate-2)) 50% 75% / 80% 80% no-repeat,
+    var(--plate-1);
+}
+
+.albers-titleblock .albers-plate-mark {
+  position: absolute;
+  right: 0;
+  top: 0.55rem;
+}
+
+.template-article main#main > .page-header,
+.template-home main#main .page-header { position: relative; padding-bottom: 1.6rem; margin-bottom: 2.2rem; }
+.template-article main#main > .page-header .albers-plate-mark,
+.template-home main#main .page-header .albers-plate-mark { top: 0.3rem; }
+/* the home page header is short: a smaller plate, and the rule spans the column */
+.template-home main#main .page-header { min-height: 6.5rem; max-width: none !important; }
+.template-home main#main .page-header .albers-plate-mark { --plate: 5.5rem; top: 0; }
+/* The site's article column is narrower than the vignette's: a smaller plate
+   leaves a two-line title room beside it, and between phone and desktop widths
+   the plate heads the title block instead, as on a phone. */
+.template-article main#main > .page-header { --site-plate: clamp(5.5rem, 7.5vw, 7rem); }
+.template-article main#main > .page-header .albers-plate-mark { --plate: var(--site-plate); }
+.template-article main#main > .page-header.albers-titleblock:has(.albers-plate-mark) { min-height: calc(var(--site-plate) + 1.9rem); }
+@media (min-width: 992px) {
+  .template-article main#main > .page-header > :is(h1, .subtitle) { margin-right: calc(var(--site-plate) + 1.5rem); }
+}
+@media (min-width: 621px) and (max-width: 991.98px) {
+  .template-article main#main > .page-header.albers-titleblock:has(.albers-plate-mark) { min-height: 0; padding-top: calc(3.5rem + 1.1rem); }
+  .template-article main#main > .page-header .albers-plate-mark { --plate: 3.5rem; top: 0; left: 0; right: auto; }
+}
+@media (min-width: 621px) {
+  .template-home main#main .page-header > h1 { margin-right: 7rem; }
+}
+
+.albers-titleblock:not(.albers-titleblock--site):has(.albers-plate-mark) > :not(.albers-plate-mark) {
+  margin-right: calc(clamp(5.5rem, 11vw, 8.25rem) + 1.5rem);
+}
+
+@media (max-width: 620px) {
+  .albers-titleblock { display: flex; flex-direction: column; }
+  .albers-titleblock .albers-plate-mark { --plate: 3.5rem; position: static; order: -1; margin-bottom: 1.1rem; }
+  .albers-titleblock:has(.albers-plate-mark) > :not(.albers-plate-mark) { margin-right: 0; }
+  h3.subtitle, p.subtitle { max-width: none; }
+
+}
+
+.albers-byline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1.6rem;
+  margin-top: 1.25rem;
+}
+
+.albers-byline > * { margin: 0 !important; }
+
+/* Contents: a quiet margin index with a rail, not a boxed card */
+body:where(.albers-vignette, :has(> #TOC), :has(> h1.title)) > #TOC {
+  margin-block: 0 var(--space-6);
+  font: 400 0.84rem/1.4 var(--font-ui);
+}
+
+#TOC::before {
+  content: "Contents";
+  display: block;
+  font: 600 0.68rem/1 var(--font-ui);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.9rem;
+}
+
+#TOC ul {
   list-style: none;
   margin: 0;
   padding-left: 0;
 }
 
-body.albers-vignette > #TOC ul ul,
-body:has(> #TOC) > #TOC ul ul {
-  padding-left: 0.95em;
-  margin-top: 0.18rem;
+#TOC > ul {
+  border-left: var(--rule-thin) solid var(--border);
 }
 
-body.albers-vignette > #TOC li,
-body:has(> #TOC) > #TOC li {
+#TOC ul ul {
+  margin: 0.1rem 0 0.35rem;
+}
+
+#TOC li {
+  margin: 0;
+  padding: 0;
+}
+
+#TOC li::before { content: none; }
+
+#TOC a {
+  display: block;
   position: relative;
-  margin: 0.2rem 0;
-  padding-left: 0.95em;
-}
-
-body.albers-vignette > #TOC li::before,
-body:has(> #TOC) > #TOC li::before {
-  content: "–";
-  position: absolute;
-  left: 0;
-  top: 0;
-  color: var(--A500);
-  opacity: var(--subdash-opacity);
-}
-
-body.albers-vignette > #TOC a,
-body:has(> #TOC) > #TOC a {
+  min-height: 24px;
+  padding: 0.28rem 0 0.28rem 0.95rem;
   color: var(--muted) !important;
   text-decoration: none !important;
-  border-bottom: none !important;
+  border: 0 !important;
+  transition: color 0.15s ease;
 }
 
-body.albers-vignette > #TOC a:hover,
-body.albers-vignette > #TOC a:focus-visible,
-body:has(> #TOC) > #TOC a:hover,
-body:has(> #TOC) > #TOC a:focus-visible {
-  color: var(--accent-ink) !important;
+#TOC ul ul a {
+  padding-left: 1.75rem;
+  font-size: 0.94em;
 }
 
-/* Two-column layout with a sticky sidebar on wide viewports. The flat
- * html_vignette DOM (title, #TOC, and section divs are all siblings of
- * <body>) is laid out as a grid: the title spans both columns, the TOC
- * occupies the left column and spans the section rows so it can stick. */
-@media (min-width: 1080px) {
-  body.albers-vignette,
-  body:has(> #TOC) {
+#TOC a:hover,
+#TOC a:focus-visible {
+  color: var(--ink) !important;
+}
+
+#TOC a:focus-visible,
+#toc a:focus-visible { outline-offset: -2px; }
+
+#TOC a.is-active {
+  color: var(--ink) !important;
+  font-weight: 600;
+}
+
+#TOC a.is-active::before {
+  content: "";
+  position: absolute;
+  left: calc(-1 * var(--rule-thin) - 1px);
+  top: 0.3rem;
+  bottom: 0.3rem;
+  width: 3px;
+  background: var(--A500);
+}
+
+/* Collapsible contents on narrow screens (albers.js adds the toggle) */
+.albers-toc-toggle {
+  display: none;
+}
+
+/* Two-column layout with a sticky index on wide viewports. The flat
+ * html_vignette DOM (title, #TOC, and sections are siblings of <body>) is
+ * laid out as a grid: the title block spans both columns and the TOC spans
+ * the section rows so it can stick. */
+@media (min-width: 1100px) {
+  body:where(.albers-vignette, :has(> #TOC)) {
     max-width: calc(
       var(--content) + var(--vig-toc-width) + var(--vig-gap) +
         2 * var(--vig-pad-inline)
     );
     display: grid;
-    grid-template-columns: [toc] var(--vig-toc-width) [main] minmax(0, 1fr);
+    grid-template-columns: [toc] var(--vig-toc-width) [main] minmax(0, var(--content));
     column-gap: var(--vig-gap);
     align-items: start;
   }
 
-  body.albers-vignette > *,
-  body:has(> #TOC) > * {
+  body:where(.albers-vignette, :has(> #TOC)) > * {
     grid-column: main;
     min-width: 0;
   }
 
-  body.albers-vignette > h1.title,
-  body:has(> #TOC) > h1.title {
+  body:where(.albers-vignette, :has(> #TOC)) > :is(h1.title, h3.subtitle, h4.author, h4.date, .albers-titleblock) {
     grid-column: toc / -1;
   }
 
-  body.albers-vignette > #TOC,
-  body:has(> #TOC) > #TOC {
+  body:where(.albers-vignette, :has(> #TOC)) > #TOC {
     grid-column: toc;
-    grid-row: 2 / span 200;
+    grid-row: span 400;
     align-self: start;
     position: sticky;
-    top: var(--vig-pad-block);
-    max-height: calc(100vh - 2 * var(--vig-pad-block));
+    top: 2rem;
+    max-height: calc(100vh - 4rem);
     overflow-y: auto;
-    margin-block: 0;
+    margin-block: 0.35rem 0;
+    scrollbar-width: thin;
   }
 }
 
-/* Edge-to-edge on phones: drop the card chrome */
+body:where(.albers-vignette, :has(> #TOC)) :is(.section[id], h2[id], h3[id], [id^="fn"]) { scroll-margin-top: 1.5rem; }
+
+@media (max-width: 1099.98px) {
+  body:where(.albers-vignette, :has(> #TOC)) :is(.section[id], h2[id], h3[id], [id^="fn"]) { scroll-margin-top: 5.5rem; }
+
+  body:where(.albers-vignette, :has(> #TOC)) > #TOC {
+    border-block: var(--rule-thin) solid var(--border);
+    padding-block: 0.9rem;
+  }
+  .albers-titleblock { margin-bottom: 0; }
+  .albers-titleblock + #TOC { border-top: 0; }
+  #TOC > ul { border-left: 0; }
+  #TOC a { padding-left: 0; }
+  #TOC ul ul a { padding-left: 1rem; }
+  #TOC a.is-active::before { display: none; }
+
+  /* sticky only once albers.js has made it a collapsible bar: without the
+     script, a full contents list must not ride over the text */
+  body:where(.albers-vignette, :has(> #TOC)) > #TOC.has-toggle {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: var(--surface);
+    max-height: 75vh;
+    overflow-y: auto;
+  }
+
+  .albers-toc-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 44px;
+    background: none;
+    border: 0;
+    padding: 0;
+    color: var(--ink);
+    font: 600 0.72rem/1 var(--font-ui);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .albers-toc-toggle::after {
+    content: "+";
+    font: 400 1.1rem/1 var(--font-mono);
+    color: var(--muted);
+  }
+  #TOC.is-open .albers-toc-toggle::after { content: "\2212"; }
+  #TOC.has-toggle::before { display: none; }
+  #TOC.has-toggle > ul { display: none; margin-top: 0.8rem; }
+  #TOC.has-toggle.is-open > ul { display: block; }
+}
+/* a short screen (a phone in landscape, 400% zoom) can't spare the bar */
+@media (max-width: 1099.98px) and (max-height: 480px) {
+  body:where(.albers-vignette, :has(> #TOC)) > #TOC.has-toggle { position: static; max-height: none; }
+}
+
+/* Sidenotes: a third, marginal column on wide screens (albers.js clones each
+   footnote beside its reference). Hidden elsewhere; the numbered list at the
+   end of the page is the canonical copy. */
+.albers-sidenote { display: none; }
+
+@media (min-width: 1360px) {
+  body:where(.albers-vignette, :has(> #TOC)) {
+    --vig-side: 13rem;
+    max-width: calc(
+      var(--content) + var(--vig-toc-width) + var(--vig-side) + 2 * var(--vig-gap) +
+        2 * var(--vig-pad-inline)
+    );
+    grid-template-columns: [toc] var(--vig-toc-width) [main] minmax(0, var(--content)) [side] var(--vig-side);
+  }
+
+  body:where(.albers-vignette, :has(> #TOC)) > :is(h1.title, h3.subtitle, h4.author, h4.date, .albers-titleblock) {
+    grid-column: toc / -1;
+  }
+
+  /* One wide track, opt-in: wrap content in ::: {.wide} (or give a chunk
+     class.source / class.output "wide") to use the margin column as well. */
+  body:where(.albers-vignette, :has(> #TOC)) :is(.wide, .fullwidth, div.sourceCode.wide, pre.wide) {
+    margin-right: calc(-1 * (var(--vig-side) + var(--vig-gap)));
+  }
+  body:where(.albers-vignette, :has(> #TOC)) :is(.wide, .fullwidth) > :is(pre, .figure, figure, .albers-table-scroll, table) {
+    margin-right: 0;
+    max-width: none;
+  }
+  body:where(.albers-vignette, :has(> #TOC)) div.sourceCode.wide > pre { margin-right: 0; }
+  body:where(.albers-vignette, :has(> #TOC)) :is(.wide, .fullwidth) > div.sourceCode:not(.wide) {
+    margin-right: calc(var(--vig-side) + var(--vig-gap));
+  }
+
+  .albers-sidenote {
+    display: block;
+    float: right;
+    clear: right;
+    position: relative;
+    width: var(--vig-side);
+    margin: 0.2rem calc(-1 * (var(--vig-side) + var(--vig-gap))) 0.8rem 0;
+    font: 400 0.8rem/1.45 var(--font-body);
+    font-style: normal;
+    color: var(--muted);
+    text-align: left;
+    text-indent: 0;
+  }
+
+  .albers-sidenote__num {
+    font: 600 0.72rem/1 var(--font-ui);
+    color: var(--accent-ink);
+    margin-right: 0.4em;
+  }
+
+  .albers-sidenote__p { display: inline; }
+  .albers-sidenote.is-flash { animation: albers-flash 1.4s ease-out; }
+  @keyframes albers-flash {
+    0%, 30% { background: color-mix(in srgb, var(--A500) 16%, transparent); box-shadow: -0.5rem 0 0 color-mix(in srgb, var(--A500) 16%, transparent); }
+    100% { background: transparent; box-shadow: none; }
+  }
+  .albers-sidenote__p + .albers-sidenote__p::before { content: " "; }
+
+  body:where(.albers-vignette, :has(> #TOC)) :is(.wide, .fullwidth, div.sourceCode.wide, pre.wide, .figure, figure) { clear: right; }
+
+  /* the margin notes are the visible copy; the list stays in the
+     accessibility tree (and as the target of the note links) */
+  body.albers-has-sidenotes > .footnotes {
+    position: absolute !important;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+@media print {
+  .albers-sidenote { display: none !important; }
+}
+
+/* Colophon (albers.js): the page's swatches and faces */
+.albers-colophon {
+  grid-column: main;
+  margin-top: 4rem;
+  padding-top: 0;
+  border-top: 0;
+  font: 400 0.82rem/1.5 var(--font-ui);
+  color: var(--muted);
+}
+
+.albers-colophon p { margin: 0.9rem 0 0; max-width: 60ch; }
+
+.albers-colophon__swatches {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  height: 2.6rem;
+  max-width: 26rem;
+}
+
+.albers-colophon__swatch {
+  position: relative;
+  display: block;
+}
+
+.albers-colophon__swatch > span {
+  position: absolute;
+  left: 0.4rem;
+  bottom: 0.3rem;
+  font: 500 0.64rem/1 var(--font-mono);
+  color: #fff;
+  mix-blend-mode: normal;
+  opacity: 0.85;
+}
+
+.albers-colophon__swatch:nth-child(n+3) > span { color: #1f1b16; opacity: 0.9; }
+
+@media print { .albers-colophon { display: none; } }
+
+/* Edge-to-edge on phones: drop the sheet chrome */
 @media (max-width: 620px) {
-  body.albers-vignette,
-  body:has(> #TOC) {
+  body:where(.albers-vignette, :has(> #TOC), :has(> h1.title)) {
+    margin: 0;
     border: none;
     box-shadow: none;
     padding-inline: 18px;
+    padding-top: 2rem;
   }
-  body.albers-vignette::before,
-  body:has(> #TOC)::before {
-    display: none;
-  }
+  body:where(.albers-vignette, :has(> #TOC), :has(> h1.title))::before { inset-inline: 0; top: 0; }
 }
 
-/* -- Surfaces ------------------------------------------------------------ */
-.page-content,
-.article,
-.reference,
-.template-home {
+/* Reading progress (albers.js) */
+.albers-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 100%;
+  transform-origin: 0 50%;
+  transform: scaleX(var(--albers-progress, 0));
+  background: var(--A500);
+  z-index: 1040;
+  pointer-events: none;
+}
+
+/* Theme switch (albers.js) */
+.albers-theme-toggle {
+  position: absolute;
+  top: calc(var(--vig-pad-block) * 0.55);
+  right: calc(var(--vig-pad-inline) * 0.6);
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: transparent;
+  border: var(--rule-thin) solid transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.albers-theme-toggle:hover { border-color: var(--border); color: var(--ink); }
+
+.albers-theme-toggle svg { width: 1.05rem; height: 1.05rem; display: block; }
+
+.albers-theme-toggle.is-inline {
+  position: static;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin: -0.25rem -0.35rem 0 auto !important;
+  border-color: transparent;
+}
+
+/* With a plate, the control sits directly beneath it, right-aligned. */
+.albers-titleblock:has(.albers-plate-mark) { min-height: calc(clamp(5.5rem, 11vw, 8.25rem) + 1.6rem); }
+.albers-titleblock:has(.albers-plate-mark) .albers-theme-toggle.is-inline {
+  position: absolute;
+  right: 0;
+  top: auto;
+  bottom: calc(-0.875rem - 0.5px);
+  margin: 0 !important;
+  background: var(--surface);
+  border-color: var(--border);
+  z-index: 35; /* above the phone contents bar (z-index 30) */
+}
+/* A title with no subtitle or byline gets a smaller plate, so a one-line title
+   isn't followed by a band of empty paper the height of the plate. */
+.albers-titleblock:not(:has(.subtitle, .albers-byline > :not(.albers-theme-toggle))) .albers-plate-mark { --plate: clamp(4.25rem, 7.5vw, 5.5rem); }
+.albers-titleblock:not(:has(.subtitle, .albers-byline > :not(.albers-theme-toggle))):has(.albers-plate-mark) { min-height: calc(clamp(4.25rem, 7.5vw, 5.5rem) + 1.6rem); }
+@media (max-width: 620px) {
+  .albers-titleblock:has(.albers-plate-mark) { min-height: 0; }
+  .albers-titleblock:has(.albers-plate-mark) .albers-theme-toggle.is-inline { top: 0.8rem; right: -0.3rem; }
+}
+
+.albers-theme-toggle.is-inline svg { width: 1rem; height: 1rem; }
+
+.albers-titleblock:not(.albers-titleblock--site):has(.albers-plate-mark) > .albers-byline.albers-byline { margin-right: 0; align-items: center; }
+
+.navbar .albers-theme-toggle {
+  position: static;
+  margin-left: auto;
+  margin-right: 0.5rem;
+  order: 2;
+}
+@media (min-width: 992px) {
+  .navbar .albers-theme-toggle { order: 3; margin-right: 0; margin-left: 0.75rem; }
+}
+/* the phone menu button matches the square theme control beside it */
+/* equal squares; display is left to Bootstrap, which hides the menu button
+   on wide screens */
+.navbar .navbar-toggler,
+.navbar .albers-theme-toggle {
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+}
+.navbar .albers-theme-toggle { display: grid; place-items: center; }
+.navbar .navbar-toggler {
+  border-radius: 0;
+  border: var(--rule-thin) solid var(--border);
+  box-shadow: none;
+}
+.navbar .navbar-toggler-icon { width: 1.25rem; height: 1.25rem; }
+.navbar .navbar-toggler:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; box-shadow: none; }
+
+/* -- pkgdown shell -------------------------------------------------------- */
+/* One paper model everywhere: the main column is a sheet on the ground, the
+   sidebar sits on the ground beside it. */
+body > .container,
+body > div.container {
+  --bs-gutter-x: 2.5rem;
+}
+
+main#main {
   position: relative;
   background: var(--surface);
   border: var(--rule-thin) solid var(--border);
   box-shadow: var(--shadow-soft);
+  --albers-card-pad: clamp(1.1rem, 3vw, 3rem);
+  padding: clamp(1.4rem, 3vw, 2.9rem) var(--albers-card-pad) clamp(2rem, 4vw, 3.5rem);
+  /* pkgdown's navbar is fixed-top and 56px tall; clear it, then breathe. */
+  margin-block: calc(56px + 1.75rem) 3rem;
 }
 
-.page-content::before,
-.article::before,
-.reference::before,
-.template-home::before {
+main#main::before {
   content: "";
   position: absolute;
+  inset-inline: calc(-1 * var(--rule-thin));
   top: calc(-1 * var(--rule-thin));
-  bottom: calc(-1 * var(--rule-thin));
-  left: calc(-1 * var(--rule-thin));
-  width: var(--rule-strong);
-  background: var(--A500);
-  opacity: var(--ribbon-opacity);
+  height: 4px;
+  background: linear-gradient(90deg,
+    var(--A900) 0 25%, var(--A700) 25% 50%, var(--A500) 50% 75%, var(--sq-outer) 75% 100%);
   pointer-events: none;
 }
 
-.page-header,
-.template-home .page-header {
-  background: var(--surface-strong);
-  border-top: var(--rule-thin) solid var(--border);
+/* Two edges on the sheet: the text measure and the full column. The measure
+   is resolved once, in main's body type (a registered length computes to px
+   and is inherited as such), so a callout or blockquote in a smaller or larger
+   size still ends where the paragraphs end. Code, tables and figures use the
+   column. */
+main#main { --albers-measure: var(--content); }
+main#main > * { max-width: var(--albers-measure); }
+main#main > .page-header,
+main#main .section > .ref-examples,
+main#main > .section { max-width: none; }
+main#main .section > :not(pre):not(div.sourceCode):not(table):not(.figure):not(figure):not(.section):not(.albers-table-scroll):not(.wide) { max-width: var(--albers-measure); }
+main#main .wide { max-width: none; width: auto; }
+main#main :is(div.figure, figure) img,
+main#main p > img:only-child[src^="data:image"],
+main#main img.r-plt { max-width: min(100%, var(--albers-measure)); height: auto; margin-inline: 0; }
+main#main :is(figcaption, p.caption) { max-width: var(--albers-measure); }
+main#main .section .section { max-width: none; }
+/* A table wider than the column borrows the card's right margin before it
+   scrolls; one of many columns first sets its cells a little closer. */
+main#main .albers-table-scroll.is-wide { max-width: none; margin-right: calc(-1 * var(--albers-card-pad)); }
+main#main table.albers-table-many :is(th, td) { padding-inline: 0.6rem; }
+main#main table.albers-table-many :is(th, td):first-child { padding-left: 0.25rem; }
+main#main table.albers-table-many :is(th, td):last-child { padding-right: 0.25rem; }
+
+.page-header {
+  background: none;
+  border: 0;
   border-bottom: var(--rule-thin) solid var(--border);
+  padding: 0 0 1.4rem;
+  margin: 0 0 2rem;
 }
 
-.navbar {
-  background: var(--surface-strong) !important;
-  border-top: var(--rule-strong) solid var(--A500);
-  border-bottom: var(--rule-thin) solid var(--border);
-  backdrop-filter: none;
-  box-shadow: none;
-}
+.page-header h1 { margin-top: 0; }
 
-.navbar .navbar-brand,
-.navbar .nav-link {
-  color: var(--ink) !important;
-  font-weight: 650;
-  letter-spacing: 0.045em;
-  text-transform: uppercase;
-  font-size: 0.85em;
-  text-decoration: none !important;
-}
-
-.navbar .navbar-brand {
-  font-weight: 730;
-  letter-spacing: 0.055em;
-}
-
-.navbar .nav-link {
-  border-bottom: var(--rule-thin) solid transparent;
-  padding-bottom: 0.18rem;
-}
-
-.navbar .nav-link:hover,
-.navbar .nav-link:focus-visible {
-  border-bottom-color: var(--A500);
-}
-
-.navbar .nav-link.active,
-.navbar .active > a {
-  border-bottom-color: var(--A500);
-}
-
-.navbar .nav-link.active::after,
-.navbar .active > a::after {
-  content: " —";
-  margin-left: var(--space-1);
-  color: var(--A500);
-  font-weight: var(--nav-dash-weight);
-}
-
-.sidebar,
-.toc {
-  background: var(--surface);
-  border: var(--rule-thin) solid var(--border);
-}
-
-/* -- Typography ---------------------------------------------------------- */
-p { margin-block: 0 1.02rem; }
-
-h1,
-h2,
-h3 {
-  font-family: var(--font-display);
-  color: var(--ink);
-  line-height: 1.18;
-  margin-top: var(--space-6);
-  margin-bottom: 0.65rem;
-}
-
-h1 {
-  font-size: clamp(2.2rem, 4vw, 3rem);
-  letter-spacing: -0.022em;
-  text-wrap: balance;
-  font-weight: calc(var(--heading-weight) + 40);
-}
-
-/* Section headers are compact uppercase grotesk labels (matches the resdesign
-   screenshots), carrying a small nested-square marker. h1 stays large and
-   sentence-case with no marker. */
-h2 {
-  font-family: var(--font-ui);
-  font-size: 1.04rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  font-weight: 700;
-}
-
-h3 {
-  font-family: var(--font-ui);
-  font-size: 0.86rem;
-  letter-spacing: 0.12em;
-  font-weight: 700;
+.page-header .dont-index,
+.page-header small,
+.page-header > .source,
+.page-header > small.dont-index {
+  font: 500 0.72rem/1.4 var(--font-ui);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
 }
 
-h2,
-h3 {
-  position: relative;
-  display: flex;
+/* "Source:" and its file move to a new line together */
+.page-header > small.dont-index { display: inline-block; max-width: 100%; }
+
+.page-header :not(pre) > code {
+  font-size: 0.95em;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.navbar {
+  background: var(--bg) !important;
+  border-top: 0;
+  border-bottom: var(--rule-thin) solid var(--border);
+  backdrop-filter: none;
+  box-shadow: none;
+  min-height: 56px;
+  font-family: var(--font-ui);
+}
+
+.navbar .navbar-brand {
+  font: 700 1.15rem/1 var(--font-display);
+  letter-spacing: -0.01em;
+  color: var(--ink) !important;
+  text-decoration: none !important;
+  display: inline-flex;
   align-items: center;
-  gap: 0.7em;
-  padding-right: 1.45em;
-  scroll-margin-top: var(--anchor-offset);
+  gap: 0.55rem;
 }
 
-/* Nested-square section marker: a small core square with two box-shadow rings,
-   echoing Albers's "Homage to the Square". Replaces the 1.x em-dash. */
-h2::before,
-h3::before {
+.navbar .navbar-brand::before {
   content: "";
+  width: 1.05rem;
+  height: 1.05rem;
   flex: none;
-  margin-left: var(--sq-ring);
-  width: var(--sq-size);
-  height: var(--sq-size);
-  background: var(--sq-core);
-  box-shadow:
-    0 0 0 var(--sq-ring) var(--sq-mid),
-    0 0 0 calc(2 * var(--sq-ring)) var(--sq-outer);
+  background:
+    linear-gradient(var(--sq-core), var(--sq-core)) 50% 75% / 40% 40% no-repeat,
+    linear-gradient(var(--sq-mid), var(--sq-mid)) 50% 75% / 70% 70% no-repeat,
+    var(--sq-outer);
 }
 
-/* -- Links --------------------------------------------------------------- */
-a,
-a:visited {
-  color: var(--accent-ink) !important;
-  text-decoration: underline;
-  text-decoration-thickness: 0.09em;
-  text-underline-offset: 0.14em;
-  text-decoration-skip-ink: auto;
-  transition: color 0.15s ease;
+.navbar .nav-text,
+.navbar small.nav-text,
+.navbar .navbar-brand + small,
+.navbar .version {
+  font: 500 0.72rem/1 var(--font-mono);
+  color: var(--muted) !important;
+  letter-spacing: 0;
 }
 
-a:hover {
-  color: var(--accent-hover) !important;
+.navbar .nav-link {
+  color: var(--ink) !important;
+  font: 500 0.92rem/1 var(--font-ui);
+  letter-spacing: 0;
+  text-transform: none;
+  text-decoration: none !important;
+  border-bottom: 2px solid transparent;
+  padding: 0.55rem 0.1rem 0.4rem !important;
+  margin-inline: 0.55rem;
+  background: none !important;
 }
 
-a:focus-visible,
-button.copy-code:focus-visible,
-.anchor:focus-visible {
-  outline: 2px solid var(--accent-ink);
-  outline-offset: 2px;
+.navbar .nav-link:hover,
+.navbar .nav-link:focus-visible {
+  border-bottom-color: var(--border);
+}
+
+.navbar .nav-link.active,
+.navbar .active > a,
+.navbar .nav-item.active > .nav-link,
+.navbar .show > .nav-link {
+  border-bottom-color: var(--A500);
+  background: none !important;
+}
+
+.navbar .form-control,
+.navbar input[type="search"] {
+  background: var(--surface);
+  border: var(--rule-thin) solid var(--border);
+  color: var(--ink);
+  font: 400 0.85rem/1.2 var(--font-ui);
+  box-shadow: none;
+}
+
+.navbar .form-control::placeholder { color: var(--muted); }
+
+.navbar .form-control:focus {
+  border-color: var(--A500);
   box-shadow: 0 0 0 3px var(--accent-tint);
 }
 
-a:focus { outline: none; }
+.dropdown-menu {
+  background: var(--surface);
+  border: var(--rule-thin) solid var(--border);
+  box-shadow: var(--shadow-card);
+  font-family: var(--font-ui);
+  font-size: 0.88rem;
+}
+
+.dropdown-item { color: var(--ink); }
+.dropdown-item:hover,
+.dropdown-item:focus { background: var(--surface-strong); color: var(--ink); }
+.dropdown-header { font: 600 0.68rem/1 var(--font-ui); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+
+/* Sidebar on the ground */
+aside h2,
+aside h3,
+#toc > h2 {
+  font: 600 0.68rem/1.2 var(--font-ui) !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase;
+  color: var(--muted) !important;
+  margin: 2rem 0 0.8rem !important;
+  padding: 0 !important;
+  border: 0 !important;
+  display: block !important;
+}
+
+aside h2::before,
+aside h3::before,
+#toc > h2::before { content: none !important; }
+
+aside { font-family: var(--font-ui); font-size: 0.88rem; padding-top: 0.8rem; }
+aside ul { padding-left: 0; list-style: none; }
+aside li { margin: 0.3rem 0; }
+aside .list-unstyled a,
+aside li > a { text-decoration: none; }
+aside .dev-status img,
+aside .badges img { filter: saturate(0.4); }
+
+#toc > .nav { border-left: var(--rule-thin) solid var(--border); }
+#toc > .nav a.nav-link,
+#toc .nav .nav a.nav-link {
+  color: var(--muted) !important;
+  text-decoration: none !important;
+  padding: 0.28rem 0 0.28rem 0.95rem;
+  background: none !important;
+  border: 0 !important;
+  position: relative;
+  font-size: 0.9em;
+}
+
+#toc .nav .nav a.nav-link { padding-left: 1.75rem; }
+
+#toc > .nav a.nav-link:hover,
+#toc .nav .nav a.nav-link:hover { color: var(--ink) !important; }
+
+#toc a.nav-link.active {
+  color: var(--ink) !important;
+  font-weight: 600;
+  background: none !important;
+}
+
+/* the deepest active entry is the reader's location: albers.js marks it
+   aria-current="location" (a :has() test here restyled ~66,000 elements on
+   every scrollspy change of a long article) */
+#toc.albers-toc-sync a.nav-link.active:not([aria-current="location"]) {
+  color: var(--muted) !important;
+  font-weight: 400;
+}
+
+#toc a.nav-link.active[aria-current="location"]::before {
+  content: "";
+  position: absolute;
+  left: calc(-1 * var(--rule-thin) - 1px);
+  top: 0.3rem;
+  bottom: 0.3rem;
+  width: 3px;
+  background: var(--A500);
+}
+
+footer {
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  color: var(--muted);
+  border-top: var(--rule-thin) solid var(--border);
+}
+
+footer a { color: var(--muted) !important; }
+
+/* Home page */
+.template-home main#main h1 { margin-top: 0; }
+.template-home main#main > div > h1:first-child,
+.template-home .section.level1 > h1:first-child { margin-top: 0; }
+
+/* -- Typography ---------------------------------------------------------- */
+p { margin-block: 0 1.1rem; }
+
+p, li, dd, blockquote {
+  hanging-punctuation: first;
+  text-wrap: pretty;
+}
+
+.preset-homage p,
+body:not([class*="preset-"]) p { font-variant-numeric: oldstyle-nums proportional-nums; }
+
+strong, b { font-weight: 600; }
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  color: var(--ink);
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: clamp(2.3rem, 4.4vw, 3.3rem);
+  letter-spacing: -0.028em;
+  line-height: 1.04;
+  font-weight: calc(var(--heading-weight) + 40);
+  margin: 0 0 0.65rem;
+}
+
+/* Section headings: sentence-case display type carrying the Homage square,
+   separated from the previous section by a hairline. */
+h2 {
+  position: relative;
+  display: block;
+  font-size: 1.62rem;
+  font-weight: var(--heading-weight);
+  letter-spacing: -0.014em;
+  margin: 3.25rem 0 0.9rem;
+  padding: 0 1.6em 0 0;
+  border-top: 0;
+  scroll-margin-top: var(--anchor-offset);
+}
+
+/* An empty inline-block's baseline is its bottom edge, so the square sits on
+   the text baseline like a capital letter (and headings with inline code wrap
+   normally). */
+h2::before {
+  content: "";
+  display: inline-block;
+  margin-right: 0.5em;
+  width: var(--sq-size);
+  height: var(--sq-size);
+  background:
+    linear-gradient(var(--sq-core), var(--sq-core)) 50% 75% / 40% 40% no-repeat,
+    linear-gradient(var(--sq-mid), var(--sq-mid)) 50% 75% / 70% 70% no-repeat,
+    var(--sq-outer);
+}
+
+/* Articles and vignettes number their sections: "01", "02" ... in the
+   display face. Sections marked {.unnumbered} are skipped. The Homage square
+   stays on README/home pages, where sections are not a sequence. */
+body:where(.albers-vignette, :has(> #TOC), :has(> h1.title)),
+.template-article main#main { counter-reset: albers-h2; }
+
+body:where(.albers-vignette, :has(> #TOC), :has(> h1.title)) .section:not(.unnumbered) > h2,
+.template-article main#main .section:not(.unnumbered) > h2 {
+  counter-increment: albers-h2;
+}
+
+body:where(.albers-vignette, :has(> #TOC), :has(> h1.title)) h2::before,
+.template-article main#main h2::before {
+  content: none;
+}
+
+/* the vignette body is a grid, so margins don't collapse: the h2's own top
+   margin is the whole gap before a section */
+body:where(.albers-vignette, :has(> #TOC), :has(> h1.title)) > :not(.section):has(+ .section.level2) { margin-bottom: 0; }
+
+body:where(.albers-vignette, :has(> #TOC), :has(> h1.title)) .section:not(.unnumbered) > h2::before,
+.template-article main#main .section:not(.unnumbered) > h2::before {
+  content: counter(albers-h2, decimal-leading-zero);
+  display: inline-block;
+  width: auto;
+  height: auto;
+  background: none;
+  margin-right: 0.7em;
+  font-weight: 500;
+  font-size: 0.72em;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums lining-nums;
+  color: var(--h2-num, var(--A700));
+  vertical-align: 0.14em;
+}
+
+html[data-albers-theme="dark"] body,
+html[data-bs-theme="dark"] body,
+body.preset-midnight { --h2-num: var(--A300); }
+
+/* Interaction: a colour study in the margin of every section. The numeral is
+   one colour throughout (the sheet), reversed out of a square whose ground
+   steps through the family and its complement, so the same numeral reads
+   differently on each -- Albers's Interaction of Color, plate by plate. */
+body.preset-interaction:where(.albers-vignette, :has(> #TOC), :has(> h1.title)) .section:not(.unnumbered) > h2::before,
+body.preset-interaction .template-article main#main .section:not(.unnumbered) > h2::before,
+.template-article.preset-interaction main#main .section:not(.unnumbered) > h2::before {
+  display: inline-grid;
+  place-items: center;
+  box-sizing: border-box;
+  min-width: 2.35em;
+  height: 2.35em;
+  padding: 0 0.3em;
+  margin-right: 0.8em;
+  background: var(--num-chip, var(--A900));
+  color: var(--surface);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.6em;
+  letter-spacing: 0.04em;
+  vertical-align: 0.3em;
+  forced-color-adjust: none;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+body.preset-interaction .section.level2:nth-child(3n+2 of .section.level2) > h2 { --num-chip: var(--A700); }
+body.preset-interaction .section.level2:nth-child(3n of .section.level2) > h2 { --num-chip: var(--comp-deep, var(--comp-ink)); }
+/* at night the chips keep the day order -- family, family, complement -- as
+   the light family tone, a deeper family tone and the light complement, held
+   a little below full strength so the heading stays the brightest thing */
+html[data-albers-theme="dark"] body.preset-interaction .section.level2:nth-child(3n+1 of .section.level2) > h2 { --num-chip: color-mix(in oklab, var(--A300) 85%, var(--surface)); }
+html[data-albers-theme="dark"] body.preset-interaction .section.level2:nth-child(3n+2 of .section.level2) > h2 { --num-chip: color-mix(in oklab, color-mix(in oklab, var(--A500) 45%, var(--A300)) 85%, var(--surface)); }
+html[data-albers-theme="dark"] body.preset-interaction .section.level2:nth-child(3n of .section.level2) > h2 { --num-chip: color-mix(in oklab, var(--comp-light) 85%, var(--surface)); }
+
+h3 {
+  position: relative;
+  font-family: var(--font-ui);
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink);
+  margin: 2.4rem 0 0.75rem;
+  padding: 0.7rem 1.6em 0 0;
+  scroll-margin-top: var(--anchor-offset);
+}
+
+h3::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2.2em;
+  height: 2px;
+  background: var(--A500);
+}
+
+.template-home main#main h2,
+.template-reference-topic main#main h2 {
+  border-top: var(--rule-thin) solid var(--border);
+  padding-top: 1.2rem;
+  margin-top: 2.6rem;
+}
+.template-home main#main h2::before,
+.template-reference-topic main#main h2::before { content: none; }
+@media (max-width: 620px) {
+  .page-header h4.author, .page-header h4.date, .page-header .dont-index { display: block; margin: 0.35rem 0 0; }
+}
+
+/* Never re-case identifiers: theme_albers() must not become THEME_ALBERS() */
+h3 code,
+h3 kbd,
+summary code { text-transform: none; letter-spacing: 0; }
+
+h2 code, h3 code, h4 code { font-size: 0.86em; }
+
+h4 {
+  font-family: var(--font-body);
+  font-size: 0.98rem;
+  font-weight: 500;
+  font-style: italic;
+  color: var(--ink);
+  letter-spacing: 0;
+  margin: 1.9rem 0 0.45rem;
+  scroll-margin-top: var(--anchor-offset);
+}
+
+.preset-interaction h4 { font-style: normal; font-family: var(--font-display); }
+
+h5, h6 {
+  font: 600 0.9rem/1.3 var(--font-ui);
+  margin: 1.5rem 0 0.4rem;
+}
+
+/* First section heading after the title block needs no rule */
+.albers-titleblock + #TOC + .section > h2:first-child,
+.albers-titleblock + .section > h2:first-child { border-top: 0; padding-top: 0; }
+
+/* -- Links --------------------------------------------------------------- */
+/* no !important: a site's own extra.css (loaded after this file) can restyle links */
+a,
+a:visited {
+  color: var(--accent-ink);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+  text-underline-offset: 0.2em;
+  text-decoration-skip-ink: auto;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+  hyphens: manual;
+}
+
+a:hover {
+  color: var(--accent-hover);
+  text-decoration-color: currentColor;
+}
+
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+.anchor:focus-visible {
+  outline: 2px solid var(--accent-ink);
+  outline-offset: 2px;
+}
+
+a:focus:not(:focus-visible) { outline: none; }
+
+/* Footnote references */
+a.footnote-ref,
+a.footnote-ref:visited {
+  text-decoration: none;
+  font-family: var(--font-ui);
+  font-size: 0.72em;
+  font-weight: 600;
+  padding-inline: 0.12em;
+}
+a.footnote-ref { vertical-align: super; line-height: 0; }
+a.footnote-ref sup { font-size: 1em; vertical-align: baseline; line-height: 0; position: static; }
+
+/* -- Lists --------------------------------------------------------------- */
+ul, ol { padding-left: 1.4em; margin: 0 0 1.1rem; }
+li { margin: 0.25rem 0; }
+li > ul, li > ol { margin: 0.25rem 0 0.35rem; }
+ul > li::marker { color: var(--muted); }
+ol > li::marker {
+  color: var(--muted);
+  font-family: var(--font-ui);
+  font-size: 0.86em;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+dl {
+  display: grid;
+  grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
+  gap: 0.5rem 1.4rem;
+  margin: 1rem 0 1.4rem;
+}
+dt { font-weight: 600; }
+dd { margin: 0; }
+
+@media (max-width: 620px) {
+  dl { grid-template-columns: minmax(0, 1fr); gap: 0.1rem; }
+  dd { margin-bottom: 0.6rem; }
+}
+
+/* pkgdown reference argument lists stay stacked */
+dl.ref-arguments,
+.ref-arguments dl { display: block; }
+.ref-arguments dt { margin-top: 0.9rem; }
+.ref-arguments dd { margin-left: 0; }
 
 /* -- Code ---------------------------------------------------------------- */
 code,
@@ -831,73 +1789,366 @@ pre,
 kbd,
 samp {
   font-family: var(--font-mono);
-  font-size: 0.95em;
-  line-height: 1.52;
+  font-variant-ligatures: none;
 }
 
 pre {
+  font-size: 0.8rem;
+  line-height: 1.62;
   background: var(--code-bg);
-  border: var(--rule-thin) solid var(--border);
-  border-left: var(--rule-strong) solid var(--A500);
+  color: var(--code-fg);
+  border: var(--rule-thin) solid var(--code-border);
   box-shadow: none;
-  padding: var(--space-5) var(--space-4);
-  margin-block: 1.35rem;
+  /* output blocks bleed to the block's edges by exactly this padding */
+  --pre-px: 1.2rem;
+  padding: 1.05rem var(--pre-px);
+  margin: 1.35rem 0 1.5rem;
   overflow: auto;
   position: relative;
   tab-size: 2;
   -moz-tab-size: 2;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--code-fg) 30%, transparent) transparent;
 }
 
-/* Keep code legible when Bootstrap switches `data-bs-theme`. */
-pre,
-.sourceCode pre {
-  color: var(--code-fg);
+div.sourceCode {
+  position: relative;
+  margin: 1.35rem 0 1.5rem;
+  background: none;
+  border: 0;
+  overflow: visible !important;
 }
 
-[data-bs-theme="dark"] pre,
-[data-bs-theme="dark"] code {
-  background-color: var(--code-bg);
+div.sourceCode > pre,
+pre.sourceCode { overflow: auto !important; }
+
+/* Bootstrap's `[data-bs-theme=dark] pre, code` background outranks `pre` */
+html[data-bs-theme] pre { background: var(--code-bg); }
+html[data-bs-theme] :not(pre) > code { background: var(--surface-strong); }
+
+pre:focus-visible,
+.albers-table-scroll:focus-visible,
+.albers-out-block:focus-visible,
+.albers-math:focus-visible {
+  outline: 2px solid var(--accent-ink);
+  outline-offset: 2px;
+  -webkit-mask-image: none !important;
+  mask-image: none !important;
+}
+pre .albers-out-block:focus-visible { outline-color: var(--code-fg); outline-offset: -2px; }
+
+/* inside code, focus rings take the code ink so they read on dark slabs */
+pre button:focus-visible,
+pre a:focus-visible { outline-color: var(--code-fg); }
+
+div.sourceCode > pre { margin: 0; }
+
+/* Edge fade while code runs past the right edge (albers.js toggles classes) */
+div.sourceCode:has(> pre.is-overflowing:not(.is-scrolled-end))::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  bottom: 1px;
+  width: 3rem;
+  pointer-events: none;
+  background: linear-gradient(to right, transparent, var(--code-bg) 85%);
 }
 
 pre code {
-  background: transparent;
+  font-size: 1em;
+  background: transparent !important;
   border: none;
   padding: 0;
   word-break: normal;
   overflow-wrap: normal;
+  white-space: pre;
   color: var(--code-fg);
 }
 
-button.copy-code {
+/* Output of a chunk rendered as its own block (collapse = FALSE) */
+pre:not(.sourceCode):not(.r):not(.downlit) {
+  background: color-mix(in srgb, var(--code-bg) 55%, var(--surface));
+}
+
+.preset-interaction pre:not(.sourceCode):not(.r):not(.downlit) {
+  --code-fg: var(--ink);
+  --code-out: color-mix(in oklab, var(--ink) 78%, var(--surface));
+  --tok-com: var(--muted);
+  background: var(--surface-strong);
+  color: var(--ink);
+  border-color: var(--border);
+}
+
+/* Output lines inside collapsed chunks (albers.js tags "#>" lines) */
+.albers-out,
+.sourceCode .co.albers-out,
+code .r-out,
+code .r-out .co {
+  color: var(--code-out);
+  font-style: normal;
+}
+
+/* albers.js gathers each run of output lines into one block, so results read
+   as a single slab under the code that produced them. */
+/* pandoc's highlighter sets `pre > code.sourceCode > span { display:
+   inline-block }`, so the block needs the extra specificity. */
+pre > code > span.albers-out-block,
+.albers-out-block {
+  display: block;
+  margin: 0.55rem calc(-1 * var(--pre-px, 1.2rem)) 0;
+  padding: 0.45rem var(--pre-px, 1.2rem);
+  background: color-mix(in srgb, var(--code-fg) 5.5%, transparent);
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--code-fg) 20%, transparent);
+}
+
+.albers-out-block + .albers-out-block { margin-top: 0; }
+/* the source line after an output slab stands as far from it as the slab
+   stands from the line before */
+pre > code > span.albers-out-block + span:not(.albers-out-block) { margin-top: 0.55rem; }
+.albers-out-block:last-child { margin-bottom: -0.45rem; }
+pre code > .albers-out-block:first-child { margin-top: -0.45rem; }
+
+.albers-out-block.is-warn { background: color-mix(in srgb, var(--code-warn) 10%, transparent); box-shadow: inset 2px 0 0 var(--code-warn); }
+.albers-out-block.is-err { background: color-mix(in srgb, var(--code-err) 9%, transparent); box-shadow: inset 2px 0 0 var(--code-err); }
+pre.albers-msg-pre > code { white-space: pre-wrap; }
+pre.albers-msg-pre { white-space: pre-wrap; }
+/* a condition line after printed output (echo-free chunks): set off from
+   the output above, clear of its rule, and hanging like one in a code block */
+pre code span.albers-msg-line { display: inline-block; max-width: 100%; white-space: pre-wrap; color: var(--tok-com); box-shadow: inset 2px 0 0 var(--tok-com); padding-left: calc(1ch + 3ch); text-indent: -3ch; margin-top: 0.35rem; }
+/* in a block of output its rule sits at the block's edge, as a standalone
+   message's does, and its text stops short of the overflow fade */
+pre.albers-plain-out code span.albers-msg-line {
+  margin-left: calc(-1 * var(--pre-px, 1.2rem));
+  padding-left: calc(var(--pre-px, 1.2rem) + 3ch);
+  max-width: calc(100% + var(--pre-px, 1.2rem));
+}
+pre.albers-plain-out.is-overflowing code span.albers-msg-line { max-width: calc(100% + var(--pre-px, 1.2rem) - 2.5rem); }
+/* an echo-free chunk's output: the ink and leading of an output band */
+pre.albers-plain-out > code { color: var(--code-out); line-height: 1.45; }
+pre code span.albers-msg-line.is-warn { color: var(--code-warn); box-shadow: inset 2px 0 0 var(--code-warn); }
+pre code span.albers-msg-line.is-err { color: var(--code-err); box-shadow: inset 2px 0 0 var(--code-err); }
+pre.albers-msg-pre.is-warn { background: color-mix(in srgb, var(--code-warn) 10%, transparent); box-shadow: inset 2px 0 0 var(--code-warn); }
+pre.albers-msg-pre.is-err { background: color-mix(in srgb, var(--code-err) 9%, transparent); box-shadow: inset 2px 0 0 var(--code-err); }
+pre.albers-msg-pre.is-warn > code { color: var(--code-warn); }
+pre.albers-msg-pre.is-err > code { color: var(--code-err); }
+/* a message line inside a mixed run: its own colour, not the block's */
+pre code span.co.albers-out.is-msg { color: var(--tok-com); font-style: normal; }
+/* messages are prose from the code, not results: they wrap, with a quiet rule */
+/* messages are commentary, not results: no output band, only a rule */
+.albers-out-block.is-msg,
+pre.albers-msg-pre.is-msg { background: none; box-shadow: inset 2px 0 0 var(--tok-com); }
+pre.albers-msg-pre > code { display: block; padding-left: 3ch; text-indent: -3ch; }
+pre code .albers-out-block.is-msg span.co,
+pre code .albers-out-block.is-msg > span,
+pre.albers-msg-pre.is-msg > code { color: var(--tok-com); font-style: normal; }
+
+/* code is never hyphenated (pkgdown hyphenates its phone pages) */
+pre, code, kbd, samp { -webkit-hyphens: manual; hyphens: manual; }
+
+/* Numbered chunks (.numberLines): pandoc hangs the numbers in a 3em left
+   margin and pulls each line back 4em; this theme owns the block's margin, so
+   the gutter goes inside the padding instead and the lines stay put. */
+pre.numberSource { margin-left: 0; padding-left: calc(var(--pre-px, 1.2rem) + 2.8em); border-left: var(--rule-thin) solid var(--code-border); }
+/* the counter too: pkgdown does not ship pandoc's highlighting CSS */
+pre.numberSource code { counter-reset: source-line 0; }
+pre.numberSource code > span { left: 0 !important; position: relative; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before {
+  content: counter(source-line);
+  position: absolute !important;
+  left: -3.3em !important;
+  width: 2.2em;
+  text-decoration: none;
+  padding: 0 !important;
+  text-align: right;
+  color: var(--code-out);
+  opacity: 0.75;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Source lines wrap with a hanging indent, so nothing hides past the edge;
+   output keeps its columns and scrolls sideways inside its own block. The
+   same rules hold on paper. */
+@media screen, print {
+  pre > code.sourceCode { white-space: pre-wrap; }
+  pre > code.sourceCode > span:not(.albers-out-block) {
+    display: inline-block;
+    max-width: 100%;
+    /* --hang (set by albers.js) is the column after the line's first open
+       bracket; without one, the line's indent plus 4ch */
+    padding-left: var(--hang, calc(var(--ind, 0ch) + 4ch));
+    text-indent: calc(-1 * var(--hang, calc(var(--ind, 0ch) + 4ch)));
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    hyphens: none;
+  }
+  /* A segment is an unbreakable unit: it moves to the next line whole when
+     it fits there, and wraps inside (at spaces, then "::" and "$", then
+     anywhere) only when it is wider than the column. Strings inside it do
+     the same. The line breaks only between segments. */
+  /* Segments are plain inline text that never breaks inside (so find-in-page
+     and selection work across them); the line breaks only between them.
+     albers.js marks a segment wider than its line's room .is-wrap, and only
+     that one may wrap inside, hanging with the rest of the line. */
+  pre > code.sourceCode .albers-seg { white-space: pre; }
+  /* (break-word, not anywhere: a name that fits on a row of its own moves
+     there whole; "anywhere" let the line breaker split it greedily) */
+  pre > code.sourceCode .albers-seg.is-wrap { white-space: pre-wrap; overflow-wrap: break-word; }
+  /* Chromium breaks at <wbr> even inside white-space: pre: the soft breaks
+     after "::" and "$" exist only in a segment that must wrap */
+  pre > code.sourceCode .albers-seg:not(.is-wrap) wbr { display: none; }
+  pre > code.sourceCode .albers-seg.is-wrap .albers-strq.is-keep { white-space: pre; }
+  pre > code.sourceCode .albers-strq.is-keep wbr { display: none; }
+  /* the breaks after "::" and "$" rank last: albers.js turns one on (.is-on)
+     only inside a run that no break after "(", ",", or an operator can fit */
+  pre > code.sourceCode wbr.albers-wbr-ns:not(.is-on) { display: none; }
+  /* an argument name keeps its "=" inside a wrapping segment */
+  pre > code.sourceCode .albers-seg.is-wrap .at.albers-at-short { white-space: pre; }
+  pre > code.sourceCode .albers-lead.is-wrap { white-space: pre-wrap; overflow-wrap: anywhere; }
+  /* (pandoc sets its line spans to line-height 1.25: wrapped continuations
+     keep the block's own leading instead) */
+  pre > code.sourceCode > span:not(.albers-out-block) { box-sizing: border-box; width: 100%; line-height: inherit; }
+  pre > code.sourceCode .albers-indent,
+  pre > code.sourceCode .albers-lead,
+  pre > code.sourceCode .albers-nameq,
+  pre > code.sourceCode .albers-opq { white-space: pre; }
+  pre > code.sourceCode .albers-indent::after { content: "\2060"; }
+  /* an author's alignment redrawn at the call's depth on a phone (albers.js
+     sets --ind-ls; the text is unchanged) */
+  pre > code.sourceCode .albers-indent { letter-spacing: var(--ind-ls, 0); }
+  pre > code.sourceCode :is(.albers-lam, .albers-tail) { white-space: nowrap !important; }
+  /* a glued unit wider than its line's room (a long argument name with its
+     value) wraps inside rather than run under the block's edge */
+  pre > code.sourceCode :is(.albers-nameq, .albers-opq).is-wrap { white-space: pre-wrap; overflow-wrap: anywhere; }
+  /* on a phone, deep alignment would hang continuations past the middle */
+  @media (max-width: 620px) {
+    pre > code.sourceCode > span:not(.albers-out-block) {
+      /* the indent plus 2ch -- in ch only: padding and text-indent
+         percentages resolve against different widths */
+      padding-left: var(--hang, calc(var(--ind, 0ch) + 2ch));
+      text-indent: calc(-1 * var(--hang, calc(var(--ind, 0ch) + 2ch)));
+    }
+  }
+  pre > code > span.albers-out-block {
+    white-space: pre;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--code-fg) 35%, transparent) transparent;
+  }
+  pre > code > span.albers-out-block > span { text-indent: 0; padding-left: 0; }
+  /* messages, warnings and errors are prose: those lines wrap (with a hanging
+     indent) while printed results in the same run keep their columns */
+  pre > code > span.albers-out-block > span.albers-out-line:is(.is-warn, .is-err, .is-msg) {
+    display: inline-block;
+    max-width: 100%;
+    white-space: pre-wrap;
+    padding-left: 3ch;
+    text-indent: -3ch;
+  }
+  pre > code > span.albers-out-block.is-overflowing:not(.is-scrolled-end) {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
+  }
+}
+
+/* the "#>" prompt: present for copy-paste fidelity, quiet to the eye */
+.albers-prompt {
+  opacity: 0.55;
+}
+
+.albers-out.is-warn, code .r-wrn, code .r-wrn .co { color: var(--code-warn); font-style: normal; }
+.albers-out.is-err, code .r-err, code .r-err .co { color: var(--code-err); font-style: normal; }
+code .r-err *, code .r-wrn *, code .r-msg * { color: inherit !important; }
+.albers-out-block [style*="color"], .albers-out [style*="color"], code .r-out [style*="color"] { color: inherit !important; background: none !important; }
+
+pre.albers-out, pre.albers-msg, pre.albers-warn, pre.albers-err { font-style: normal; }
+pre.albers-warn { border-left: 3px solid var(--warn); }
+pre.albers-err { border-left: 3px solid var(--danger); }
+
+/* Copy button: quiet, appears on hover/focus */
+button.copy-code,
+.btn-copy-ex {
+  user-select: none;
+  -webkit-user-select: none;
   position: absolute;
-  top: 8px;
-  right: 8px;
-  border: var(--rule-thin) solid var(--A500);
-  background: var(--surface);
-  color: var(--accent-ink);
-  padding: 4px 8px;
-  font: 650 11px/1 var(--font-display);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  top: 0.45rem;
+  right: 0.45rem;
+  border: var(--rule-thin) solid color-mix(in srgb, var(--code-fg) 22%, transparent);
+  background: var(--code-bg);
+  color: var(--code-fg);
+  padding: 0.3rem 0.5rem;
+  font: 500 0.68rem/1 var(--font-mono);
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
   cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 2;
 }
 
-button.copy-code:hover {
-  background: var(--accent-tint);
+pre:hover :is(button.copy-code, .btn-copy-ex),
+div.sourceCode:hover :is(button.copy-code, .btn-copy-ex),
+pre:focus-within :is(button.copy-code, .btn-copy-ex),
+div.sourceCode:focus-within .btn-copy-ex,
+:is(button.copy-code, .btn-copy-ex):focus-visible,
+button.copy-code.is-done {
+  opacity: 0.85;
 }
 
-button.copy-code:active {
-  transform: translateY(1px);
+button.copy-code:hover { opacity: 1; }
+.btn-copy-ex { visibility: visible !important; }
+button.copy-code:active { transform: translateY(1px); }
+
+@media (hover: none) {
+  :is(button.copy-code, .btn-copy-ex) { opacity: 0.7; }
 }
 
-/* Inline code stays a light chip with accent ink in BOTH directions (never the
-   dark block background that Interaction uses for `pre`). */
+/* Reflow: no word, URL or heading may widen the page (WCAG 1.4.10). */
+body { overflow-wrap: break-word; }
+:is(h1, h2, h3, h4, h5, h6, a.uri, .albers-heading-link, dt) { overflow-wrap: anywhere; }
+
+/* pkgdown and Bootstrap style code inside lists and links more specifically;
+   whatever else they change, inline code keeps its break opportunities */
+body :not(pre) > code:not(.sourceCode) { white-space: pre-wrap; overflow-wrap: anywhere; }
+/* in a table cell, "anywhere" would shrink the column to a character and
+   split calls such as f(); the table scrolls instead */
+body :is(td, th) code:not(.sourceCode) { overflow-wrap: break-word; }
+
+/* Inline code: an ink chip. The accent is reserved for links. */
 :not(pre) > code {
   background: var(--surface-strong);
   border: var(--rule-thin) solid var(--border);
-  color: var(--accent-ink);
-  padding: 0.12em 0.36em;
-  font-size: 0.86em;
+  color: var(--ink);
+  padding: 0.08em 0.32em;
+  font-size: 0.84em;
+  /* rmarkdown's template sets code { white-space: pre }, which leaves no
+     break opportunity at all; a long call would widen the page */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+a > code,
+a:visited > code {
+  color: inherit;
+  text-decoration: inherit;
+  border-color: color-mix(in srgb, currentColor 28%, transparent);
+  background: color-mix(in srgb, currentColor 5%, var(--surface));
+}
+
+kbd {
+  display: inline-block;
+  font: 600 0.74em/1.25 var(--font-ui);
+  letter-spacing: 0.02em;
+  padding: 0.14em 0.5em 0.1em;
+  background: color-mix(in oklab, var(--ink) 7%, var(--surface));
+  color: var(--ink);
+  border: 0;
+  border-radius: 3px;
+  box-shadow: inset 0 -2px 0 color-mix(in oklab, var(--ink) 22%, transparent);
+  vertical-align: 0.1em;
 }
 
 /* -- Syntax Highlighting -------------------------------------------------- */
@@ -907,15 +2158,25 @@ button.copy-code:active {
 .sourceCode .op,
 .sourceCode .pp,
 .sourceCode .ot,
-.sourceCode .sc {
+.sourceCode .sc,
+.sourceCode .ex,
+code .op,
+code .va {
   color: var(--code-fg);
 }
 
+.sourceCode .at,
+code .at { color: var(--tok-arg); }
+
+pre code span.co { color: var(--tok-com); }
+pre:not(.sourceCode) code span.co { color: var(--code-out); font-style: normal; }
+
 pre code .kw,
 .sourceCode .kw,
+.sourceCode .cf,
 .hljs-keyword {
   color: var(--tok-kw);
-  font-weight: 650;
+  font-weight: 600;
 }
 
 pre code .fu,
@@ -927,12 +2188,15 @@ pre code .fu,
 
 pre code .st,
 .sourceCode .st,
+.sourceCode .ss,
+.sourceCode .ch,
 .hljs-string {
   color: var(--tok-str);
 }
 
 pre code .co,
 .sourceCode .co,
+.sourceCode .do,
 .hljs-comment {
   color: var(--tok-com);
   font-style: italic;
@@ -948,136 +2212,520 @@ pre code .cn,
   color: var(--tok-num);
 }
 
+/* Same mapping at pre > code > span specificity, which outranks the syntax
+   stylesheets pkgdown and pandoc ship (their `.va { color: #111 }` is
+   invisible on a dark code ground). */
+pre code span:is(.va, .op, .pp, .ot, .sc, .ex, .im, .bu, .ch, .vs, .in, .an, .wa) { color: var(--code-fg); }
+pre code span:is(.at) { color: var(--tok-arg); }
+pre code span:is(.kw, .cf, .dt) { color: var(--tok-kw); font-weight: 600; }
+pre code span:is(.fu) { color: var(--tok-fun); }
+pre code span:is(.st, .ss, .ch) { color: var(--tok-str); }
+pre code span:is(.dv, .fl, .bn, .cn) { color: var(--tok-num); }
+pre code span:is(.co, .do, .cv) { color: var(--tok-com); font-style: italic; }
+pre code span.co.albers-out { color: var(--code-out); font-style: normal; }
+pre code span.co.albers-out.is-warn { color: var(--code-warn); }
+pre code span.co.albers-out.is-err { color: var(--code-err); }
+
+/* Code-line anchors pandoc emits are not for the reader */
+pre:not(.numberSource) code > span > a:first-child:empty { display: none; }
+pre.numberSource code > span > a:first-child:empty { display: inline; text-decoration: none; }
+
 /* downlit links inside code read as code (function colour), not page links */
 pre code a,
 pre code a:visited,
 div.sourceCode a,
 div.sourceCode a:visited {
-  color: var(--tok-fun) !important;
+  color: inherit !important;
   text-decoration: none;
 }
 pre code a:hover,
 div.sourceCode a:hover {
   text-decoration: underline;
+  text-decoration-color: currentColor;
 }
 
-/* -- Tables -------------------------------------------------------------- */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-variant-numeric: tabular-nums;
-  border: var(--rule-thin) solid var(--border);
+/* -- Tables (booktabs) --------------------------------------------------- */
+.albers-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 1.5rem 0 2rem;
+  scrollbar-width: thin;
 }
+
+.albers-math.is-overflowing:not(.is-scrolled-end),
+math.is-overflowing:not(.is-scrolled-end),
+pre:not(.sourceCode).is-overflowing:not(.is-scrolled-end),
+.albers-table-scroll.is-overflowing:not(.is-scrolled-end) {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 3rem), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 3rem), transparent);
+}
+
+.albers-table-scroll > table { margin: 0; }
+
+/* Without the script (no scroll wrapper), a wide table scrolls itself. */
+body:where(.albers-vignette, :has(> #TOC), :has(> h1.title)) :is(.section, .wide) > table:not(.albers-table-scroll > table) {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+table {
+  width: auto;
+  min-width: min(100%, 22rem);
+  max-width: 100%;
+  border-collapse: collapse;
+  border: 0;
+  border-top: var(--rule-strong) solid var(--ink);
+  border-bottom: var(--rule-thin) solid var(--ink);
+  margin: 1.5rem 0 2rem;
+  font-size: 0.9em;
+  font-variant-numeric: tabular-nums lining-nums;
+  line-height: 1.4;
+  background: none;
+}
+
+table[style*="width:100%"],
+table[style*="width: 100%"] { width: 100%; }
 
 th,
 td {
-  border-bottom: var(--rule-thin) solid var(--border);
-  padding: 10px 9px;
+  border: 0;
+  border-bottom: var(--rule-thin) solid color-mix(in srgb, var(--border) 75%, transparent);
+  padding: 0.5rem 0.9rem;
+  vertical-align: top;
+  background: none;
 }
 
-th + th,
-td + td {
-  border-left: var(--rule-thin) solid color-mix(in srgb, var(--border) var(--table-divider-alpha), transparent);
-}
+th:first-child,
+td:first-child { padding-left: 0.25rem; }
+
+th:last-child,
+td:last-child { padding-right: 0.25rem; }
+
+tbody tr:last-child td { border-bottom: 0; }
+
+td:first-child { white-space: nowrap; }
 
 thead th {
-  background: var(--surface-strong);
-  border-bottom: var(--rule-strong) solid var(--A500);
-  font-weight: 700;
-  text-transform: uppercase;
-  font-size: 0.84em;
-  letter-spacing: 0.06em;
+  font: 600 0.8rem/1.25 var(--font-ui);
+  letter-spacing: 0.01em;
+  text-transform: none;
+  color: color-mix(in oklab, var(--ink) 78%, var(--surface));
+  border-bottom: var(--rule-thin) solid var(--ink);
+  vertical-align: bottom;
+  background: none;
   text-align: left;
 }
 
-tbody tr:nth-child(odd) {
-  background: var(--accent-tint);
+th[align="right"], td[align="right"],
+th[style*="right"], td[style*="right"] { text-align: right; }
+th[align="center"], td[align="center"],
+th[style*="center"], td[style*="center"] { text-align: center; }
+
+tbody tr { background: none; transition: background-color 0.12s ease; }
+tbody tr:hover { background: color-mix(in srgb, var(--ink) 3.5%, transparent); }
+
+.albers-table-caption {
+  margin: 1.8rem 0 0.55rem;
+  max-width: var(--content);
 }
 
-tbody tr:hover {
-  background: color-mix(in srgb, var(--accent-band) var(--table-hover-alpha), transparent);
-}
+.albers-table-caption + .albers-table-scroll { margin-top: 0; }
+/* pkgdown sets tables display:block (to scroll them); the wrapper scrolls
+   here, so the table stays a table and its rules span its own columns */
+main#main .albers-table-scroll > table { display: table; margin: 0; }
+.albers-table-caption + .albers-table-scroll > table { margin-top: 0; }
 
-caption {
-  caption-side: bottom;
+caption,
+.albers-table-caption {
+  caption-side: top;
+  text-align: left;
   color: var(--muted);
-  padding-top: 0.7rem;
-  font-size: 0.94em;
+  padding: 0 0 0.6rem;
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  font-style: italic;
+  line-height: 1.45;
 }
+
+.preset-interaction caption { font-style: normal; }
+
+.albers-num {
+  font: 600 0.7rem/1 var(--font-ui);
+  font-style: normal;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink);
+  margin-right: 0.6em;
+}
+
+/* Bootstrap .table (pkgdown) resets */
+.table { --bs-table-bg: transparent; --bs-table-striped-bg: transparent; --bs-table-hover-bg: transparent; --bs-table-color: var(--ink); --bs-table-striped-color: var(--ink); --bs-table-hover-color: var(--ink); color: var(--ink); }
+.table > :not(caption) > * > * { background-color: transparent; box-shadow: none; padding: 0.5rem 0.9rem; border-bottom-color: color-mix(in srgb, var(--border) 75%, transparent); }
+table.table { width: auto; margin-bottom: 2rem; border-top-color: var(--ink); border-bottom-color: var(--ink); }
+.table > thead > tr > th { border-bottom: var(--rule-thin) solid var(--ink); }
+.table > tbody > tr:last-child > * { border-bottom-width: 0; }
 
 /* -- Figures ------------------------------------------------------------- */
-figure {
-  margin-block: 1.2rem 1.6rem;
-  padding: 0.78rem 0.82rem;
-  border: var(--rule-thin) solid var(--border);
-  background: var(--surface);
+figure,
+div.figure {
+  margin: 2rem 0 2.2rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left !important;
 }
 
-figure::before {
-  content: "";
+/* knitr's side-by-side figures (out.width < 100%, fig.show = "hold") sit on
+   one line; a lone narrow figure keeps fig.align's inline display:block */
+:is(p, div.figure, figure) > img[width$="%"]:not([width="100%"]):not([style*="display"]) {
+  display: inline-block;
+  vertical-align: top;
+}
+
+figure img,
+div.figure img,
+p > img:only-child,
+img.r-plt {
   display: block;
-  height: var(--rule-strong);
-  width: clamp(64px, 18%, 160px);
-  background: var(--A500);
-  opacity: 0.58;
-  margin-bottom: 0.68rem;
+  max-width: 100%;
+  height: auto;
+  margin-inline: auto;
 }
 
-figcaption {
-  margin-top: 0.58rem;
-  font-size: 0.82rem;
-  text-transform: uppercase;
-  letter-spacing: 0.052em;
+figcaption,
+p.caption {
+  margin: 0.75rem 0 0;
+  padding-left: 0.85rem;
+  border-left: var(--rule-strong) solid var(--A500);
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  font-style: italic;
+  line-height: 1.45;
   color: var(--muted);
+  text-align: left;
+  max-width: var(--content);
+}
+
+.preset-interaction figcaption,
+.preset-interaction p.caption { font-style: normal; }
+
+/* Light plot plates on a dark page read as prints on a wall */
+html[data-albers-theme="dark"] :is(figure, div.figure) img,
+html[data-albers-theme="dark"] img.r-plt {
+  outline: 1px solid var(--border);
+  outline-offset: 0;
+  filter: brightness(0.9);
+}
+
+/* Figure twins: the dark image replaces the light one on screen in dark
+   mode only; print and light mode always use the light figure. */
+/* !important: knitr's fig.align writes an inline display:block on the image */
+img.albers-dark-twin.albers-dark-twin { display: none !important; }
+/* Phone twins (albers_vignette) are sources for albers.js, never shown */
+img.albers-phone-twin.albers-phone-twin { display: none !important; }
+@media screen {
+  html[data-albers-theme="dark"] img.albers-has-twin:has(+ img.albers-dark-twin) { display: none !important; }
+  html[data-albers-theme="dark"] img.albers-has-twin + img.albers-dark-twin.albers-dark-twin { display: var(--albers-twin-display, block) !important; }
+}
+
+/* Plots with a dark twin (albers_vignette) are drawn for the night ground:
+   no mat, no glare. */
+html[data-albers-theme="dark"] img.albers-has-twin.albers-has-twin,
+html[data-albers-theme="dark"] img.albers-dark-twin.albers-dark-twin {
+  outline: 0;
+  filter: none;
+}
+
+/* Native MathML (albers_vignette() default): an offline math face stack */
+math {
+  font-family: "STIX Two Math", "Cambria Math", "Latin Modern Math", "Noto Sans Math", math;
+  font-size: 1.06em;
+}
+math[display="block"] { margin: 1.2rem 0; overflow-x: auto; overflow-y: hidden; max-width: 100%; }
+.albers-math { max-width: 100%; overflow-x: auto; overflow-y: hidden; margin: 1.2rem 0; }
+.albers-math > math[display="block"] { margin: 0; overflow: visible; max-width: none; }
+math:not([display="block"]) { display: inline-block; max-width: 100%; overflow-x: auto; overflow-y: hidden; vertical-align: middle; }
+
+/* Figure zoom (albers.js) */
+img.albers-zoomable { cursor: zoom-in; }
+img.albers-zoomable:focus-visible,
+html[data-albers-theme] img.albers-zoomable:focus-visible { outline: 2px solid var(--accent-ink) !important; outline-offset: 3px; }
+html:has(dialog.albers-zoom[open]) { overflow: hidden; }
+dialog.albers-zoom {
+  box-sizing: border-box;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 1rem;
+  border: 0;
+  background: var(--surface);
+  overflow: auto;
+  cursor: zoom-out;
+}
+dialog.albers-zoom::backdrop { background: color-mix(in srgb, var(--ink) 40%, transparent); }
+/* The stage is a table whose caption is the figure caption: the caption is
+   exactly as wide as the image and starts at its left edge. */
+dialog.albers-zoom .albers-zoom-stage { display: table; margin: 3.2rem auto 0; }
+dialog.albers-zoom.is-actual .albers-zoom-stage { display: block; margin: 3.2rem 0 0; padding-bottom: 6rem; }
+dialog.albers-zoom img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  max-height: calc(100vh - 8rem);
+  margin: 0;
+  cursor: zoom-in;
+}
+dialog.albers-zoom img.is-actual { max-width: none; max-height: none; cursor: zoom-out; }
+/* at actual size the caption stays in view, on a band at the foot */
+dialog.albers-zoom.is-actual p {
+  display: block;
+  position: fixed; left: 0; right: 0; bottom: 0;
+  max-height: 30vh;
+  overflow-y: auto;
+  margin: 0; padding: 0.6rem 1rem 0.8rem;
+  background: var(--surface);
+  border-top: var(--rule-thin) solid var(--border);
+}
+/* Fit mode stops near the plot's drawn width, so plot type stays close to
+   page type instead of growing past it; "Actual size" goes to 1:1 pixels. */
+dialog.albers-zoom img:not(.is-actual) { max-width: min(calc(100vw - 2rem), 960px); }
+dialog.albers-zoom p { display: table-caption; caption-side: bottom; font: 400 1.05rem/1.5 var(--font-body); font-style: italic; color: var(--ink); text-align: left; margin: 0; padding-top: 1rem; }
+.preset-interaction dialog.albers-zoom p { font-style: normal; }
+dialog.albers-zoom :is(.albers-zoom-close, .albers-zoom-size):focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+dialog.albers-zoom .albers-zoom-size {
+  position: fixed; top: 0.75rem; right: calc(0.75rem + 44px + 0.5rem);
+  height: 44px; padding: 0 0.9rem;
+  background: var(--surface); color: var(--ink);
+  border: var(--rule-thin) solid var(--border);
+  font: 600 0.8rem/1 var(--font-ui);
+  cursor: pointer;
+}
+dialog.albers-zoom .albers-zoom-size[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+.footnotes math { overflow: visible; }
+dialog.albers-zoom .albers-zoom-close {
+  position: fixed; top: 0.75rem; right: 0.75rem;
+  width: 44px; height: 44px;
+  display: grid; place-items: center;
+  background: var(--surface); color: var(--ink);
+  border: var(--rule-thin) solid var(--border);
+  font: 400 1.5rem/1 var(--font-ui);
+  cursor: pointer;
+}
+
+
+/* -- Blockquote (epigraph) ------------------------------------------------ */
+blockquote {
+  margin: 1.8rem 0;
+  padding: 0.15rem 0 0.15rem 1.4rem;
+  border: 0;
+  border-left: var(--rule-strong) solid var(--A500);
+  background: none;
+  font-size: 1.1em;
+  font-style: italic;
+  color: var(--ink);
+}
+
+.preset-interaction blockquote { font-style: normal; font-size: 1.05em; }
+
+blockquote p { margin: 0 0 0.6rem; }
+blockquote p:last-child { margin-bottom: 0; }
+blockquote p:last-child:not(:first-child) {
+  font-size: 0.82em;
+  font-style: normal;
+  color: var(--muted);
+  font-family: var(--font-ui);
+  letter-spacing: 0.02em;
 }
 
 /* -- Callouts ------------------------------------------------------------ */
-blockquote,
+/* Callouts are Albers objects: a small nested square in a hanging gutter,
+   its colours carrying the callout's meaning; the label runs in. */
 .callout {
+  --co-1: color-mix(in oklab, var(--ink) 30%, var(--surface));
+  --co-2: color-mix(in oklab, var(--ink) 12%, var(--surface));
+  --co-3: color-mix(in oklab, var(--ink) 72%, var(--surface));
+  --co-fill: transparent;
+  --co-edge: color-mix(in oklab, var(--ink) 62%, var(--surface));
+  --co-glyph: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  --co-edge: color-mix(in oklab, var(--ink) 35%, var(--surface));
   position: relative;
-  border: var(--rule-thin) solid var(--border);
-  border-left: 3px solid var(--accent);
-  background: var(--surface-strong);
-  padding: 16px 22px;
-  margin-block: 1.45rem;
+  border: 0;
+  box-shadow: inset 3px 0 0 var(--co-edge);
+  background: var(--co-fill);
+  padding: 1.05rem 1.3rem 1.05rem 1.4rem;
+  margin: 1.8rem 0;
+  font-size: 0.96em;
 }
 
-/* small nested-square corner accent (matches the resdesign callout) */
-blockquote::after,
-.callout::after {
-  content: "";
+.callout::before {
+  content: none;
   position: absolute;
-  top: 14px;
-  right: 14px;
-  width: 0.5em;
-  height: 0.5em;
-  background: var(--sq-mid);
-  box-shadow: 0 0 0 0.17em var(--sq-outer);
+  left: 1.05rem;
+  top: 1.2rem;
+  width: 1.35rem;
+  height: 1.35rem;
+  background:
+    linear-gradient(var(--co-3), var(--co-3)) 50% 75% / 42% 42% no-repeat,
+    linear-gradient(var(--co-2), var(--co-2)) 50% 75% / 72% 72% no-repeat,
+    var(--co-1);
 }
 
-blockquote p { margin: 0; }
+.callout > :last-child { margin-bottom: 0; }
 
-.callout-note {
-  border-left-color: var(--A500);
-  background: var(--accent-band);
+.callout > p:first-child > strong.albers-callout-label {
+  font: 700 0.7rem/1 var(--font-ui);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink);
+  margin-right: 0.6em;
+  vertical-align: 0.1em;
+}
+.callout > p:first-child > strong.albers-callout-label::before {
+  content: "";
+  display: inline-block;
+  width: 0.95em;
+  height: 0.95em;
+  margin-right: 0.5em;
+  vertical-align: -0.12em;
+  background: var(--co-edge);
+  clip-path: var(--co-glyph);
+}
+.callout-note > p:first-child > strong.albers-callout-label,
+.callout:not([class*="callout-"]) > p:first-child > strong.albers-callout-label { color: var(--ink); }
+
+.callout-insight,
+.callout-tip {
+  --co-1: var(--A300);
+  --co-2: var(--A500);
+  --co-3: var(--A900);
+  --co-fill: transparent;
+  --co-edge: var(--A500);
+  --co-glyph: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
 }
 
-.callout-insight {
-  border-left-color: var(--A700);
-  background: var(--accent-tint);
+.callout-warning,
+.callout-caution {
+  --co-1: color-mix(in oklab, var(--warn) 35%, var(--surface));
+  --co-2: var(--warn);
+  --co-3: color-mix(in oklab, var(--warn) 55%, #000);
+  --co-fill: transparent;
+  --co-edge: var(--warn);
+  --co-glyph: polygon(50% 0, 100% 100%, 0 100%);
+  box-shadow: inset 3px 0 0 var(--co-edge), inset 6px 0 0 var(--surface), inset 8px 0 0 var(--co-edge);
 }
 
-.callout-warning {
-  border-left-color: #b48900;
-  background: rgba(180, 137, 0, 0.12);
+.callout-important {
+  --co-1: var(--ink);
+  --co-fill: color-mix(in oklab, var(--ink) 5%, var(--surface));
+  --co-edge: var(--ink);
+  --co-glyph: polygon(38% 0, 62% 0, 62% 64%, 38% 64%, 38% 76%, 62% 76%, 62% 100%, 38% 100%);
+}
+
+.callout-danger {
+  --co-1: color-mix(in oklab, var(--danger) 30%, var(--surface));
+  --co-2: var(--danger);
+  --co-3: color-mix(in oklab, var(--danger) 55%, #000);
+  --co-fill: color-mix(in oklab, var(--danger) 9%, var(--surface));
+  --co-edge: var(--danger);
+  --co-glyph: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%);
 }
 
 .callout-experiment {
-  border-left-color: color-mix(in srgb, var(--A500) 60%, var(--A900));
+  --co-1: var(--sq-outer);
+  --co-2: var(--A500);
+  --co-3: var(--A900);
   background:
     linear-gradient(90deg, color-mix(in srgb, var(--A300) 22%, transparent) 0 2px, transparent 2px),
-    color-mix(in srgb, var(--accent-band) 75%, var(--surface));
+    color-mix(in srgb, var(--accent-band) 55%, var(--surface));
 }
+
+/* An unfilled callout has no visible right side: its text runs to the edge the
+   paragraphs share, rather than stopping short of it on a third edge. */
+@media (forced-colors: none) {
+  .callout:not(.callout-important, .callout-danger, .callout-experiment) { padding-right: 0; }
+}
+
+/* -- Details, rules, footnotes ------------------------------------------- */
+details {
+  border-top: var(--rule-thin) solid var(--border);
+  border-bottom: var(--rule-thin) solid var(--border);
+  padding: 0.7rem 0;
+  margin: 1.6rem 0;
+}
+
+details > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font: 600 0.92rem/1.4 var(--font-ui);
+  color: var(--ink);
+}
+
+details > summary::-webkit-details-marker { display: none; }
+
+/* Closed: a small solid square turned on its point (a pointer, not a
+   checkbox). Open: it turns upright into the full Homage. */
+details > summary::before {
+  content: "";
+  flex: none;
+  width: 0.62rem;
+  height: 0.62rem;
+  margin-inline: 0.1rem;
+  background: var(--A500);
+  transform: rotate(45deg) scale(0.9);
+  transition: transform 0.18s ease, width 0.18s ease, height 0.18s ease;
+}
+
+details[open] > summary::before {
+  width: 0.82rem;
+  height: 0.82rem;
+  margin-inline: 0;
+  transform: none;
+  background:
+    linear-gradient(var(--A900), var(--A900)) 50% 75% / 40% 40% no-repeat,
+    linear-gradient(var(--A500), var(--A500)) 50% 75% / 70% 70% no-repeat,
+    var(--sq-outer);
+}
+
+details[open] > summary { margin-bottom: 0.8rem; }
+
+hr {
+  border: 0;
+  height: 0.5rem;
+  width: 3rem;
+  margin: 2.8rem 0;
+  opacity: 1;
+  background: linear-gradient(90deg,
+    var(--A900) 0 33.3%, var(--A500) 33.3% 66.6%, var(--sq-outer) 66.6% 100%);
+}
+
+.footnotes,
+section.footnotes {
+  margin-top: 3rem;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.footnotes > hr {
+  width: 100%;
+  height: 0;
+  margin: 0 0 1.2rem;
+  background: none;
+  border-top: var(--rule-thin) solid var(--border);
+}
+
+.footnotes ol { padding-left: 1.2em; }
+.footnotes li p { margin-bottom: 0.4rem; }
+a.footnote-back { text-decoration: none; margin-left: 0.25em; }
+.footnotes li:target { background: color-mix(in srgb, var(--A500) 12%, transparent); }
+a.footnote-ref { padding: 0.35em 0.2em; margin: -0.35em 0; }
 
 /* -- Anchors ------------------------------------------------------------- */
 h2:hover .anchor,
@@ -1085,22 +2733,45 @@ h3:hover .anchor,
 h2:focus-within .anchor,
 h3:focus-within .anchor {
   opacity: 1;
-  transform: translateY(-50%) translateX(0);
 }
 
-.anchor {
+.anchor,
+a.anchor {
   opacity: 0;
   position: absolute;
   right: 0;
-  top: 50%;
-  transform: translateY(-50%) translateX(0.2em);
-  text-decoration: none;
-  color: var(--A500);
-  line-height: 1;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  transition: opacity 0.15s ease-in-out, transform 0.15s ease-in-out;
+  bottom: 0.1em;
+  text-decoration: none !important;
+  color: var(--muted) !important;
+  font: 500 0.85rem/1 var(--font-mono);
+  letter-spacing: 0;
+  transition: opacity 0.15s ease-in-out;
 }
+
+h3 .anchor { bottom: auto; top: 0; }
+.anchor:hover { color: var(--accent-ink) !important; }
+
+/* Vignette headings link to themselves (albers.js wraps the text), so the
+   permalink is operable by keyboard and the heading's name stays clean. */
+a.albers-heading-link,
+a.albers-heading-link:visited {
+  color: inherit !important;
+  text-decoration: none;
+}
+a.albers-heading-link::after {
+  content: "#";
+  content: "#" / "";
+  margin-left: 0.4em;
+  font: 500 0.6em/1 var(--font-mono);
+  color: var(--muted);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+a.albers-heading-link:hover::after,
+a.albers-heading-link:focus-visible::after { opacity: 1; }
+
+/* pkgdown ships its own anchor glyph; keep one visible cue */
+a.anchor:empty::before { content: "#"; }
 
 /* -- Homage hero & structural elements ----------------------------------- */
 .homage-hero {
@@ -1222,8 +2893,11 @@ h3:focus-within .anchor {
 /* -- Theme Lab ----------------------------------------------------------- */
 .theme-lab {
   display: grid;
+  /* an auto track grows to its widest content; the lab stays in the column */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
 }
+.theme-lab > * { min-width: 0; }
 
 .theme-lab__panel {
   border: var(--rule-thin) solid var(--border);
@@ -1239,20 +2913,22 @@ h3:focus-within .anchor {
 
 .theme-lab label {
   display: block;
-  font-size: 0.78rem;
+  font: 600 0.7rem/1.3 var(--font-ui);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.1em;
   color: var(--muted);
   margin-bottom: var(--space-1);
 }
 
 .theme-lab select,
 .theme-lab input {
+  box-sizing: border-box;
   width: 100%;
   border: var(--rule-thin) solid var(--border);
   background: var(--surface);
   color: var(--ink);
   padding: 0.46rem 0.5rem;
+  font-family: var(--font-ui);
 }
 
 .theme-lab__preview {
@@ -1272,9 +2948,9 @@ h3:focus-within .anchor {
   background: var(--surface-strong);
   color: var(--ink);
   padding: 0.2rem 0.44rem;
-  font-size: 0.74rem;
+  font: 600 0.7rem/1.3 var(--font-ui);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
 }
 
 /* Theme Lab palette chips: live swatches of the active family's four tones,
@@ -1288,24 +2964,19 @@ h3:focus-within .anchor {
 .theme-lab__chips .albers-chip:nth-child(3) { background: var(--A500); }
 .theme-lab__chips .albers-chip:nth-child(4) {
   background: var(--A300);
-  color: var(--ink);
+  color: #15181e;
 }
 
-body.preset-midnight #toc > .nav a.nav-link {
-  color: color-mix(in srgb, var(--ink) 84%, var(--A300));
+/* Bootstrap/pkgdown invert example plots in dark mode (`img.r-plt`, and
+   `.r-plt img` in reference examples); keep them as rendered, set like the
+   article figures: a light print on the dark wall. */
+html[data-bs-theme="dark"] .r-plt img,
+html[data-albers-theme="dark"] .r-plt img {
+  filter: brightness(0.9) !important;
+  outline: 1px solid var(--border);
+  opacity: 1 !important; /* Bootstrap dims `pre img` to 0.66 in dark */
 }
-
-body.preset-midnight #toc > .nav a.nav-link:hover,
-body.preset-midnight #toc > .nav a.nav-link:focus {
-  background-color: color-mix(in srgb, var(--A300) 24%, transparent);
-}
-
-body.preset-midnight #toc > .nav a.nav-link.active {
-  color: var(--accent-ink);
-  background-color: color-mix(in srgb, var(--A300) 30%, var(--surface));
-}
-
-/* Bootstrap inverts `img.r-plt` in dark mode; disable it for true midnight renders. */
+[data-bs-theme="dark"] img.r-plt,
 body.preset-midnight img.r-plt,
 body.preset-midnight pre .r-plt.img img,
 body.preset-midnight .cell-output-display img,
@@ -1315,134 +2986,63 @@ body.preset-midnight .html-widget {
 
 /* -- Responsive ---------------------------------------------------------- */
 @media (max-width: 920px) {
-  html,
-  body { font-size: 16.8px; }
-
   :root { --anchor-offset: 64px; }
 
-  h2,
-  h3 {
-    padding-left: 0.62em;
-    padding-right: 1.2em;
-  }
-
-  .page-content,
-  .article,
-  .reference,
-  .template-home {
-    box-shadow: none;
-    border-left: none;
-    border-right: none;
-  }
-
-  .page-content::before,
-  .article::before,
-  .reference::before,
-  .template-home::before {
-    display: none;
-  }
-
-  button.copy-code {
-    font-size: 10px;
-    letter-spacing: 0.05em;
-  }
+  main#main { margin-block: calc(56px + 1rem) 2rem; }
 }
 
 @media (max-width: 760px) {
   :root {
     --anchor-offset: 58px;
-    --content: 74ch;
+    --fs-body: 17px;
   }
 
-  main,
-  .content,
-  .page-content,
-  .vignette,
-  .contents {
-    padding-inline: 14px;
-  }
+  .preset-interaction { --fs-body: 16px; }
 
-  .navbar .navbar-brand,
-  .navbar .nav-link {
-    font-size: 0.78em;
-    letter-spacing: 0.035em;
-  }
-
-  h1 { font-size: clamp(1.72rem, 7.2vw, 2.02rem); }
-  h2 {
-    font-size: clamp(1.16rem, 5.2vw, 1.35rem);
-    letter-spacing: 0.045em;
-  }
-  h3 { font-size: clamp(1rem, 4.3vw, 1.14rem); }
+  h1 { font-size: clamp(1.95rem, 8.4vw, 2.4rem); }
+  h2 { font-size: 1.38rem; margin-top: 2.5rem; padding-top: 1.1rem; }
 
   pre {
-    padding: var(--space-5) var(--space-3);
-    font-size: 0.91em;
+    --pre-px: 1rem;
+    padding: 0.9rem var(--pre-px);
+    font-size: 0.76rem;
   }
 
-  button.copy-code {
-    min-height: 30px;
-    padding: 6px 10px;
+  /* the sheet runs edge to edge: no container gutters on phones */
+  body > .container, body > div.container, body > .container > .row { --bs-gutter-x: 0; }
+  main#main {
+    border-inline: 0;
+    box-shadow: none;
   }
+  main#main::before { inset-inline: 0; }
+  body > .container > .row > aside { padding-inline: 18px; }
 
-  table {
-    display: block;
-    overflow-x: auto;
-    white-space: nowrap;
-    -webkit-overflow-scrolling: touch;
-  }
+  .navbar .nav-link { margin-inline: 0; }
 }
 
 @media (max-width: 520px) {
   :root { --anchor-offset: 54px; }
 
-  main,
-  .content,
-  .page-content,
-  .vignette,
-  .contents {
-    padding-inline: 12px;
-  }
-
-  .navbar { border-top-width: 2px; }
-
-  .navbar .navbar-brand,
-  .navbar .nav-link {
-    font-size: 0.74em;
-    letter-spacing: 0.03em;
-  }
-
-  h2,
-  h3 {
-    padding-right: 1em;
-  }
-
-  .anchor { right: -0.08em; }
-
-  pre {
-    border-left-width: 2px;
-    padding: var(--space-4) var(--space-3);
-  }
-
-  button.copy-code {
-    top: 6px;
-    right: 6px;
-    min-height: 28px;
-    padding: 5px 8px;
-    font-size: 9px;
-  }
+  .albers-theme-toggle { top: 0.9rem; right: 0.6rem; }
 }
 
 @media (prefers-contrast: more) {
-  :root {
+  :root,
+  :root body,
+  :root body[class] {
     --border: #9aa1ad;
     --muted: #4f5661;
-    --accent-tint: rgba(228, 73, 38, 0.18);
-    --accent-band: rgba(228, 73, 38, 0.24);
     --rule-strong: 3px;
   }
 
-  a { text-decoration-thickness: 0.12em; }
+  :root[data-albers-theme="dark"] body[class],
+  :root[data-bs-theme="dark"] body[class],
+  :root body.preset-midnight[class] {
+    --border: #7a8290;
+    --muted: #cfd3da;
+  }
+
+  a { text-decoration-thickness: 2px; text-decoration-color: currentColor; }
 
   pre,
   table,
@@ -1450,66 +3050,251 @@ body.preset-midnight .html-widget {
   .callout {
     border-width: 2px;
   }
-
-  .navbar .nav-link.active::after,
-  .navbar .active > a::after { color: var(--A700); }
 }
 
+@media (forced-colors: active) {
+  pre code span.albers-msg-line, pre.albers-msg-pre,
+  pre code .albers-out-line:is(.is-warn, .is-err, .is-msg) { border-left: 2px solid CanvasText; }
+  .callout, pre, .albers-out-block, kbd, :not(pre) > code, details, table { border: 1px solid CanvasText; }
+  .albers-out-block.is-warn { border-left: 4px dashed CanvasText; }
+  .albers-out-block.is-err { border-left: 6px double CanvasText; }
+  .albers-out-block, .albers-table-scroll, div.sourceCode { -webkit-mask-image: none !important; mask-image: none !important; }
+  #TOC a.is-active, #toc a.nav-link.active { text-decoration: underline 2px !important; text-underline-offset: 0.2em; }
+  .albers-plate-mark, h2::before, .albers-colophon__swatches { forced-color-adjust: none; }
+  a.albers-heading-link { color: CanvasText; }
+}
+
+/* (no transitions at all: a 0.01ms duration on every element started a
+   real transition for each property change -- tens of thousands on a long
+   article, an 11 s freeze; albers.js waits on no transitionend) */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    transition: none !important;
     scroll-behavior: auto !important;
   }
 }
 
 @media print {
-  body { background: #fff !important; }
+  /* One light token set for paper, whatever the screen theme or direction. */
+  html,
+  :root body,
+  :root body[class],
+  :root[data-albers-theme] body[class],
+  :root[data-bs-theme] body[class] {
+    background: #fff !important;
+    --bg: #fff;
+    --surface: #fff;
+    --surface-strong: #f5f5f3;
+    --border: #d9d6cf;
+    --ink: #111;
+    --muted: #555;
+    /* the code ground keeps a light wash of the family, as on screen */
+    --code-bg: color-mix(in oklab, var(--A300) 13%, #fff);
+    --code-fg: #222;
+    --code-border: color-mix(in oklab, var(--A300) 38%, #fff);
+    --code-out: #444;
+    /* syntax keeps the family on paper: the light-day triad (deep family,
+       deep complement, third hue), all AA on white and on the code ground */
+    --tok-fun: var(--A700);
+    --tok-str: var(--comp-ink);
+    --tok-num: var(--code-num);
+    --tok-com: #666;
+    --tok-kw: #111;
+    --tok-arg: #444;
+    --accent-ink: var(--A900);
+    --warn: #7a5300;
+    --danger: #b3261e;
+    --code-warn: #7a5300;
+    --code-err: #b3261e;
+    color-scheme: light !important;
+    font-size: 11pt;
+  }
 
-  body.albers-vignette,
-  body:has(> #TOC) {
+  :root, :root[data-bs-theme] {
+    --bs-body-color: #111;
+    --bs-body-bg: #fff;
+    --bs-table-color: #111;
+    --bs-table-bg: transparent;
+    --bs-emphasis-color: #111;
+  }
+  .albers-skip { display: none !important; }
+
+  a[href^="http"]:not(:has(code))::after {
+    content: " (" attr(href) ")";
+    font-size: 0.8em;
+    color: #555;
+    word-break: break-all;
+  }
+  pre a[href]::after,
+  #TOC a::after,
+  .footnotes a::after { content: none !important; }
+
+  body:where(.albers-vignette, :has(> #TOC), :has(> h1.title)) {
     display: block;
     max-width: none;
     border: none;
     box-shadow: none;
-    padding: 0;
+    padding: 6mm 0 0;
+    margin: 0;
   }
-  body.albers-vignette::before,
-  body:has(> #TOC)::before { display: none; }
+  /* the family bar heads the first page: a thin band, its colours printed
+     even with the browser's background graphics off */
+  body:where(.albers-vignette, :has(> #TOC), :has(> h1.title))::before,
+  main#main::before {
+    display: block;
+    inset-inline: 0;
+    top: 0;
+    height: 1.4mm;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 
   .navbar,
   .sidebar,
-  .toc,
+  aside,
   #TOC,
-  .page-header,
   .homage-hero,
   .hr-notch,
   button.copy-code,
+  .albers-theme-toggle,
+  .albers-progress,
   .anchor { display: none !important; }
 
-  .page-content,
-  .article,
-  .reference,
-  .template-home {
+  main#main {
     border: none;
     box-shadow: none;
     background: #fff;
+    padding: 6mm 0 0;
+    /* no navbar to clear, and no sidebar: the card takes the page */
+    margin-top: 0 !important;
+    flex: 0 0 100% !important;
+    width: 100% !important;
+    max-width: none !important;
   }
 
-  .page-content::before,
-  .article::before,
-  .reference::before,
-  .template-home::before {
-    display: none;
+  @page { margin: 18mm 16mm; }
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+  html.albers-loading body { opacity: 1; }
+  body:where(.albers-vignette, :has(> #TOC), :has(> h1.title)) { max-width: 44rem !important; margin: 0 auto !important; }
+  /* pandoc's print CSS gives code line spans a -5em hanging indent; the
+     output block is such a span, so cancel it or its first line is clipped */
+  .albers-out-block { margin-inline: 0 !important; padding-inline: 0.6rem !important; text-indent: 0 !important; }
+  .albers-out-block > span { text-indent: 0 !important; padding-left: 0 !important; }
+  div.sourceCode::after { display: none !important; }
+  /* wide tables: let them shrink onto the page instead of being clipped */
+  .albers-table-scroll { overflow: visible !important; }
+  .albers-table-scroll > table, table { font-size: 8pt; width: 100% !important; min-width: 0 !important; }
+  th, td { padding: 0.25rem 0.4rem !important; white-space: normal !important; }
+  /* many columns: smaller type first; only then may a cell break */
+  table.albers-table-many { font-size: 6.5pt !important; }
+  table.albers-table-many :is(th, td) { padding: 0.2rem 0.25rem !important; font-size: inherit !important; }
+  td, th.albers-th-long { overflow-wrap: anywhere; }
+  /* paper can't scroll: any unbroken token breaks inside the column */
+  :is(p, li, blockquote, dd, dt, h1, h2, h3, h4, figcaption, .caption) { overflow-wrap: anywhere; }
+  /* a link whose text is its URL isn't printed twice */
+  a.uri::after { content: none !important; }
+  :is(.wide, .fullwidth, div.sourceCode.wide, pre.wide) { margin-right: 0 !important; }
+  /* Bootstrap theme variables live on every [data-bs-theme] element */
+  [data-bs-theme] {
+    color-scheme: light;
+    --bs-body-color: #111;
+    --bs-body-bg: #fff;
+    --bs-emphasis-color: #111;
+    --bs-secondary-color: #555;
+    --bs-table-color: #111;
+    --bs-table-bg: transparent;
   }
+  :is(div.sourceCode, pre, .albers-table-scroll).is-wide { margin-right: 0 !important; }
+  /* the title plate, small, beside the title on the first page; on paper it
+     is always the light-outside study, so no dark square fills the corner */
+  .albers-titleblock .albers-plate-mark {
+    --plate: 15mm;
+    width: 15mm !important;
+    height: 15mm !important;
+    --plate-1: var(--sq-outer);
+    --plate-2: var(--A300);
+    --plate-3: var(--A500);
+    --plate-4: var(--A900);
+    display: block !important;
+    position: absolute !important;
+    top: 0 !important;
+    right: 0 !important;
+    left: auto !important;
+    margin: 0 !important;
+    filter: none !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .albers-titleblock { display: block !important; min-height: calc(15mm + 4mm) !important; padding-top: 0 !important; margin-bottom: 7mm !important; }
+  /* the same stroke, opaque on white: a translucent chip border inside a link
+     (the site's "Source:" line) leaves Poppler-based PDF viewers painting the
+     plate's squares at a quarter of their strength */
+  a > code, a:visited > code { border-color: color-mix(in srgb, currentColor 28%, #fff) !important; }
+  .albers-titleblock:has(.albers-plate-mark) > :not(.albers-plate-mark) { margin-right: calc(15mm + 6mm) !important; }
+  /* the code ground's family wash prints without background graphics */
+  pre, div.sourceCode { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  pre { white-space: pre-wrap; break-inside: avoid; }
+  /* on paper segments cannot be measured (no layout pass per page width), so
+     they wrap at spaces rather than risk running off the page */
+  pre > code.sourceCode .albers-seg,
+  pre > code.sourceCode .albers-lead { white-space: pre-wrap !important; overflow-wrap: anywhere; }
+  /* ... but strings, names with their "=" and argument names stay whole */
+  pre > code.sourceCode :is(.albers-strq:not(.albers-strq-long), .albers-nameq, .albers-opq, .at.albers-at-short) { white-space: pre !important; }
+  /* the screen's keep-whole state does not carry to paper for long strings */
+  pre > code.sourceCode .albers-strq.albers-strq-long { white-space: pre-wrap !important; overflow-wrap: anywhere; }
+  /* the bracket hang is measured in the screen's pixels: paper takes the
+     plain hang (the line's indent plus 4ch), whatever window printed it */
+  pre > code.sourceCode > span:not(.albers-out-block) {
+    padding-left: calc(var(--ind, 0ch) + 4ch) !important;
+    text-indent: calc(-1 * (var(--ind, 0ch) + 4ch)) !important;
+  }
+  .albers-out-block { white-space: pre-wrap !important; overflow: visible !important; -webkit-mask-image: none !important; mask-image: none !important; }
+  h1 { font-size: 26pt; }
+  pre code { white-space: pre-wrap; }
+  h2, h3, h4 { break-after: avoid; }
+  figure, div.figure, table, .callout, blockquote { break-inside: avoid; }
+  /* scroll fades are a screen cue; on paper they fade real data */
+  .albers-table-scroll, .albers-out-block, .albers-math, math, pre, div.sourceCode { -webkit-mask-image: none !important; mask-image: none !important; }
+  div.sourceCode::after { content: none !important; }
 
-  pre { page-break-inside: avoid; }
-
-  a {
+  /* :visited must be named too: the screen rule `a, a:visited` would
+     otherwise outrank a bare `a` for visited (e.g. same-page) links */
+  a,
+  a:visited,
+  a > code,
+  a:visited > code {
     color: inherit !important;
     text-decoration: none;
   }
+}
+
+
+/* -- v19: inline chips, pkgdown shell, carried details -------------------- */
+/* a short inline code chip stays on one line */
+body :not(pre) > code.is-short:not(.sourceCode) { white-space: nowrap; }
+/* pandoc's error token (.er) in the theme's error colour, not pure red */
+pre code span.er { color: var(--code-err); font-weight: inherit; }
+/* actual-size zoom sits centred when narrower than the window */
+dialog.albers-zoom.is-actual .albers-zoom-stage { width: max-content; max-width: none; margin-inline: auto; }
+/* pkgdown: argument names read as code */
+main#main dl dt[id^="arg-"] { font-family: var(--font-mono); font-weight: 500; font-size: 0.92em; }
+/* pkgdown dark: an example plot drawn on white is mounted on paper, not dimmed */
+html[data-albers-theme="dark"] .r-plt img,
+html[data-bs-theme="dark"] .r-plt img { filter: none !important; background: #f7f2e6; padding: 0.6rem; outline: 0; }
+@media (max-width: 991.98px) {
+  /* the menu button at the bar's end, beside the theme control */
+  .navbar > .container, .navbar > .container-fluid { flex-wrap: wrap; }
+  .navbar .navbar-toggler { order: 3; margin-inline-start: 0.5rem; }
+  .navbar .albers-theme-toggle { order: 2; margin-inline-start: auto; }
+  /* the footer keeps the page gutter; the phone contents list is not a slab */
+  body > footer, footer.pkgdown-footer, body > .container > footer { padding-inline: 1.125rem; }
+  aside#pkgdown-sidebar, main#main + aside { background: none; margin-inline: 0; padding: 1rem 1.125rem; border-top: var(--rule-thin) solid var(--border); }
+}
+@media (max-width: 620px) {
+  /* the vignette's theme control is a full-size touch target */
+  .albers-theme-toggle.is-inline { width: 44px; height: 44px; }
 }

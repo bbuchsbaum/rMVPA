@@ -52,6 +52,11 @@ run_searchlight(
   :   Searchlight engine: `"auto"` (default), `"legacy"` (the
       compatibility key for the general-purpose iterator), `"swift"`,
       `"dual_lda_fast"`, `"naive_xdec_fast"`, or `"era_rsa_fast"`.
+      `"auto"` only selects engines that compute the same estimator as
+      the model specification. `"swift"` is never selected
+      automatically: it replaces the specified classifier with SWIFT's
+      z-scored nearest-class-mean estimator and must be requested
+      explicitly.
 
   combiner
 
@@ -85,7 +90,13 @@ A \`searchlight_result\` object containing spatial maps for each metric.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-  # See run_searchlight generic for examples
-} # }
+# An mvpa_model has no dedicated method, so dispatch uses this default
+ds <- gen_sample_dataset(D = c(3, 3, 3), nobs = 24, nlevels = 2, blocks = 3)
+cval <- blocked_cross_validation(ds$design$block_var)
+mspec <- mvpa_model(load_model("corclass"), dataset = ds$dataset,
+                    design = ds$design, crossval = cval)
+res <- run_searchlight(mspec, radius = 2, method = "standard")
+#> INFO [2026-10-07 05:02:31] searchlight engine: aggregate_fast
+names(res$results)
+#> [1] "Accuracy" "AUC"     
 ```

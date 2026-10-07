@@ -45,12 +45,16 @@ calls `temporal_rdm` with the same parameters.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-# Use directly in RSA formula
+run_ids <- rep(1:4, each = 10)
+set.seed(1)
+task_rdm <- dist(matrix(rnorm(40 * 3), 40, 3))
+
+# Build a temporal nuisance RDM and use it in an RSA design
 rdes <- rsa_design(
-  ~ task_rdm + temporal(trial_index, block=run, kernel="adjacent", width=2),
-  data = list(task_rdm = task_rdm, trial_index = 1:100, run = run_ids),
+  ~ task_rdm + temp_rdm,
+  data = list(task_rdm = task_rdm,
+              temp_rdm = temporal(1:40, block = run_ids, kernel = "adjacent", width = 2),
+              run = run_ids),
   block_var = ~ run
 )
-} # }
 ```

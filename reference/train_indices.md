@@ -34,5 +34,5 @@ An integer vector of training indices.
 ``` r
 cval <- kfold_cross_validation(len = 20, nfolds = 4)
 train_indices(cval, 1)
-#>  [1]  2  3  4  5  6  7  8  9 10 12 15 16 18 19 20
+#>  [1]  1  2  3  4  5  6  8  9 11 12 13 14 17 18 20
 ```

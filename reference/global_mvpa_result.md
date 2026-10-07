@@ -58,17 +58,28 @@ An S3 object of class `global_mvpa_result`.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-  # Typically created by run_global(), not directly
-  result <- global_mvpa_result(
-    performance_table = tibble::tibble(Accuracy = 0.8),
-    result = NULL,
-    importance_map = NULL,
-    importance_vector = c(0.1, 0.2),
-    activation_patterns = NULL,
-    raw_weights = NULL,
-    fold_fits = NULL,
-    model_spec = list()
-  )
-} # }
+# Typically created by run_global(), shown here with toy values
+result <- global_mvpa_result(
+  performance_table = tibble::tibble(Accuracy = 0.8),
+  result = NULL,
+  importance_map = NULL,
+  importance_vector = c(0.1, 0.2),
+  activation_patterns = NULL,
+  raw_weights = NULL,
+  fold_fits = NULL,
+  model_spec = list()
+)
+print(result)
+#> 
+#>   Global MVPA Result
+#> 
+#>   Performance:
+#> # A tibble: 1 × 1
+#>   Accuracy
+#>      <dbl>
+#> 1      0.8
+#> 
+#>   Importance vector: length 2 
+#>     range: [ 0.1 , 0.2 ]
+#> 
 ```

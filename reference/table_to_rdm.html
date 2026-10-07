@@ -3,7 +3,7 @@
 for use in RSA analyses. The function maps label pairs through the similarity table
 and creates a complete RDM, using default values for missing pairs."><meta property="og:description" content="Converts a similarity lookup table to a Representational Dissimilarity Matrix (RDM)
 for use in RSA analyses. The function maps label pairs through the similarity table
-and creates a complete RDM, using default values for missing pairs."></head><body>
+and creates a complete RDM, using default values for missing pairs."><link href="../albers.css" rel="stylesheet"><script>window.albersdownDefaults = window.albersdownDefaults || { family: "red", preset: "homage", style: "minimal" };</script><script src="../albers.js"></script></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -141,10 +141,8 @@ dissimilarity = 1 - similarity</p>
 <span class="r-in"><span><span class="va">rdm_matrix</span> <span class="op">&lt;-</span> <span class="fu">table_to_rdm</span><span class="op">(</span><span class="va">sim_table</span>, <span class="va">conditions</span>, as_dist <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Use in RSA design</span></span></span>
-<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
 <span class="r-in"><span><span class="va">rsa_des</span> <span class="op">&lt;-</span> <span class="fu"><a href="rsa_design.html">rsa_design</a></span><span class="op">(</span><span class="op">~</span> <span class="va">theoretical_rdm</span>,</span></span>
 <span class="r-in"><span>                     data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>theoretical_rdm <span class="op">=</span> <span class="va">rdm</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

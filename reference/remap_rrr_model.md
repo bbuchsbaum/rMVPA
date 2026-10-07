@@ -190,9 +190,8 @@ faster single-fit adapters per ROI.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-  # Requires dataset with paired train/test data
-  ds <- gen_sample_dataset(c(5,5,5), 20, external_test=TRUE)
-  model <- remap_rrr_model(ds$dataset, ds$design, rank=5)
-} # }
+ds <- gen_sample_dataset(c(5, 5, 5), 20, external_test = TRUE)
+model <- remap_rrr_model(ds$dataset, ds$design, rank = 5)
+class(model)
+#> [1] "remap_rrr_model" "model_spec"      "list"           
 ```

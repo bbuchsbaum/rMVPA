@@ -7,7 +7,7 @@ an HRF-overlap-based nuisance built trial-wise then reduced to condition level."
 nuisance RDMs for MS-ReVE analyses given an mvpa_design, a time index
 (trial onsets or order), and a compact specification. Each entry can be a
 kernel-based nuisance (delegates to temporal_nuisance_for_msreve) or
-an HRF-overlap-based nuisance built trial-wise then reduced to condition level."></head><body>
+an HRF-overlap-based nuisance built trial-wise then reduced to condition level."><link href="../albers.css" rel="stylesheet"><script>window.albersdownDefaults = window.albersdownDefaults || { family: "red", preset: "homage", style: "minimal" };</script><script src="../albers.js"></script></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -95,10 +95,19 @@ set <code>kind="hrf"</code> and include <code>TR</code> plus optional <code>dura
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
-<span class="r-in"><span>  <span class="va">spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>lag<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>kernel<span class="op">=</span><span class="st">"exp"</span>, lambda<span class="op">=</span><span class="fl">3</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="va">conf</span> <span class="op">&lt;-</span> <span class="fu">msreve_temporal_confounds</span><span class="op">(</span><span class="va">mvpa_design</span>, time_idx<span class="op">=</span><span class="fl">1</span><span class="op">:</span><span class="fl">100</span>, <span class="va">spec</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">ds</span> <span class="op">&lt;-</span> <span class="fu"><a href="gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span>D <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">4</span>, <span class="fl">4</span>, <span class="fl">4</span><span class="op">)</span>, nobs <span class="op">=</span> <span class="fl">24</span>, nlevels <span class="op">=</span> <span class="fl">4</span>, blocks <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>lag <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>kernel <span class="op">=</span> <span class="st">"exp"</span>, lambda <span class="op">=</span> <span class="fl">3</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>             hrf <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>kind <span class="op">=</span> <span class="st">"hrf"</span>, TR <span class="op">=</span> <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">conf</span> <span class="op">&lt;-</span> <span class="fu">msreve_temporal_confounds</span><span class="op">(</span><span class="va">ds</span><span class="op">$</span><span class="va">design</span>,</span></span>
+<span class="r-in"><span>                                  time_idx <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, by <span class="op">=</span> <span class="fl">2</span>, length.out <span class="op">=</span> <span class="fl">24</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                                  spec <span class="op">=</span> <span class="va">spec</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">conf</span>, <span class="va">dim</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $lag</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 4 4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $hrf</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 4 4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

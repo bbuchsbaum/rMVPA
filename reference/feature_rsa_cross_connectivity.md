@@ -71,16 +71,34 @@ returned with elements `matrix`, `raw_matrix`, `adjusted_matrix`,
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-res <- run_regional(
-  feature_rsa_model(dataset, design, method = "pls", return_rdm_vectors = TRUE),
-  region_mask
+set.seed(1)
+sample_ds <- gen_sample_dataset(c(4, 4, 4), nobs = 24, blocks = 3)
+Fmat <- matrix(rnorm(24 * 6), 24, 6)
+des <- feature_rsa_design(F = Fmat, labels = paste0("t", seq_len(24)),
+                          max_comps = 3, block_var = sample_ds$design$block_var)
+mdl <- feature_rsa_model(sample_ds$dataset, des, method = "pca",
+                         ncomp_selection = "max", return_rdm_vectors = TRUE)
+region_mask <- neuroim2::NeuroVol(
+  rep(1:3, length.out = length(sample_ds$dataset$mask)),
+  neuroim2::space(sample_ds$dataset$mask)
 )
+res <- run_regional(mdl, region_mask)
+#> INFO [2026-10-07 05:01:59] 
+#> MVPA Iteration Complete
+#> - Total ROIs: 3
+#> - Processed: 3
+#> - Skipped: 0
+#> INFO [2026-10-07 05:01:59] run_regional: 3 ROIs processed (success=3, errors=0)
 cross_conn <- feature_rsa_cross_connectivity(res, method = "spearman")
 cross_dc <- feature_rsa_cross_connectivity(
   res,
   method = "spearman",
   adjust = "double_center"
 )
-} # }
+round(cross_dc, 2)
+#>          observed
+#> predicted     1     2     3
+#>         1 -0.05 -0.02  0.07
+#>         2 -0.02  0.04 -0.03
+#>         3  0.07 -0.02 -0.04
 ```

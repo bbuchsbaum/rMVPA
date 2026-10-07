@@ -3,7 +3,7 @@
 the ROI RDM and a seed RDM, optionally controlling for confound RDMs (block,
 lag, behavior, etc.)."><meta property="og:description" content="For each ROI or searchlight, computes representational connectivity between
 the ROI RDM and a seed RDM, optionally controlling for confound RDMs (block,
-lag, behavior, etc.)."></head><body>
+lag, behavior, etc.)."><link href="../albers.css" rel="stylesheet"><script>window.albersdownDefaults = window.albersdownDefaults || { family: "red", preset: "homage", style: "minimal" };</script><script src="../albers.js"></script></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -94,10 +94,13 @@ lag, behavior, etc.).</p>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
-<span class="r-in"><span>  <span class="co"># Requires repnet_design with seed_rdm</span></span></span>
-<span class="r-in"><span>  <span class="co"># model &lt;- repnet_model(dataset, design, repnet_des)</span></span></span>
-<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">ds</span> <span class="op">&lt;-</span> <span class="fu"><a href="gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span>D <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">4</span>, <span class="fl">4</span>, <span class="fl">4</span><span class="op">)</span>, nobs <span class="op">=</span> <span class="fl">16</span>, blocks <span class="op">=</span> <span class="fl">4</span>, nlevels <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="co"># Seed RDM over trials (e.g. from a seed region or a behavioural model)</span></span></span>
+<span class="r-in"><span><span class="va">key_ids</span> <span class="op">&lt;-</span> <span class="va">ds</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">train_design</span><span class="op">$</span><span class="va">.rownum</span></span></span>
+<span class="r-in"><span><span class="va">seed_rdm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/dist.html" class="external-link">dist</a></span><span class="op">(</span><span class="va">key_ids</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">seed_rdm</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">seed_rdm</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="va">key_ids</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">rn_des</span> <span class="op">&lt;-</span> <span class="fu"><a href="repnet_design.html">repnet_design</a></span><span class="op">(</span><span class="va">ds</span><span class="op">$</span><span class="va">design</span>, key_var <span class="op">=</span> <span class="op">~</span> <span class="va">.rownum</span>, seed_rdm <span class="op">=</span> <span class="va">seed_rdm</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu">repnet_model</span><span class="op">(</span><span class="va">ds</span><span class="op">$</span><span class="va">dataset</span>, <span class="va">ds</span><span class="op">$</span><span class="va">design</span>, <span class="va">rn_des</span><span class="op">)</span></span></span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

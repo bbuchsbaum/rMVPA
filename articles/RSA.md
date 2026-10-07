@@ -410,24 +410,29 @@ projection of the neural pair vector onto your model RDM subspace.
 then turns those fingerprints into ROI-by-ROI representational
 connectivity in one call. The same flag also feeds k-means anchor maps
 for searchlight runs without materialising an `n_centers × n_centers`
-matrix. See
-[`vignette("Model_Space_Connectivity")`](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md)
+matrix. See [Model-Space Representational
+Connectivity](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.html)
 for the full workflow, including cross-domain pair designs
 (`pair_rsa_design(..., pairs = "between")`).
 
 ## Further reading
 
-- [`vignette("Model_Space_Connectivity")`](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md)
+- [Model-Space Representational
+  Connectivity](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.html)
   – model-space fingerprints, ROI-to-ROI connectivity, pair_rsa_design,
   and searchlight anchor maps
-- [`vignette("Feature_RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA.md)
-  – Feature-Based RSA: predicting neural patterns from a feature matrix
-- [`vignette("Vector_RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/Vector_RSA.md)
-  – Vector-Based RSA: per-trial RSA scores with built-in across-block
+- [Feature-Based
+  RSA](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA.html) –
+  Feature-Based RSA: predicting neural patterns from a feature matrix
+- [Vector-Based
+  RSA](https://bbuchsbaum.github.io/rMVPA/articles/Vector_RSA.html) –
+  Vector-Based RSA: per-trial RSA scores with built-in across-block
   masking
-- [`vignette("Contrast_RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/Contrast_RSA.md)
+- [Contrast RSA with
+  contrast_rsa_model](https://bbuchsbaum.github.io/rMVPA/articles/Contrast_RSA.html)
   – MS-ReVE: contrast-based decomposition of representational geometry
-- [`vignette("Temporal_Confounds_in_RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/Temporal_Confounds_in_RSA.md)
+- [Temporal Confounds in
+  RSA](https://bbuchsbaum.github.io/rMVPA/articles/Temporal_Confounds_in_RSA.html)
   – controlling for temporal proximity confounds
 
 ## References

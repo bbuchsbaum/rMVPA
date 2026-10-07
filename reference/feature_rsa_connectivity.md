@@ -63,8 +63,19 @@ A symmetric numeric matrix with ROIs in rows/columns.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-vecs <- feature_rsa_rdm_vectors(res)
-conn <- feature_rsa_connectivity(vecs, method = "spearman", keep = 0.1)
-} # }
+# Usually `vecs` comes from feature_rsa_rdm_vectors(run_regional(...));
+# here a toy table of per-ROI lower-triangle RDM vectors is used.
+set.seed(1)
+vecs <- tibble::tibble(
+  roinum = 1:4,
+  rdm_vec = replicate(4, as.numeric(dist(matrix(rnorm(30), 10, 3))),
+                      simplify = FALSE)
+)
+conn <- feature_rsa_connectivity(vecs, method = "spearman", keep = 0.5)
+round(conn, 2)
+#>      1     2     3     4
+#> 1 1.00  0.00  0.14  0.00
+#> 2 0.00  1.00 -0.02 -0.02
+#> 3 0.14 -0.02  1.00  0.00
+#> 4 0.00 -0.02  0.00  1.00
 ```

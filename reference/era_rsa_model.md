@@ -426,7 +426,26 @@ complete-case set.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-  # See vignette for complete ERA-RSA workflow
-} # }
+# Encoding (train) and retrieval (test) data share item labels
+toy <- gen_sample_dataset(D = c(4, 4, 4), nobs = 24, nlevels = 4, blocks = 3,
+                          external_test = TRUE)
+toy$design$train_design$Item <- toy$design$train_design$Y
+toy$design$test_design$Item  <- toy$design$test_design$Ytest
+# suppressWarnings(): no per-item run metadata is supplied in this toy example
+model <- suppressWarnings(era_rsa_model(toy$dataset, toy$design, key_var = ~ Item))
+res <- run_regional(model, toy$dataset$mask)
+#> INFO [2026-10-07 05:01:57] 
+#> MVPA Iteration Complete
+#> - Total ROIs: 1
+#> - Processed: 1
+#> - Skipped: 0
+#> INFO [2026-10-07 05:01:57] run_regional: 1 ROIs processed (success=1, errors=0)
+res$performance_table
+#> # A tibble: 1 × 12
+#>   roinum n_items era_top1_acc era_diag_mean era_diag_minus_off geom_cor
+#>    <int>   <dbl>        <dbl>         <dbl>              <dbl>    <dbl>
+#> 1      1       4            0       -0.0388            -0.0172   -0.229
+#> # ℹ 6 more variables: era_diag_minus_off_same_block <dbl>,
+#> #   era_diag_minus_off_diff_block <dbl>, era_lag_cor <dbl>,
+#> #   geom_cor_partial <dbl>, geom_cor_run_partial <dbl>, geom_cor_xrun <dbl>
 ```

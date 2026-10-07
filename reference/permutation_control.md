@@ -76,34 +76,31 @@ permutation_control(
 
 - perm_strategy:
 
-  Character. Controls how each permutation pass is executed. Two
-  strategies are available; neither contains any engine-specific
-  branching:
+  Character. Controls how each permutation pass is executed. Eligible
+  exact engines reuse preparation across permutations for built-in
+  blocked CV or explicit custom splits. Other CV specifications retain
+  their per-permutation fold generation.
 
   `"iterate"` (default)
 
-  :   Each permutation runs
+  :   Each permutation evaluates a **subsampled** set of centers using a
+      prepared engine when eligible, or
       [`mvpa_iterate`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_iterate.md)
-      on a **subsampled** set of centers. This is the universal, safe
-      path: it works with every model type and every searchlight engine
-      because it goes through the generic per-ROI iterator.
+      otherwise.
 
       **When to use**: slow classifiers, large brains, limited compute.
       The `subsample` parameter controls how many centers are evaluated
-      per permutation, giving 5–20\\\times\\ speedup over a full-brain
-      pass.
+      per permutation.
 
       Null pool size: `n_perm * n_subsampled_centers`.
 
   `"searchlight"`
 
-  :   Each permutation runs
+  :   Each permutation evaluates the **full brain** using a prepared
+      engine when eligible, or
       [`run_searchlight`](https://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md)
-      on the **full brain**, then extracts metric values at every
-      center. Because the call goes through the standard
-      `run_searchlight` dispatch, it automatically benefits from any
-      fast engine the model qualifies for (e.g.\\ SWIFT, dual-LDA) as
-      well as any user-defined `run_searchlight.<class>` method.
+      otherwise. The latter retains standard engine dispatch and
+      user-defined `run_searchlight.<class>` methods.
 
       **When to use**: models with a fast searchlight engine, or when
       you want the richest possible null distribution. Since the full

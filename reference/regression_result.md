@@ -49,3 +49,12 @@ Other classification_result:
 [`binary_classification_result()`](https://bbuchsbaum.github.io/rMVPA/reference/binary_classification_result.md),
 [`classification_result()`](https://bbuchsbaum.github.io/rMVPA/reference/classification_result.md),
 [`multiway_classification_result()`](https://bbuchsbaum.github.io/rMVPA/reference/multiway_classification_result.md)
+
+## Examples
+
+``` r
+res <- regression_result(observed = c(1, 2, 3), predicted = c(1.1, 1.9, 3.2))
+performance(res)
+#>        R2      RMSE  spearcor 
+#> 0.9814540 0.1414214 1.0000000 
+```

@@ -11,8 +11,9 @@ coding, whitening, and component directions learned during discovery.
 That separation permits t and omnibus tests without treating a selected,
 regularized discovery loading as an ordinary regression coefficient. It
 does not turn cross-validated rank selection into a test of population
-rank. Pooling confirmed subject loadings is
-[`vignette("Pattern_Group")`](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Group.md).
+rank. Pooling confirmed subject loadings is [Group patterns in shared
+target
+coordinates](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Group.html).
 
 ## Freeze a discovery fit
 
@@ -223,5 +224,5 @@ Confirmation of several components is not a sequential rank test:
 validated null.
 
 To pool these subject-level confirmations in a shared target basis,
-continue with
-[`vignette("Pattern_Group")`](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Group.md).
+continue with [Group patterns in shared target
+coordinates](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Group.html).

@@ -87,8 +87,22 @@ It does not assume any specific model type, but expects that
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-  # Internal base function - users should call run_searchlight instead
-  # result <- run_searchlight_base(model_spec, radius=8, method="standard")
-} # }
+# Internal base function - users should normally call run_searchlight()
+ds <- gen_sample_dataset(D = c(3, 3, 3), nobs = 24, nlevels = 2, blocks = 3)
+cval <- blocked_cross_validation(ds$design$block_var)
+mspec <- mvpa_model(load_model("corclass"), dataset = ds$dataset,
+                    design = ds$design, crossval = cval)
+res <- run_searchlight_base(mspec, radius = 2, method = "standard")
+#> INFO [2026-10-07 05:02:31] Running standard searchlight with radius = 2
+#> INFO [2026-10-07 05:02:31] creating standard searchlight
+#> INFO [2026-10-07 05:02:31] running standard searchlight iterator
+#> INFO [2026-10-07 05:02:31] Using automatic searchlight batch size 27 for 27 centers (memory budget 512.0 MiB).
+#> INFO [2026-10-07 05:02:31] 
+#> MVPA Iteration Complete
+#> - Total ROIs: 27
+#> - Processed: 27
+#> - Skipped: 0
+#> INFO [2026-10-07 05:02:31] searchlight (standard): 27 ROIs processed (success=27, errors=0)
+names(res$results)
+#> [1] "Accuracy" "AUC"     
 ```

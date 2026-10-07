@@ -26,7 +26,13 @@ Invisibly returns the input object `x` (called for side effects).
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-  # print method called on feature_sets object
-} # }
+X <- matrix(rnorm(10 * 5), 10, 5)
+fs <- feature_sets(X, blocks(low = 2, high = 3))
+print(fs)
+#> feature_sets
+#> ===========
+#> 
+#> Observations: 10
+#> Features:     5
+#> Sets:         2 (low, high)
 ```

@@ -5,7 +5,7 @@ ROI j.  This captures how well the model-predicted representational geometry
 in one ROI matches the data-driven geometry in another."><meta property="og:description" content="Builds an asymmetric ROI x ROI matrix where entry (i, j) is the correlation
 between the predicted RDM vector of ROI i and the observed RDM vector of
 ROI j.  This captures how well the model-predicted representational geometry
-in one ROI matches the data-driven geometry in another."></head><body>
+in one ROI matches the data-driven geometry in another."><link href="../albers.css" rel="stylesheet"><script>window.albersdownDefaults = window.albersdownDefaults || { family: "red", preset: "homage", style: "minimal" };</script><script src="../albers.js"></script></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -114,18 +114,36 @@ while cross-connectivity is being computed.</p></dd>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
-<span class="r-in"><span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="run_regional-methods.html">run_regional</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="feature_rsa_model.html">feature_rsa_model</a></span><span class="op">(</span><span class="va">dataset</span>, <span class="va">design</span>, method <span class="op">=</span> <span class="st">"pls"</span>, return_rdm_vectors <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  <span class="va">region_mask</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">sample_ds</span> <span class="op">&lt;-</span> <span class="fu"><a href="gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">4</span>, <span class="fl">4</span>, <span class="fl">4</span><span class="op">)</span>, nobs <span class="op">=</span> <span class="fl">24</span>, blocks <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">Fmat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">24</span> <span class="op">*</span> <span class="fl">6</span><span class="op">)</span>, <span class="fl">24</span>, <span class="fl">6</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">des</span> <span class="op">&lt;-</span> <span class="fu"><a href="feature_rsa_design.html">feature_rsa_design</a></span><span class="op">(</span>F <span class="op">=</span> <span class="va">Fmat</span>, labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"t"</span>, <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fl">24</span><span class="op">)</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                          max_comps <span class="op">=</span> <span class="fl">3</span>, block_var <span class="op">=</span> <span class="va">sample_ds</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">block_var</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">mdl</span> <span class="op">&lt;-</span> <span class="fu"><a href="feature_rsa_model.html">feature_rsa_model</a></span><span class="op">(</span><span class="va">sample_ds</span><span class="op">$</span><span class="va">dataset</span>, <span class="va">des</span>, method <span class="op">=</span> <span class="st">"pca"</span>,</span></span>
+<span class="r-in"><span>                         ncomp_selection <span class="op">=</span> <span class="st">"max"</span>, return_rdm_vectors <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">region_mask</span> <span class="op">&lt;-</span> <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroVol.html" class="external-link">NeuroVol</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">3</span>, length.out <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">sample_ds</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span><span class="op">)</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/space-methods.html" class="external-link">space</a></span><span class="op">(</span><span class="va">sample_ds</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">mdl</span>, <span class="va">region_mask</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-10-07 05:01:59] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">3</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">3</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-10-07 05:01:59] run_regional: 3 ROIs processed (success=3, errors=0)</span>
 <span class="r-in"><span><span class="va">cross_conn</span> <span class="op">&lt;-</span> <span class="fu">feature_rsa_cross_connectivity</span><span class="op">(</span><span class="va">res</span>, method <span class="op">=</span> <span class="st">"spearman"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">cross_dc</span> <span class="op">&lt;-</span> <span class="fu">feature_rsa_cross_connectivity</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="va">res</span>,</span></span>
 <span class="r-in"><span>  method <span class="op">=</span> <span class="st">"spearman"</span>,</span></span>
 <span class="r-in"><span>  adjust <span class="op">=</span> <span class="st">"double_center"</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">cross_dc</span>, <span class="fl">2</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>          observed</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> predicted     1     2     3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         1 -0.05 -0.02  0.07</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         2 -0.02  0.04 -0.03</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         3  0.07 -0.02 -0.04</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

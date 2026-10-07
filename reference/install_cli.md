@@ -8,7 +8,7 @@ Copies the packaged command-line wrappers into a directory on your
 
 ``` r
 install_cli(
-  dest_dir = "~/.local/bin",
+  dest_dir,
   overwrite = FALSE,
   commands = c("searchlight", "regional")
 )
@@ -18,7 +18,9 @@ install_cli(
 
 - dest_dir:
 
-  Destination directory for the wrappers.
+  Destination directory for the wrappers, for example `"~/.local/bin"`.
+  Required: nothing is written to your home directory unless you choose
+  it.
 
 - overwrite:
 

@@ -3,7 +3,7 @@
 as ClusteredNeuroVec objects from neuroim2. A "clustered searchlight"
 iterates over all K parcels, pooling nearby parcels as features for each analysis.'><meta property="og:description" content='Creates a dataset object for MVPA analysis on parcellated brain data stored
 as ClusteredNeuroVec objects from neuroim2. A "clustered searchlight"
-iterates over all K parcels, pooling nearby parcels as features for each analysis.'></head><body>
+iterates over all K parcels, pooling nearby parcels as features for each analysis.'><link href="../albers.css" rel="stylesheet"><script>window.albersdownDefaults = window.albersdownDefaults || { family: "red", preset: "homage", style: "minimal" };</script><script src="../albers.js"></script></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -92,10 +92,15 @@ iterates over all K parcels, pooling nearby parcels as features for each analysi
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
-<span class="r-in"><span>  <span class="va">ds</span> <span class="op">&lt;-</span> <span class="fu"><a href="gen_clustered_sample_dataset.html">gen_clustered_sample_dataset</a></span><span class="op">(</span>K<span class="op">=</span><span class="fl">5</span>, nobs<span class="op">=</span><span class="fl">20</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">ds</span><span class="op">$</span><span class="va">dataset</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">ds</span> <span class="op">&lt;-</span> <span class="fu"><a href="gen_clustered_sample_dataset.html">gen_clustered_sample_dataset</a></span><span class="op">(</span>D <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">5</span>, <span class="fl">5</span><span class="op">)</span>, nobs <span class="op">=</span> <span class="fl">20</span>, K <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">ds</span><span class="op">$</span><span class="va">dataset</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Clustered MVPA Dataset</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   - Clusters:      5 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   - Observations:  20 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   - Test set:      no </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

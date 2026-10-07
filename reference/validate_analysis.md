@@ -151,7 +151,7 @@ validate_analysis(des, crossval = cv_bad)
 #>     2 classes with 50 to 50 observations each. 
 #> 
 #>    [PASS]   class_balance 
-#>     Class balance OK across folds (worst ratio: 1.2:1). 
+#>     Class balance OK across folds (worst ratio: 1.1:1). 
 #> 
 #>    [PASS]   single_class_folds 
 #>     All folds have multiple classes in both train and test sets. 

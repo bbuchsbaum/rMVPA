@@ -3,7 +3,7 @@
 columns represent features (e.g., neural network embeddings, semantic features).
 Optionally performs PCA to reduce dimensionality."><meta property="og:description" content="Creates contrasts based on a matrix where rows represent conditions and
 columns represent features (e.g., neural network embeddings, semantic features).
-Optionally performs PCA to reduce dimensionality."></head><body>
+Optionally performs PCA to reduce dimensionality."><link href="../albers.css" rel="stylesheet"><script>window.albersdownDefaults = window.albersdownDefaults || { family: "red", preset: "homage", style: "minimal" };</script><script src="../albers.js"></script></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -130,39 +130,39 @@ principal components. Takes precedence over `pve`. (Default: NULL)</p></dd>
 <span class="r-in"><span><span class="co"># Use raw features (first 3)</span></span></span>
 <span class="r-in"><span><span class="va">C_raw</span> <span class="op">&lt;-</span> <span class="fu">make_feature_contrasts</span><span class="op">(</span><span class="va">feat_mat</span><span class="op">[</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">3</span><span class="op">]</span>, use_pca <span class="op">=</span> <span class="cn">FALSE</span>, prefix<span class="op">=</span><span class="st">"RawFeat_"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">C_raw</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>        RawFeat_F1  RawFeat_F2 RawFeat_F3</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Cond1 -0.70167103 -0.02769106  0.2624713</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Cond2 -0.32752839  0.16210666  0.7531110</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Cond3  0.04572309 -0.78981934 -0.3832260</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Cond4 -1.12194511  2.44091203  0.4375869</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       RawFeat_F1 RawFeat_F2 RawFeat_F3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Cond1 -0.2392778  1.1288804  0.9073228</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Cond2  0.6911381  1.7116207  0.5359473</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Cond3  1.0736168 -1.7690945  1.4313724</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Cond4  0.8185904 -0.4231769 -1.1689419</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Use PCA, selecting top 2 PCs</span></span></span>
 <span class="r-in"><span><span class="va">C_pca</span> <span class="op">&lt;-</span> <span class="fu">make_feature_contrasts</span><span class="op">(</span><span class="va">feat_mat</span>, use_pca <span class="op">=</span> <span class="cn">TRUE</span>, n_pcs <span class="op">=</span> <span class="fl">2</span>, prefix<span class="op">=</span><span class="st">"PCA_"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">C_pca</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>          PCA_PC1     PCA_PC2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Cond1  2.4679528 -0.02669533</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Cond2 -1.7677353 -0.55337525</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Cond3 -0.1490867 -1.47407527</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Cond4 -0.5511308  2.05414586</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>          PCA_PC1    PCA_PC2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Cond1  0.2873227  1.2383453</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Cond2  1.8757505  0.7446504</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Cond3 -3.3997310 -0.1509157</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Cond4  1.2366578 -1.8320799</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Use PCA, selecting &gt;= 80% variance explained</span></span></span>
 <span class="r-in"><span><span class="va">C_pca_pve</span> <span class="op">&lt;-</span> <span class="fu">make_feature_contrasts</span><span class="op">(</span><span class="va">feat_mat</span>, use_pca <span class="op">=</span> <span class="cn">TRUE</span>, pve <span class="op">=</span> <span class="fl">0.8</span>, prefix<span class="op">=</span><span class="st">"PCA_"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">C_pca_pve</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>          PCA_PC1     PCA_PC2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Cond1  2.4679528 -0.02669533</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Cond2 -1.7677353 -0.55337525</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Cond3 -0.1490867 -1.47407527</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Cond4 -0.5511308  2.05414586</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>          PCA_PC1    PCA_PC2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Cond1  0.2873227  1.2383453</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Cond2  1.8757505  0.7446504</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Cond3 -3.3997310 -0.1509157</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Cond4  1.2366578 -1.8320799</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Reorder based on labels</span></span></span>
 <span class="r-in"><span><span class="va">C_pca_reorder</span> <span class="op">&lt;-</span> <span class="fu">make_feature_contrasts</span><span class="op">(</span><span class="va">feat_mat</span>, labels<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Cond3"</span>, <span class="st">"Cond1"</span>, <span class="st">"Cond4"</span>, <span class="st">"Cond2"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>                                      use_pca <span class="op">=</span> <span class="cn">TRUE</span>, n_pcs <span class="op">=</span> <span class="fl">2</span>, prefix<span class="op">=</span><span class="st">"PCA_"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">C_pca_reorder</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>          PCA_PC1     PCA_PC2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Cond3 -0.1490867  1.47407527</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Cond1  2.4679528  0.02669533</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Cond4 -0.5511308 -2.05414586</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Cond2 -1.7677353  0.55337525</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>          PCA_PC1    PCA_PC2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Cond3  3.3997310 -0.1509157</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Cond1 -0.2873227  1.2383453</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Cond4 -1.2366578 -1.8320799</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Cond2 -1.8757505  0.7446504</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

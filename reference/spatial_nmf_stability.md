@@ -136,10 +136,12 @@ are consistently among the strongest loadings.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-  stab <- spatial_nmf_stability(
-    matrix(rnorm(100*10), 100, 10),
-    k = 3, nruns = 5
-  )
-} # }
+set.seed(1)
+X <- matrix(runif(20 * 30), 20, 30)
+fit <- spatial_nmf(X, k = 2)$fit
+stab <- spatial_nmf_stability(X = X, fit = fit, n_boot = 5, seed = 1)
+#> INFO [2026-10-07 05:02:35] Spatial NMF stability: 5 bootstrap samples (serial)
+#> INFO [2026-10-07 05:02:35] Spatial NMF stability: bootstrap complete.
+dim(stab$mean)
+#> [1]  2 30
 ```

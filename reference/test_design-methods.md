@@ -25,18 +25,17 @@ A data frame containing the test set design variables.
 
 ``` r
 ds <- gen_sample_dataset(D = c(4, 4, 4), nobs = 10, external_test = TRUE)
-#> external test
 test_design(ds$design)
 #> # A tibble: 10 × 2
 #>    Ytest .rownum
 #>    <fct>   <int>
 #>  1 b           1
-#>  2 a           2
-#>  3 e           3
-#>  4 c           4
-#>  5 a           5
-#>  6 e           6
-#>  7 b           7
+#>  2 c           2
+#>  3 a           3
+#>  4 e           4
+#>  5 e           5
+#>  6 b           6
+#>  7 a           7
 #>  8 c           8
 #>  9 d           9
 #> 10 d          10

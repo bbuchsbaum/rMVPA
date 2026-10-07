@@ -180,7 +180,7 @@ res$performance_table
 #> # A tibble: 1 × 3
 #>   roinum Accuracy   AUC
 #>    <int>    <dbl> <dbl>
-#> 1      1    0.917 0.973
+#> 1      1    0.917 0.972
 ```
 
 ## Cross-validated accuracy
@@ -244,8 +244,9 @@ Faces and houses lead — exactly as in Figure 2 of the original paper.
 
 [`mvpa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_model.md)
 reads its classifier from rMVPA’s pre-registered registry, so swapping
-the family is one line. Below we run the same VT analysis under five
-classifiers covering different inductive biases:
+the family is one line. Below we run the same VT analysis under up to
+five classifiers (two need optional packages) covering different
+inductive biases:
 
 - **`corclass`** — correlation-to-prototype, the original Haxby (2001)
   method.
@@ -272,31 +273,34 @@ fit_one <- function(model_name, ...) {
   )
 }
 
+# rf and svmLinear need the optional randomForest and e1071 packages;
+# classifiers whose package is not installed are left out of the table.
+available <- function(pkg) is.null(pkg) || requireNamespace(pkg, quietly = TRUE)
 panel <- rbind(
   fit_one("corclass"),
   fit_one("naive_bayes"),
-  fit_one("rf",        tune_grid = data.frame(mtry = 50)),
-  fit_one("svmLinear"),
+  if (available("randomForest")) fit_one("rf", tune_grid = data.frame(mtry = 50)),
+  if (available("e1071")) fit_one("svmLinear"),
   fit_one("sda_notune")
 )
 panel <- panel[order(-panel$accuracy), ]
 panel
 #>    classifier accuracy   auc seconds
-#> 5  sda_notune    0.917 0.973     1.9
-#> 4   svmLinear    0.698 0.853     2.2
-#> 3          rf    0.500 0.694     9.4
-#> 2 naive_bayes    0.375 0.481     1.8
-#> 1    corclass    0.271 0.289     1.3
+#> 5  sda_notune    0.917 0.972     0.5
+#> 4   svmLinear    0.656 0.847     0.9
+#> 3          rf    0.510 0.710    11.3
+#> 2 naive_bayes    0.375 0.479     0.7
+#> 1    corclass    0.271 0.289     0.4
 ```
 
-![Cross-validated accuracy under five classifiers, all on the same VT
-patterns and the same leave-one-run-out CV. Dashed line = chance for an
-8-way problem
+![Cross-validated accuracy under the available classifiers, all on the
+same VT patterns and the same leave-one-run-out CV. Dashed line = chance
+for an 8-way problem
 (12.5%).](Haxby_2001_files/figure-html/classifier-bars-1.png)
 
-Cross-validated accuracy under five classifiers, all on the same VT
-patterns and the same leave-one-run-out CV. Dashed line = chance for an
-8-way problem (12.5%).
+Cross-validated accuracy under the available classifiers, all on the
+same VT patterns and the same leave-one-run-out CV. Dashed line = chance
+for an 8-way problem (12.5%).
 
 `sda_notune`’s shrinkage discriminant dominates by ≈25 percentage
 points. That gap is not a cross-validation artefact: leave-one-run-out
@@ -320,8 +324,8 @@ split-half-within-run* version of correlation classification that is
 structurally different from the 8-way leave-one-run-out reported here.
 
 The full `MVPAModels` registry includes 22 classifiers; see
-`ls(rMVPA:::MVPAModels)` for the complete list and
-[`vignette("FeatureSelection")`](https://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.md)
+`ls(rMVPA:::MVPAModels)` for the complete list and [Feature Selection in
+rMVPA](https://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.html)
 for adding feature selection inside the CV loop.
 
 ## Where the raw data lives
@@ -364,8 +368,9 @@ The package’s `data-raw/haxby2001_subj1.R` script reproduces the bundled
   The same `mspec` plus
   [`run_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md)
   produces a per-voxel decoding map.
-- For RSA-style geometry (rather than category labels),
-  [`vignette("Kriegeskorte_92_Images")`](https://bbuchsbaum.github.io/rMVPA/articles/Kriegeskorte_92_Images.md)
+- For RSA-style geometry (rather than category labels), [Reproducing
+  Kriegeskorte (2008) with
+  rMVPA](https://bbuchsbaum.github.io/rMVPA/articles/Kriegeskorte_92_Images.html)
   walks through the matched real-data RSA workflow.
 - For rMVPA’s classification ergonomics in general, see
   [`vignette("Regional_Analysis")`](https://bbuchsbaum.github.io/rMVPA/articles/Regional_Analysis.md)
@@ -380,6 +385,6 @@ The package’s `data-raw/haxby2001_subj1.R` script reproduces the bundled
 > <https://doi.org/10.1126/science.1063736>
 
 Subject 1 data are redistributed by the [PyMVPA
-project](http://www.pymvpa.org/datadb/haxby2001.md) and on [OpenNeuro
+project](https://www.pymvpa.org/datadb/haxby2001.html) and on [OpenNeuro
 ds000105](https://openneuro.org/datasets/ds000105). Cite Haxby et
 al. (2001) and the data redistribution source you used.

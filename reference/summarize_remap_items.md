@@ -32,8 +32,18 @@ A tibble with columns: \`item\`, \`res_naive\`, \`res_remap\`,
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-res <- run_regional(model, region_mask, return_fits = TRUE)
-items_tbl <- summarize_remap_items(res, roi = 1)
-} # }
+# A predictor list as stored in regional_mvpa_result$fits when
+# run_regional(..., return_fits = TRUE) is used with remap_rrr_model():
+pred <- list(diag_by_fold = list(
+  list(train_items = c("a", "b"), item_res_naive = c(4, 8),
+       item_res_remap = c(2, 4)),
+  list(train_items = c("a", "b"), item_res_naive = c(6, 10),
+       item_res_remap = c(3, 5))
+))
+summarize_remap_items(pred)
+#> # A tibble: 2 × 5
+#>   item  res_naive res_remap n_folds res_ratio
+#>   <chr>     <dbl>     <dbl>   <int>     <dbl>
+#> 1 a             5       2.5       2       0.5
+#> 2 b             9       4.5       2       0.5
 ```

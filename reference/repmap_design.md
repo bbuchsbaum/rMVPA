@@ -30,9 +30,7 @@ A list with elements:
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-  items <- letters[1:10]
-  seed_features <- matrix(rnorm(10*5), 10, 5)
-  des <- repmap_design(items, seed_features)
-} # }
+items <- letters[1:10]
+seed_features <- matrix(rnorm(10*5), 10, 5)
+des <- repmap_design(items, seed_features)
 ```

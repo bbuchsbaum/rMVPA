@@ -107,8 +107,17 @@ A list containing:
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-  # Internal S3 method called after cross-validation
-  # perf <- evaluate_model(feature_rsa_model, newdata, observed)
-} # }
+# Normally called internally after cross-validation; shown on toy matrices.
+set.seed(2)
+sample_ds <- gen_sample_dataset(c(4, 4, 4), nobs = 12, blocks = 2)
+des <- feature_rsa_design(F = matrix(rnorm(12 * 4), 12, 4),
+                          labels = paste0("t", 1:12),
+                          block_var = sample_ds$design$block_var)
+mdl <- feature_rsa_model(sample_ds$dataset, des, method = "pca")
+observed <- matrix(rnorm(12 * 5), 12, 5)
+predicted <- observed + matrix(rnorm(12 * 5, sd = 0.5), 12, 5)
+perf <- evaluate_model.feature_rsa_model(mdl, predicted, observed)
+unlist(perf[c("pattern_correlation", "rdm_correlation", "r_squared")])
+#> pattern_correlation     rdm_correlation           r_squared 
+#>           0.8911931           0.8045298           0.7604208 
 ```

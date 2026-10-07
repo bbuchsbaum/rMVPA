@@ -57,11 +57,9 @@ Other classification_result:
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-  obs <- factor(c("a", "b", "a", "b"))
-  pred <- factor(c("a", "b", "b", "a"))
-  probs <- matrix(c(0.8, 0.2, 0.7, 0.3, 0.4, 0.6, 0.3, 0.7),
-                  ncol=2, dimnames=list(NULL, c("a","b")))
-  res <- binary_classification_result(obs, pred, probs)
-} # }
+obs <- factor(c("a", "b", "a", "b"))
+pred <- factor(c("a", "b", "b", "a"))
+probs <- matrix(c(0.8, 0.2, 0.7, 0.3, 0.4, 0.6, 0.3, 0.7),
+                ncol=2, dimnames=list(NULL, c("a","b")))
+res <- binary_classification_result(obs, pred, probs)
 ```

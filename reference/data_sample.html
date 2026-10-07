@@ -3,7 +3,7 @@
 Construct a light-weight data sample descriptor for a set of features (e.g., voxels)
 associated with a dataset. Methods define how to interpret and convert this descriptor."><meta property="og:description" content="Extract a sample from a given dataset object.
 Construct a light-weight data sample descriptor for a set of features (e.g., voxels)
-associated with a dataset. Methods define how to interpret and convert this descriptor."></head><body>
+associated with a dataset. Methods define how to interpret and convert this descriptor."><link href="../albers.css" rel="stylesheet"><script>window.albersdownDefaults = window.albersdownDefaults || { family: "red", preset: "homage", style: "minimal" };</script><script src="../albers.js"></script></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -81,11 +81,9 @@ associated with a dataset. Methods define how to interpret and convert this desc
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
-<span class="r-in"><span>  <span class="va">ds</span> <span class="op">&lt;-</span> <span class="fu"><a href="gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>,<span class="fl">5</span>,<span class="fl">5</span><span class="op">)</span>, <span class="fl">20</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="va">vox</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="va">ds</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">)</span>, <span class="fl">10</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="va">samp</span> <span class="op">&lt;-</span> <span class="fu">data_sample</span><span class="op">(</span><span class="va">ds</span><span class="op">$</span><span class="va">dataset</span>, <span class="va">vox</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">ds</span> <span class="op">&lt;-</span> <span class="fu"><a href="gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>,<span class="fl">5</span>,<span class="fl">5</span><span class="op">)</span>, <span class="fl">20</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">vox</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="va">ds</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">)</span>, <span class="fl">10</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">samp</span> <span class="op">&lt;-</span> <span class="fu">data_sample</span><span class="op">(</span><span class="va">ds</span><span class="op">$</span><span class="va">dataset</span>, <span class="va">vox</span><span class="op">)</span></span></span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

@@ -11,6 +11,9 @@ model_importance(object, X_train, ...)
 # S3 method for class 'sda'
 model_importance(object, X_train, summary_fun = NULL, ...)
 
+# S3 method for class 'sda_native'
+model_importance(object, X_train, summary_fun = NULL, ...)
+
 # S3 method for class 'glmnet'
 model_importance(object, X_train, summary_fun = NULL, ...)
 

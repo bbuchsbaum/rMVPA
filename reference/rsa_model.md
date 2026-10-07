@@ -135,6 +135,12 @@ conditional inference on individual coefficients. The per-ROI t-values
 returned by `regtype = "lm"` use pair-based degrees of freedom and are
 anti-conservative.
 
+## See also
+
+[`rsa_neural_rdm`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_neural_rdm.md)
+to compute the full neural correlation distance matrix from supplied
+observation-by-feature patterns.
+
 ## Examples
 
 ``` r

@@ -10,28 +10,28 @@ easier to keep straight if defined once:
   classify target patterns against source prototypes via correlation.
   Lives in
   [`naive_xdec_model()`](https://bbuchsbaum.github.io/rMVPA/reference/naive_xdec_model.md).
-- **ERA-RSA**
-  *([`vignette("ERA_RSA_Cross_Decoding")`](https://bbuchsbaum.github.io/rMVPA/articles/ERA_RSA_Cross_Decoding.md))*
+- **ERA-RSA** *([ERA-RSA: Cross-Decoding Between Encoding and
+  Retrieval](https://bbuchsbaum.github.io/rMVPA/articles/ERA_RSA_Cross_Decoding.html))*
   — encoding-retrieval analysis combining first-order item match and
   second-order RDM similarity. Lives in
   [`era_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/era_rsa_model.md)
   and
   [`era_partition_model()`](https://bbuchsbaum.github.io/rMVPA/reference/era_partition_model.md).
-- **REMAP-RRR**
-  *([`vignette("REMAP_RRR")`](https://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.md))*
+- **REMAP-RRR** *([REMAP‑RRR — Domain‑Adaptive
+  Cross‑Decoding](https://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.html))*
   — domain-adaptive cross-decoding via reduced-rank regression. Lives in
   [`remap_rrr_model()`](https://bbuchsbaum.github.io/rMVPA/reference/remap_rrr_model.md).
-- **ReNA-Map**
-  *([`vignette("repmap_model")`](https://bbuchsbaum.github.io/rMVPA/articles/repmap_model.md),
+- **ReNA-Map** *([Representational Mapping (ReNA-Map):
+  repmap_model](https://bbuchsbaum.github.io/rMVPA/articles/repmap_model.html),
   [`repmap_model()`](https://bbuchsbaum.github.io/rMVPA/reference/repmap_model.md))*
   — predicts an ROI’s pattern from a low-rank seed feature space.
-- **ReNA-RM**
-  *([`vignette("repmed_model")`](https://bbuchsbaum.github.io/rMVPA/articles/repmed_model.md),
+- **ReNA-RM** *([Representational Mediation (ReNA-RM):
+  repmed_model](https://bbuchsbaum.github.io/rMVPA/articles/repmed_model.html),
   [`repmed_model()`](https://bbuchsbaum.github.io/rMVPA/reference/repmed_model.md))*
   — tests whether one ROI’s geometry mediates another’s relationship to
   a seed.
-- **ReNA-RC**
-  *([`vignette("repnet_model")`](https://bbuchsbaum.github.io/rMVPA/articles/repnet_model.md),
+- **ReNA-RC** *([Representational Connectivity (ReNA-RC):
+  repnet_model](https://bbuchsbaum.github.io/rMVPA/articles/repnet_model.html),
   [`repnet_model()`](https://bbuchsbaum.github.io/rMVPA/reference/repnet_model.md))*
   — representational connectivity: correlates an ROI’s RDM with a seed
   RDM, with optional confound RDMs.
@@ -204,14 +204,16 @@ to work.
 when there is a large systematic domain shift. Consider domain-adaptive
 models such as
 [`remap_rrr_model()`](https://bbuchsbaum.github.io/rMVPA/reference/remap_rrr_model.md)
-(see
-[`vignette("REMAP_RRR")`](https://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.md)).
+(see [REMAP‑RRR — Domain‑Adaptive
+Cross‑Decoding](https://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.html)).
 
 ## Next steps
 
-- [`vignette("REMAP_RRR")`](https://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.md)
+- [REMAP‑RRR — Domain‑Adaptive
+  Cross‑Decoding](https://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.html)
   — domain-adaptive cross-decoding with low-rank corrections
-- [`vignette("ERA_RSA_Cross_Decoding")`](https://bbuchsbaum.github.io/rMVPA/articles/ERA_RSA_Cross_Decoding.md)
+- [ERA-RSA: Cross-Decoding Between Encoding and
+  Retrieval](https://bbuchsbaum.github.io/rMVPA/articles/ERA_RSA_Cross_Decoding.html)
   — encoding-retrieval RSA and ERA partitioning
 - [`?naive_xdec_model`](https://bbuchsbaum.github.io/rMVPA/reference/naive_xdec_model.md)
   — full parameter documentation

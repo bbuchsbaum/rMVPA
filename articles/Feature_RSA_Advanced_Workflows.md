@@ -85,8 +85,9 @@ The important comparison is not just target prediction in the abstract.
 It is whether a model that can adapt on target-train rows recovers more
 held-out target geometry than a source-only baseline. When the
 target-side representation is itself estimated from target data, use a
-fold-aware `target_builder` as shown in
-[`vignette("Feature_RSA_Domain_Adaptation")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Domain_Adaptation.md).
+fold-aware `target_builder` as shown in [Feature-RSA Across States:
+Domain Adaptation from Encoding to
+Recall](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Domain_Adaptation.html).
 
 ## When do you want ROI_i -\> ROI_j transfer?
 
@@ -164,7 +165,9 @@ cross-correlation is computed.
 ## Next steps
 
 For the full cross-state workflow, including fold-aware target
-rebuilding, see
-[`vignette("Feature_RSA_Domain_Adaptation")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Domain_Adaptation.md).
+rebuilding, see [Feature-RSA Across States: Domain Adaptation from
+Encoding to
+Recall](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Domain_Adaptation.html).
 For the full ROI-to-ROI workflow and stripe-mitigation examples, see
-[`vignette("Feature_RSA_Connectivity")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.md).
+[Feature-RSA Connectivity: ROI-to-ROI Generalization and Offset
+Control](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.html).

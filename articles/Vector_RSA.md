@@ -38,9 +38,9 @@ Use Vector-Based RSA when:
   the permutation loop yourself.
 
 If you instead have a feature matrix and want regression-style metrics
-(pattern correlation, R²) under cross-validation, see
-[`vignette("Feature_RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA.md).
-If you want to fit multiple model RDMs as competing predictors, see
+(pattern correlation, R²) under cross-validation, see [Feature-Based
+RSA](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA.html). If
+you want to fit multiple model RDMs as competing predictors, see
 [`vignette("RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/RSA.md).
 
 ## Inputs and outputs
@@ -205,8 +205,9 @@ distributions are also returned.
 
 ## What’s next
 
-- [`vignette("Feature_RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA.md)
-  — when you have a feature matrix rather than a single reference RDM.
+- [Feature-Based
+  RSA](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA.html) —
+  when you have a feature matrix rather than a single reference RDM.
 - [`vignette("RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/RSA.md)
   — the standard whole-RDM workflow with multiple model RDMs and
   `keep_intra_run`.

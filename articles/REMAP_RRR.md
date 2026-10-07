@@ -31,8 +31,8 @@ predicted templates in the whitened space.
 > adapters per ROI.
 
 > **Note**: For a complete introduction to naive cross-decoding (the
-> baseline method), see
-> [`vignette("Naive_Cross_Decoding")`](https://bbuchsbaum.github.io/rMVPA/articles/Naive_Cross_Decoding.md).
+> baseline method), see [Naive
+> Cross-Decoding](https://bbuchsbaum.github.io/rMVPA/articles/Naive_Cross_Decoding.html).
 > That vignette explains the algorithm, use cases, and when domain
 > adaptation is needed.
 

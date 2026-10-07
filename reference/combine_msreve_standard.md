@@ -44,8 +44,15 @@ A `searchlight_result` object containing:
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-  # Internal function for combining MS-ReVE results
-  # result <- combine_msreve_standard(model_spec, good_results, bad_results)
-} # }
+# Deprecated internal combiner; shown with mock per-center results
+ds <- gen_sample_dataset(D = c(4, 4, 4), nobs = 20, nlevels = 2, blocks = 2)
+ids <- which(as.logical(ds$dataset$mask))[1:10]
+good <- tibble::tibble(
+  id = ids,
+  performance = lapply(seq_along(ids), function(i) c(AvsB = rnorm(1), CvsD = rnorm(1)))
+)
+spec <- list(output_metric = "beta_delta", dataset = ds$dataset)
+res <- suppressWarnings(combine_msreve_standard(spec, good, tibble::tibble()))
+names(res$results)
+#> [1] "AvsB" "CvsD"
 ```

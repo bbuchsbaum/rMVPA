@@ -213,5 +213,6 @@ via `rrpack`.
   – the ROI-based counterpart to searchlight analysis
 - [`vignette("CrossValidation")`](https://bbuchsbaum.github.io/rMVPA/articles/CrossValidation.md)
   – cross-validation strategies for fMRI
-- [`vignette("CustomAnalyses")`](https://bbuchsbaum.github.io/rMVPA/articles/CustomAnalyses.md)
+- [Running Custom Analyses with
+  rMVPA](https://bbuchsbaum.github.io/rMVPA/articles/CustomAnalyses.html)
   – plug in your own analysis functions

@@ -2,41 +2,41 @@ pandoc: 3.8.3
 pkgdown: 2.2.1
 pkgdown_sha: ~
 articles:
-  Banded_Ridge_Encoding: Banded_Ridge_Encoding.html
-  CommandLine: CommandLine.html
-  CommandLineScripts: CommandLineScripts.html
-  Constructing_Datasets: Constructing_Datasets.html
-  Contrast_RSA: Contrast_RSA.html
+  articles/Banded_Ridge_Encoding: Banded_Ridge_Encoding.html
+  articles/CommandLine: CommandLine.html
+  articles/CommandLineScripts: CommandLineScripts.html
+  articles/Constructing_Datasets: Constructing_Datasets.html
+  articles/Contrast_RSA: Contrast_RSA.html
   CrossValidation: CrossValidation.html
-  CustomAnalyses: CustomAnalyses.html
-  ERA_RSA_Cross_Decoding: ERA_RSA_Cross_Decoding.html
-  Feature_RSA_Advanced_Workflows: Feature_RSA_Advanced_Workflows.html
-  Feature_RSA_Connectivity: Feature_RSA_Connectivity.html
-  Feature_RSA_Domain_Adaptation: Feature_RSA_Domain_Adaptation.html
-  Feature_RSA: Feature_RSA.html
-  FeatureSelection: FeatureSelection.html
+  articles/CustomAnalyses: CustomAnalyses.html
+  articles/ERA_RSA_Cross_Decoding: ERA_RSA_Cross_Decoding.html
+  articles/Feature_RSA_Advanced_Workflows: Feature_RSA_Advanced_Workflows.html
+  articles/Feature_RSA_Connectivity: Feature_RSA_Connectivity.html
+  articles/Feature_RSA_Domain_Adaptation: Feature_RSA_Domain_Adaptation.html
+  articles/Feature_RSA: Feature_RSA.html
+  articles/FeatureSelection: FeatureSelection.html
   Haxby_2001: Haxby_2001.html
-  ITEM_Decoding: ITEM_Decoding.html
-  Kriegeskorte_92_Images: Kriegeskorte_92_Images.html
-  Model_Space_Connectivity: Model_Space_Connectivity.html
-  MVPA_RegionalCmdline: MVPA_RegionalCmdline.html
-  Naive_Cross_Decoding: Naive_Cross_Decoding.html
-  Parallelism: Parallelism.html
-  Pattern_Confirmation: Pattern_Confirmation.html
-  Pattern_Group: Pattern_Group.html
+  articles/ITEM_Decoding: ITEM_Decoding.html
+  articles/Kriegeskorte_92_Images: Kriegeskorte_92_Images.html
+  articles/Model_Space_Connectivity: Model_Space_Connectivity.html
+  articles/MVPA_RegionalCmdline: MVPA_RegionalCmdline.html
+  articles/Naive_Cross_Decoding: Naive_Cross_Decoding.html
+  articles/Parallelism: Parallelism.html
+  articles/Pattern_Confirmation: Pattern_Confirmation.html
+  articles/Pattern_Group: Pattern_Group.html
   Pattern_Model: Pattern_Model.html
-  Plugin_Development: Plugin_Development.html
+  articles/Plugin_Development: Plugin_Development.html
   Regional_Analysis: Regional_Analysis.html
-  REMAP_RRR: REMAP_RRR.html
-  repmap_model: repmap_model.html
-  repmed_model: repmed_model.html
-  repnet_model: repnet_model.html
+  articles/REMAP_RRR: REMAP_RRR.html
+  articles/repmap_model: repmap_model.html
+  articles/repmed_model: repmed_model.html
+  articles/repnet_model: repnet_model.html
   rMVPA: rMVPA.html
   RSA: RSA.html
   Searchlight_Analysis: Searchlight_Analysis.html
-  Temporal_Confounds_in_RSA: Temporal_Confounds_in_RSA.html
-  Vector_RSA: Vector_RSA.html
-last_built: 2026-09-16T16:29Z
+  articles/Temporal_Confounds_in_RSA: Temporal_Confounds_in_RSA.html
+  articles/Vector_RSA: Vector_RSA.html
+last_built: 2026-10-07T05:01Z
 urls:
   reference: https://bbuchsbaum.github.io/rMVPA/reference
   article: https://bbuchsbaum.github.io/rMVPA/articles

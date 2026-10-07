@@ -92,8 +92,8 @@ Without progressr, only coarse batch-level log messages are shown.
 # \donttest{
   # Generate sample dataset with categorical response
   dataset <- gen_sample_dataset(
-    D = c(8,8,8),           # 8x8x8 volume
-    nobs = 100,             # 100 observations
+    D = c(5,5,5),           # 5x5x5 volume
+    nobs = 60,              # 60 observations
     response_type = "categorical",
     data_mode = "image",
     blocks = 3,             # 3 blocks for cross-validation
@@ -118,27 +118,15 @@ Without progressr, only coarse batch-level log messages are shown.
   # Run searchlight analysis
   results <- run_searchlight(
     mspec,
-    radius = 8,            # 8mm radius
+    radius = 3,            # 3mm radius
     method = "standard"    # Use standard searchlight
   )
-#> INFO [2026-09-16 16:31:25] searchlight engine: general-purpose iterator (no eligible fast path)
-#> INFO [2026-09-16 16:31:25] Running standard searchlight with radius = 8
-#> INFO [2026-09-16 16:31:25] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)
-#> INFO [2026-09-16 16:31:25] shard backend [volumetric]: shared 100 x 512 matrix (512 masked voxels)
-#> INFO [2026-09-16 16:31:25] creating standard searchlight
-#> INFO [2026-09-16 16:31:25] running standard searchlight iterator
-#> INFO [2026-09-16 16:31:25] Using automatic searchlight batch size 512 for 512 centers (memory budget 512.0 MiB).
-#> INFO [2026-09-16 16:32:23] 
-#> MVPA Iteration Complete
-#> - Total ROIs: 512
-#> - Processed: 512
-#> - Skipped: 0
-#> INFO [2026-09-16 16:32:23] searchlight (standard): 512 ROIs processed (success=512, errors=0)
+#> INFO [2026-10-07 05:02:31] searchlight engine: sda_fast
   
   # Run with custom batch size for memory management
   # results <- run_searchlight(
   #   mspec,
-  #   radius = 8,
+  #   radius = 3,
   #   method = "standard",
   #   batch_size = 500      # Process 500 searchlights per batch
   # )

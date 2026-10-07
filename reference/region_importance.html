@@ -3,7 +3,7 @@
 by comparing cross-validated accuracy when the feature is included vs. excluded
 across many random feature subsets."><meta property="og:description" content="Assess each feature's (region/parcel/voxel) contribution to model performance
 by comparing cross-validated accuracy when the feature is included vs. excluded
-across many random feature subsets."></head><body>
+across many random feature subsets."><link href="../albers.css" rel="stylesheet"><script>window.albersdownDefaults = window.albersdownDefaults || { family: "red", preset: "homage", style: "minimal" };</script><script src="../albers.js"></script></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -124,12 +124,12 @@ random forests, <code>region_importance</code> is the recommended approach.</p>
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># \donttest{</span></span></span>
-<span class="r-in"><span>  <span class="va">ds</span> <span class="op">&lt;-</span> <span class="fu"><a href="gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>,<span class="fl">5</span>,<span class="fl">5</span><span class="op">)</span>, <span class="fl">40</span>, nlevels<span class="op">=</span><span class="fl">2</span>, blocks<span class="op">=</span><span class="fl">3</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">ds</span> <span class="op">&lt;-</span> <span class="fu"><a href="gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">4</span>,<span class="fl">4</span>,<span class="fl">4</span><span class="op">)</span>, <span class="fl">30</span>, nlevels<span class="op">=</span><span class="fl">2</span>, blocks<span class="op">=</span><span class="fl">3</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="va">cval</span> <span class="op">&lt;-</span> <span class="fu"><a href="cross_validation.html">blocked_cross_validation</a></span><span class="op">(</span><span class="va">ds</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">block_var</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="va">mdl</span> <span class="op">&lt;-</span> <span class="fu"><a href="load_model.html">load_model</a></span><span class="op">(</span><span class="st">"sda_notune"</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="va">mspec</span> <span class="op">&lt;-</span> <span class="fu"><a href="mvpa_model.html">mvpa_model</a></span><span class="op">(</span><span class="va">mdl</span>, <span class="va">ds</span><span class="op">$</span><span class="va">dataset</span>, <span class="va">ds</span><span class="op">$</span><span class="va">design</span>,</span></span>
 <span class="r-in"><span>    <span class="st">"classification"</span>, crossval<span class="op">=</span><span class="va">cval</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="va">imp</span> <span class="op">&lt;-</span> <span class="fu">region_importance</span><span class="op">(</span><span class="va">mspec</span>, n_regions<span class="op">=</span><span class="fl">5</span>, n_subsets<span class="op">=</span><span class="fl">10</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">imp</span> <span class="op">&lt;-</span> <span class="fu">region_importance</span><span class="op">(</span><span class="va">mspec</span>, n_regions<span class="op">=</span><span class="fl">4</span>, n_subsets<span class="op">=</span><span class="fl">5</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
     </div>

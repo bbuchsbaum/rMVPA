@@ -120,10 +120,16 @@ differences in expression, rather than testing individual voxels.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-  # Requires completed spatial NMF fit
-  W <- matrix(rnorm(20*5), 20, 5)
-  groups <- factor(rep(c("A","B"), each=10))
-  result <- spatial_nmf_component_test(W=W, groups=groups, nperm=100)
-} # }
+# Subject-by-component loadings (normally taken from a spatial NMF fit)
+set.seed(1)
+W <- matrix(runif(20 * 3), 20, 3)
+groups <- factor(rep(c("A", "B"), each = 10))
+result <- spatial_nmf_component_test(W = W, groups = groups, nperm = 50, seed = 1)
+#> INFO [2026-10-07 05:02:34] Spatial NMF component test: 50 permutations (serial)
+#> INFO [2026-10-07 05:02:34] Spatial NMF component test: permutations complete.
+result$table
+#>   component        stat mean_group1 mean_group2     p_unc    p_fwer
+#> 1         1  0.05558341   0.5515139   0.5588204 0.9215686 1.0000000
+#> 2         2  0.89668132   0.4183230   0.5294414 0.4117647 0.7843137
+#> 3         3 -1.82307662   0.6048658   0.4095610 0.1176471 0.2549020
 ```

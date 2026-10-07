@@ -58,16 +58,26 @@ An S3 object of class `region_importance_result`.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-  # Typically created by region_importance(), not directly
-  result <- region_importance_result(
-    importance = c(0.1, 0.2),
-    importance_map = NULL,
-    p_values = c(0.05, 0.01),
-    p_value_map = NULL,
-    stats_table = tibble::tibble(feature_id = 1:2),
-    iteration_log = tibble::tibble(iter = 1:10),
-    model_spec = list()
-  )
-} # }
+# Typically created by region_importance(), shown here with toy values
+result <- region_importance_result(
+  importance = c(0.1, 0.2),
+  importance_map = NULL,
+  p_values = c(0.05, 0.01),
+  p_value_map = NULL,
+  stats_table = tibble::tibble(feature_id = 1:2),
+  iteration_log = tibble::tibble(iter = 1:10, performance = runif(10)),
+  model_spec = list()
+)
+print(result)
+#> 
+#>   Region Importance Result
+#> 
+#>   Features: 2 ( 2 with valid importance)
+#>   Iterations: 10 
+#>   Importance range: [ 0.1 , 0.2 ]
+#>   Top 2 features:
+#>      2 : importance = 0.2 , p = 0.01 
+#>      1 : importance = 0.1 , p = 0.05 
+#>   Mean iteration performance: 0.4949 (SD: 0.2604 )
+#> 
 ```

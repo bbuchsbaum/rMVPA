@@ -89,15 +89,29 @@ subjects jointly to preserve relative differences. The returned
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
+set.seed(1)
+sp <- neuroim2::NeuroSpace(c(5, 5, 2))
+mask <- neuroim2::LogicalNeuroVol(array(TRUE, c(5, 5, 2)), sp)
+# Chance-centered AUC maps (AUC - 0.5)
+auc_maps <- lapply(1:6, function(i) {
+  neuroim2::NeuroVol(array(rnorm(50, sd = 0.1), c(5, 5, 2)), sp)
+})
+
 # For AUC-0.5 maps (chance-centered)
 prepped <- nmf_preprocess_maps(auc_maps, method = "auc")
-result <- spatial_nmf_maps(prepped$maps, mask = mask, k = 5)
+result <- spatial_nmf_maps(prepped$maps, mask = mask, k = 2)
+#> INFO [2026-10-07 05:02:11] spatial_nmf_maps: fitting NMF (n=6, p=50, k=2, lambda=0)
+#> Warning: did not converge--results might be invalid!; try increasing maxit or work
+#> INFO [2026-10-07 05:02:11] spatial_nmf_maps: NMF fit complete (converged=TRUE, iterations=47)
+#> INFO [2026-10-07 05:02:11] spatial_nmf_maps: parallel=FALSE (explicit=FALSE)
 
 # For raw AUC maps
-prepped <- nmf_preprocess_maps(auc_maps, method = "auc_raw")
+raw_auc_maps <- lapply(auc_maps, function(m) m + 0.5)
+prepped <- nmf_preprocess_maps(raw_auc_maps, method = "auc_raw")
 
 # For z-score maps with small positive floor
+zmaps <- lapply(1:6, function(i) neuroim2::NeuroVol(array(rnorm(50), c(5, 5, 2)), sp))
 prepped <- nmf_preprocess_maps(zmaps, method = "shift", min_val = 0.01)
-} # }
+prepped$offset
+#> [1] 3.018049
 ```

@@ -81,8 +81,16 @@ A tibble row with the final performance metrics for the ROI/sphere.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-  # Internal S3 method called during ROI processing
-  # result <- merge_results(manova_model, result_set, indices, id)
-} # }
+# Normally called internally during ROI/searchlight processing
+dset <- gen_sample_dataset(D = c(4, 4, 4), nobs = 24, nlevels = 3, blocks = 3)
+mspec <- manova_model(dset$dataset, manova_design(~ Y, dset$design$train_design))
+
+# A processor result holding -log(p) values for one ROI
+result_set <- tibble::tibble(result = list(c(Y = 2.3)), error = FALSE,
+                             error_message = "~")
+merge_results(mspec, result_set, indices = 1:10, id = 1)
+#> # A tibble: 1 × 6
+#>   result indices    performance      id error error_message
+#>   <list> <list>     <list>        <dbl> <lgl> <chr>        
+#> 1 <NULL> <int [10]> <dbl [1 × 1]>     1 FALSE ~            
 ```

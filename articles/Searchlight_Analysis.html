@@ -12,6 +12,8 @@
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
 <script src="../extra.js"></script><meta property="og:title" content="Searchlight Analysis">
+<link href="../albers.css" rel="stylesheet">
+<script>window.albersdownDefaults = window.albersdownDefaults || { family: "red", preset: "homage", style: "minimal" };</script><script src="../albers.js"></script>
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -57,7 +59,7 @@
                         <h4 data-toc-skip class="author">Bradley
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-09-16</h4>
+            <h4 data-toc-skip class="date">2026-10-07</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/rMVPA/blob/master/vignettes/Searchlight_Analysis.Rmd" class="external-link"><code>vignettes/Searchlight_Analysis.Rmd</code></a></small>
       <div class="d-none name"><code>Searchlight_Analysis.Rmd</code></div>
@@ -266,7 +268,8 @@ counterpart to searchlight analysis</li>
 <code><a href="../articles/CrossValidation.html">vignette("CrossValidation")</a></code> – cross-validation
 strategies for fMRI</li>
 <li>
-<code><a href="../articles/CustomAnalyses.html">vignette("CustomAnalyses")</a></code> – plug in your own analysis
+<a href="https://bbuchsbaum.github.io/rMVPA/articles/CustomAnalyses.html">Running
+Custom Analyses with rMVPA</a> – plug in your own analysis
 functions</li>
 </ul>
 <!-- ## External Cross-Validation Example --><!-- Instead of using internal cross-validation, as we used in the above examples, sometimes one might have a held-out test data that can be used as a validation set. Here we show how to  --><!-- ```{r} --><!-- # Create training data --><!-- train_design <- data.frame(y = rep(letters[1:4], 5), x1 = rnorm(20), x2 = rnorm(20), block = rep(1:4, each = 5)) --><!-- # Create test data --><!-- test_design <- data.frame(y = sample(letters[1:4], 10, replace=TRUE)) --><!-- # Create an MVPA design object with external cross-validation --><!-- design <- mvpa_design(train_design, ~ y, block_var = ~ block, test_design = test_design, y_test = ~ y) --><!-- # Display the MVPA design object --><!-- print(design) --><!-- # Create a new dataset for external cross-validation --><!-- dataset_ext <- list(dataset = dataset$dataset, design = design) --><!-- # Construct an `mvpa_model` object with a Shrinkage Discriminant Analysis classifier (`sda_notune`) --><!-- sda_model_ext <- load_model("sda_notune") --><!-- model_ext <- mvpa_model(model = sda_model_ext, dataset = dataset_ext$dataset, design = dataset_ext$design) --><!-- # Run a randomized searchlight analysis using external cross-validation --><!-- result_ext <- run_searchlight(model_ext, radius = 4, method = "randomized", niter = 8) --><!-- # Display the results --><!-- print(result_ext) --><!-- # Plot a histogram of AUC values --><!-- hist(result_ext$AUC) --><!-- ``` -->

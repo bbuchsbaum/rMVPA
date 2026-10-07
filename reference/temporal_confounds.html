@@ -3,7 +3,7 @@
 a compact specification. Items can be kernel-based (temporal_rdm) or
 HRF-overlap based (temporal_hrf_overlap)."><meta property="og:description" content="Convenience function to produce a named list of temporal nuisance RDMs from
 a compact specification. Items can be kernel-based (temporal_rdm) or
-HRF-overlap based (temporal_hrf_overlap)."></head><body>
+HRF-overlap based (temporal_hrf_overlap)."><link href="../albers.css" rel="stylesheet"><script>window.albersdownDefaults = window.albersdownDefaults || { family: "red", preset: "homage", style: "minimal" };</script><script src="../albers.js"></script></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -94,10 +94,10 @@ For kernel-based items, include at least <code>kernel</code>. For HRF items, set
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
-<span class="r-in"><span>  <span class="va">spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>lag<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>kernel<span class="op">=</span><span class="st">"exp"</span>, lambda<span class="op">=</span><span class="fl">3</span><span class="op">)</span>, hrf<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>kind<span class="op">=</span><span class="st">"hrf"</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="va">conf</span> <span class="op">&lt;-</span> <span class="fu">temporal_confounds</span><span class="op">(</span><span class="va">spec</span>, onsets<span class="op">=</span><span class="fl">1</span><span class="op">:</span><span class="fl">20</span>, run<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">4</span>,each<span class="op">=</span><span class="fl">5</span><span class="op">)</span>, TR<span class="op">=</span><span class="fl">2</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>lag <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>kernel <span class="op">=</span> <span class="st">"exp"</span>, lambda <span class="op">=</span> <span class="fl">3</span><span class="op">)</span>, hrf <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>kind <span class="op">=</span> <span class="st">"hrf"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">conf</span> <span class="op">&lt;-</span> <span class="fu">temporal_confounds</span><span class="op">(</span><span class="va">spec</span>, onsets <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">20</span>, run <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">4</span>, each <span class="op">=</span> <span class="fl">5</span><span class="op">)</span>, TR <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">conf</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "lag" "hrf"</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

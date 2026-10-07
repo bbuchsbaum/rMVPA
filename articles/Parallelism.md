@@ -189,9 +189,9 @@ observation-aligned `block_var` in
 and at least two training blocks in every outer fold. Inner centering
 and scaling are learned without the held-out block. `"pve"` and `"max"`
 are cheaper still, but they change the tuning estimand rather than
-accelerating the same validation scheme. See
-[`vignette("Feature_RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA.md)
-for the selection contract.
+accelerating the same validation scheme. See [Feature-Based
+RSA](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA.html) for
+the selection contract.
 
 rMVPA now streams held-out segment errors, uses compact matrix-level
 PLS/PCR fits, and computes the final out-of-fold geometry once. A worker
@@ -303,36 +303,37 @@ OpenMP and BLAS were fixed at one thread. Each scheduler/data-backend
 pairing ran in three fresh R processes from a clean installed rMVPA
 0.1.3 tarball.
 
-| Future plan  | Data backend | Median (s) | Range (s)     | Task frames (MiB) |
-|:-------------|:-------------|-----------:|:--------------|------------------:|
-| sequential   | default      |      5.875 | 5.705–6.160   |            12.444 |
-| sequential   | shard        |      4.211 | 4.183–4.642   |             0.101 |
-| multisession | default      |      9.452 | 9.081–9.639   |            12.444 |
-| multisession | shard        |      6.710 | 6.566–6.856   |             0.101 |
-| multicore    | default      |      6.276 | 6.269–7.411   |            12.444 |
-| multicore    | shard        |      3.589 | 3.249–3.672   |             0.101 |
-| mirai        | default      |     13.457 | 12.940–13.911 |            12.444 |
-| mirai        | shard        |     10.217 | 9.968–11.436  |             0.101 |
+| Future plan  | Data backend | Median (s) | Range (s)    | Task frames (MiB) |
+|:-------------|:-------------|-----------:|:-------------|------------------:|
+| sequential   | default      |      1.326 | 1.004–1.441  |            12.531 |
+| sequential   | shard        |      1.201 | 0.966–1.603  |             0.101 |
+| multisession | default      |      4.551 | 4.190–5.820  |            12.531 |
+| multisession | shard        |      4.621 | 3.686–5.195  |             0.101 |
+| multicore    | default      |      2.325 | 2.116–2.873  |            12.531 |
+| multicore    | shard        |      1.871 | 1.260–2.451  |             0.101 |
+| mirai        | default      |      6.843 | 6.756–10.372 |            12.531 |
+| mirai        | shard        |      7.774 | 6.341–7.848  |             0.101 |
 
 Local fresh-process characterization on an Apple M3 Max (36 GB). Timings
 are descriptive, not thresholds. {.table}
 
 All eight paths produced identical canonical result vectors in every
 fixture repetition (`max_abs_result_error = 0`). The default frames
-totaled 13,048,800 bytes per run; shard frames totaled 105,712 bytes, a
-123-fold reduction for this design. This is direct evidence about the
+totaled 13,139,536 bytes per run; shard frames totaled 105,712 bytes, a
+124-fold reduction for this design. This is direct evidence about the
 transport structure measured by
 [`object.size()`](https://rdrr.io/r/utils/object.size.html), not a claim
 that physical RAM fell by exactly the same factor.
 
-Shard reduced the median time for every plan measured in this short
-local run, and the three-repetition timing ranges are separated for
-every pairing. Startup dominates the separate-session plans. Read that
-ordering as one machine on one afternoon rather than a property of the
-backends: multicore’s local timing does not override its safety
-constraints, and mirai’s fresh-process overhead here does not predict a
-long-lived mirai deployment. Re-run the driver on the target system
-before choosing on speed.
+Shard reduced the median time for multicore and sequential in this short
+local run, and raised it for mirai and multisession, and the
+three-repetition timing ranges overlap for every pairing. Startup
+dominates the separate-session plans. Read that ordering as one machine
+on one afternoon rather than a property of the backends: multicore’s
+local timing does not override its safety constraints, and mirai’s
+fresh-process overhead here does not predict a long-lived mirai
+deployment. Re-run the driver on the target system before choosing on
+speed.
 
 The receipt intentionally omits process-tree RSS as a publication claim.
 Summed RSS can double-count shared and copy-on-write pages, while socket

@@ -13,10 +13,10 @@ encoding, forward patterns, and restricted regional prediction. You do
 not fit one model to predict labels and another to draw a map.
 
 This is the first of three pattern-model articles. Confirmation of a
-frozen fit is
-[`vignette("Pattern_Confirmation")`](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Confirmation.md);
-pooling confirmed subject loadings is
-[`vignette("Pattern_Group")`](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Group.md).
+frozen fit is [Confirming a frozen pattern
+model](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Confirmation.html);
+pooling confirmed subject loadings is [Group patterns in shared target
+coordinates](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Group.html).
 
 ## When to use it
 
@@ -35,9 +35,9 @@ Use a different family when the question is narrower:
 
 | Question | Model family |
 |----|----|
-| Decode feature vectors inside independently fitted regions | `feature_rsa_model` ([`vignette("Feature_RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA.md)) |
-| Voxelwise encoding from grouped predictors | `banded_ridge_model` ([`vignette("Banded_Ridge_Encoding")`](https://bbuchsbaum.github.io/rMVPA/articles/Banded_Ridge_Encoding.md)) |
-| Map between perception and retrieval domains | `remap_rrr_model` ([`vignette("REMAP_RRR")`](https://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.md)) |
+| Decode feature vectors inside independently fitted regions | `feature_rsa_model` ([Feature-Based RSA](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA.html)) |
+| Voxelwise encoding from grouped predictors | `banded_ridge_model` ([Fit a Blocked Voxelwise Banded-Ridge Encoding Model](https://bbuchsbaum.github.io/rMVPA/articles/Banded_Ridge_Encoding.html)) |
+| Map between perception and retrieval domains | `remap_rrr_model` ([REMAP‑RRR — Domain‑Adaptive Cross‑Decoding](https://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.html)) |
 | Find locally predictive neighborhoods with separate local fits | searchlight analysis ([`vignette("Searchlight_Analysis")`](https://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.md)) |
 
 The current residual covariance is diagonal plus a few shared noise
@@ -350,8 +350,8 @@ pattern_model(dataset, design, rank = 2, weights = w)
 
 If the design is a `feature_sets_design`, its `row_weights` are used
 automatically. Integer weights are equivalent to replicating rows.
-Confirmation
-([`vignette("Pattern_Confirmation")`](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Confirmation.md))
+Confirmation ([Confirming a frozen pattern
+model](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Confirmation.html))
 does not accept nonuniform weights.
 
 ## Rotate a display and compare folds
@@ -410,6 +410,8 @@ image aggregation is refused because averaging channels would change the
 estimand; those results save as RDS.
 
 To test the frozen discovery directions on new rows, continue with
-[`vignette("Pattern_Confirmation")`](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Confirmation.md).
-To pool confirmed subject loadings in a shared target basis, use
-[`vignette("Pattern_Group")`](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Group.md).
+[Confirming a frozen pattern
+model](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Confirmation.html).
+To pool confirmed subject loadings in a shared target basis, use [Group
+patterns in shared target
+coordinates](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Group.html).

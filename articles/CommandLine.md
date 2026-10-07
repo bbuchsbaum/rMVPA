@@ -208,8 +208,8 @@ cross_validation:
   nreps: 10
 ```
 
-See
-[`vignette("FeatureSelection")`](https://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.md)
+See [Feature Selection in
+rMVPA](https://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.html)
 and
 [`vignette("CrossValidation")`](https://bbuchsbaum.github.io/rMVPA/articles/CrossValidation.md)
 for the full option surface.
@@ -408,7 +408,8 @@ remap_min_pairs: 5
 
 Outputs include the standard regional summaries plus REMAP diagnostics
 such as `remap_improv`, `delta_frob_mean`, and `lambda_mean`. See
-[`vignette("REMAP_RRR")`](https://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.md)
+[REMAP‑RRR — Domain‑Adaptive
+Cross‑Decoding](https://bbuchsbaum.github.io/rMVPA/articles/REMAP_RRR.html)
 for the model-level details.
 
 ## Backward Compatibility

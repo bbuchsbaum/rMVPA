@@ -57,8 +57,13 @@ An `mvpa_clustered_dataset` object (S3 class) containing:
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-  ds <- gen_clustered_sample_dataset(K=5, nobs=20)
-  print(ds$dataset)
-} # }
+ds <- gen_clustered_sample_dataset(D = c(5, 5, 5), nobs = 20, K = 5)
+print(ds$dataset)
+#> 
+#>   Clustered MVPA Dataset
+#> 
+#>   - Clusters:      5 
+#>   - Observations:  20 
+#>   - Test set:      no 
+#> 
 ```

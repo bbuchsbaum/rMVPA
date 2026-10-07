@@ -53,8 +53,8 @@ A named list of `dist` objects (or matrices if `as_dist=FALSE`)
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-  spec <- list(lag=list(kernel="exp", lambda=3), hrf=list(kind="hrf"))
-  conf <- temporal_confounds(spec, onsets=1:20, run=rep(1:4,each=5), TR=2)
-} # }
+spec <- list(lag = list(kernel = "exp", lambda = 3), hrf = list(kind = "hrf"))
+conf <- temporal_confounds(spec, onsets = 1:20, run = rep(1:4, each = 5), TR = 2)
+names(conf)
+#> [1] "lag" "hrf"
 ```

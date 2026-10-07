@@ -123,16 +123,23 @@ matrix and you want to declare sets via \`blocks()\` or \`by_set()\`.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
+set.seed(1)
+dset <- gen_sample_dataset(c(3, 3, 3), nobs = 30, external_test = TRUE,
+                           ntest_obs = 20)$dataset
+X_enc <- matrix(rnorm(30 * 6), 30, 6)
+# Soft alignment posterior (recall x encoding), rows sum to 1
+gamma <- matrix(runif(20 * 30), 20, 30)
+gamma <- gamma / rowSums(gamma)
+recall_runs <- rep(1:2, each = 10)
+
 ms <- grouped_ridge_da(
   dataset = dset,
   X_train = X_enc,
-  spec = blocks(low = 100, mid = 100, high = 100, sem = 100),
+  spec = blocks(low = 2, mid = 2, sem = 2),
   gamma = gamma,
   block_var_test = recall_runs,
   mode = "stacked",
-  lambdas = c(low = 10, mid = 10, high = 10, sem = 10),
+  lambdas = c(low = 10, mid = 10, sem = 10),
   alpha_recall = 0.2
 )
-} # }
 ```

@@ -12,6 +12,8 @@
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
 <script src="../extra.js"></script><meta property="og:title" content="Feature-Based RSA">
+<link href="../albers.css" rel="stylesheet">
+<script>window.albersdownDefaults = window.albersdownDefaults || { family: "red", preset: "homage", style: "minimal" };</script><script src="../albers.js"></script>
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -57,9 +59,9 @@
                         <h4 data-toc-skip class="author">Bradley
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-09-16</h4>
+            <h4 data-toc-skip class="date">2026-10-07</h4>
       
-      <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/rMVPA/blob/master/vignettes/Feature_RSA.Rmd" class="external-link"><code>vignettes/Feature_RSA.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/rMVPA/blob/master/vignettes/articles/Feature_RSA.Rmd" class="external-link"><code>vignettes/articles/Feature_RSA.Rmd</code></a></small>
       <div class="d-none name"><code>Feature_RSA.Rmd</code></div>
     </div>
 
@@ -101,12 +103,11 @@ fit — pattern correlation, pattern discrimination, RDM correlation,
 voxel correlation, R² — rather than choosing one a priori.</li>
 </ul>
 <p>If you only have a model RDM (no feature matrix) and want a per-trial
-similarity score with built-in across-block masking, see
-<code><a href="../articles/Vector_RSA.html">vignette("Vector_RSA")</a></code>. If you want to test multiple model
-RDMs as regressors and read out coefficients, see
-<code><a href="../articles/RSA.html">vignette("RSA")</a></code>. If you want a whole-brain,
-covariance-aware reduced-rank model that yields forward patterns and
-regional access from one fit, see
+similarity score with built-in across-block masking, see <a href="https://bbuchsbaum.github.io/rMVPA/articles/Vector_RSA.html">Vector-Based
+RSA</a>. If you want to test multiple model RDMs as regressors and read
+out coefficients, see <code><a href="../articles/RSA.html">vignette("RSA")</a></code>. If you want a
+whole-brain, covariance-aware reduced-rank model that yields forward
+patterns and regional access from one fit, see
 <code><a href="../articles/Pattern_Model.html">vignette("Pattern_Model")</a></code>.</p>
 </div>
 <div class="section level2">
@@ -643,7 +644,7 @@ descriptive.</caption>
 <tbody>
 <tr class="odd">
 <td align="left">PLS LOO</td>
-<td align="right">206.50</td>
+<td align="right">119.50</td>
 <td align="right">1.0</td>
 <td align="right">1.000</td>
 <td align="right">0.0000</td>
@@ -651,39 +652,39 @@ descriptive.</caption>
 </tr>
 <tr class="even">
 <td align="left">PLS blocked</td>
-<td align="right">12.00</td>
-<td align="right">12.1</td>
+<td align="right">11.00</td>
+<td align="right">10.7</td>
 <td align="right">1.000</td>
 <td align="right">0.0000</td>
 <td align="right">0.0000</td>
 </tr>
 <tr class="odd">
 <td align="left">Ridge GCV</td>
-<td align="right">2.62</td>
-<td align="right">46.8</td>
+<td align="right">2.93</td>
+<td align="right">41.0</td>
 <td align="right">0.877</td>
 <td align="right">0.0022</td>
 <td align="right">0.0026</td>
 </tr>
 <tr class="even">
 <td align="left">Ridge analytic LOO</td>
-<td align="right">10.83</td>
-<td align="right">10.7</td>
+<td align="right">10.58</td>
+<td align="right">11.2</td>
 <td align="right">0.887</td>
 <td align="right">0.0018</td>
 <td align="right">0.0021</td>
 </tr>
 <tr class="odd">
 <td align="left">Ridge blocked</td>
-<td align="right">15.83</td>
-<td align="right">10.2</td>
+<td align="right">12.00</td>
+<td align="right">9.8</td>
 <td align="right">0.888</td>
 <td align="right">0.0018</td>
 <td align="right">0.0018</td>
 </tr>
 <tr class="even">
 <td align="left">glmnet ridge blocked CV</td>
-<td align="right">1402.00</td>
+<td align="right">923.50</td>
 <td align="right">0.1</td>
 <td align="right">2.624</td>
 <td align="right">-0.0100</td>
@@ -772,17 +773,19 @@ enough to <em>predict</em> the next held-out trial.</p>
 </h2>
 <ul>
 <li>
-<code><a href="../articles/Vector_RSA.html">vignette("Vector_RSA")</a></code> — per-trial RSA scores with
-built-in across-block masking, when you have a single reference
-RDM.</li>
+<a href="https://bbuchsbaum.github.io/rMVPA/articles/Vector_RSA.html">Vector-Based
+RSA</a> — per-trial RSA scores with built-in across-block masking, when
+you have a single reference RDM.</li>
 <li>
-<code><a href="../articles/Feature_RSA_Advanced_Workflows.html">vignette("Feature_RSA_Advanced_Workflows")</a></code> — workflow
-extensions: returning predicted RDM vectors, cross-ROI representational
-connectivity from feature-RSA fits, multi-scenario evaluation.</li>
+<a href="https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Advanced_Workflows.html">Feature-RSA
+Advanced Workflows</a> — workflow extensions: returning predicted RDM
+vectors, cross-ROI representational connectivity from feature-RSA fits,
+multi-scenario evaluation.</li>
 <li>
-<code><a href="../articles/Feature_RSA_Connectivity.html">vignette("Feature_RSA_Connectivity")</a></code> and
-<code><a href="../articles/Feature_RSA_Domain_Adaptation.html">vignette("Feature_RSA_Domain_Adaptation")</a></code> — connectivity
-and cross-state extensions of the same model.</li>
+<a href="https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.html">Feature-RSA
+Connectivity: ROI-to-ROI Generalization and Offset Control</a> and <a href="https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Domain_Adaptation.html">Feature-RSA
+Across States: Domain Adaptation from Encoding to Recall</a> —
+connectivity and cross-state extensions of the same model.</li>
 <li>
 <code><a href="../reference/feature_rsa_design.html">?feature_rsa_design</a></code>, <code><a href="../reference/feature_rsa_model.html">?feature_rsa_model</a></code> —
 full argument reference.</li>

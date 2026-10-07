@@ -38,12 +38,10 @@ specified by the indices.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-  # S3 method - called via sub_result generic
-  cres <- multiway_classification_result(
-    factor(c("a","b","c")), factor(c("a","b","c")),
-    matrix(runif(9), 3, 3, dimnames=list(NULL, c("a","b","c")))
-  )
-  subset <- sub_result(cres, 1:2)
-} # }
+# S3 method - called via sub_result generic
+cres <- multiway_classification_result(
+  factor(c("a","b","c")), factor(c("a","b","c")),
+  matrix(runif(9), 3, 3, dimnames=list(NULL, c("a","b","c")))
+)
+subset <- sub_result(cres, 1:2)
 ```

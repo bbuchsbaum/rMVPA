@@ -221,7 +221,8 @@ the model space is shared across subjects.
 contributions from each orthogonal axis of the model space. The first
 axis captures most of the shared geometry; the rest distinguish *which*
 models a given (subject, session) leans on more than the others. See
-[`vignette("Model_Space_Connectivity")`](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md)
+[Model-Space Representational
+Connectivity](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.html)
 for that workflow on synthetic data.
 
 ## Verifying against the published table
@@ -260,13 +261,14 @@ different absolute numbers but the same ranking.
 ## Where to go next
 
 - For a synthetic-data walkthrough of the same connectivity machinery,
-  see
-  [`vignette("Model_Space_Connectivity")`](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md).
+  see [Model-Space Representational
+  Connectivity](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.html).
 - For pair-design generalisations (cross-domain RDMs, function-valued
   model entries), see the same vignette.
 - For Feature-RSA’s complementary “predict the RDM through a learned
-  feature space” workflow, see
-  [`vignette("Feature_RSA_Connectivity")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.md).
+  feature space” workflow, see [Feature-RSA Connectivity: ROI-to-ROI
+  Generalization and Offset
+  Control](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.html).
 
 ## Citation
 

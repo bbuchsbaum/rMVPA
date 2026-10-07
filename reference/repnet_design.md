@@ -41,7 +41,15 @@ A list with fields:
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-  des <- repnet_design(design, ~ ImageID, seed_rdm=my_rdm)
-} # }
+trials <- data.frame(ImageID = rep(letters[1:4], 3), run = rep(1:3, each = 4))
+design <- mvpa_design(trials, y_train = ~ ImageID, block_var = ~ run)
+my_rdm <- as.matrix(dist(matrix(rnorm(4 * 3), 4, 3)))
+rownames(my_rdm) <- colnames(my_rdm) <- letters[1:4]
+des <- repnet_design(design, ~ ImageID, seed_rdm = my_rdm)
+str(des, max.level = 1)
+#> List of 3
+#>  $ key          : Factor w/ 4 levels "a","b","c","d": 1 2 3 4 1 2 3 4 1 2 ...
+#>  $ seed_rdm     : num [1:4, 1:4] 0 3.04 2.23 1.79 3.04 ...
+#>   ..- attr(*, "dimnames")=List of 2
+#>  $ confound_rdms: list()
 ```

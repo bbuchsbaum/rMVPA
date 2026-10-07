@@ -31,7 +31,7 @@ rMVPA exposes two complementary ways to ask “do these ROIs share
 representational geometry?” Picking the right one is the single most
 important decision in this analysis:
 
-|  | **Model-space connectivity** *(this vignette)* | **Feature-RSA connectivity** *([`vignette("Feature_RSA_Connectivity")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.md))* |
+|  | **Model-space connectivity** *(this vignette)* | **Feature-RSA connectivity** *([Feature-RSA Connectivity: ROI-to-ROI Generalization and Offset Control](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.html))* |
 |:---|:---|:---|
 | **Question it answers** | Do ROIs project onto the *same axes of my declared model RDMs*? | Do ROIs *predict the same trial-by-trial similarity structure* through a learned feature space? |
 | **What you supply** | One or more explicit model RDMs | A feature matrix `F` (or similarity matrix `S`) |
@@ -436,17 +436,18 @@ anchors.
   and
   [`?rdm_decorrelate`](https://bbuchsbaum.github.io/rMVPA/reference/rdm_decorrelate.md).
 - For the *learned-feature-space* connectivity path — predicting one
-  ROI’s RDM from another via a feature-RSA model — see
-  [`vignette("Feature_RSA_Connectivity")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.md).
+  ROI’s RDM from another via a feature-RSA model — see [Feature-RSA
+  Connectivity: ROI-to-ROI Generalization and Offset
+  Control](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.html).
   The two paths are complementary:
   [`model_space_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/model_space_connectivity.md)
   works in your declared model-RDM subspace;
   [`feature_rsa_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_connectivity.md)
   works in a fitted feature space.
-- For variance partitioning by signed contrasts, see
-  [`vignette("Contrast_RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/Contrast_RSA.md).
-- For temporal / nuisance pair predictors, see
-  [`vignette("Temporal_Confounds_in_RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/Temporal_Confounds_in_RSA.md)
+- For variance partitioning by signed contrasts, see [Contrast RSA with
+  contrast_rsa_model](https://bbuchsbaum.github.io/rMVPA/articles/Contrast_RSA.html).
+- For temporal / nuisance pair predictors, see [Temporal Confounds in
+  RSA](https://bbuchsbaum.github.io/rMVPA/articles/Temporal_Confounds_in_RSA.html)
   and
   [`?temporal_rdm`](https://bbuchsbaum.github.io/rMVPA/reference/temporal_rdm.md).
 

@@ -34,18 +34,10 @@ multivariate statistical analysis using the MANOVA method.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
 # Create a MANOVA model using gen_sample_dataset
-dset <- gen_sample_dataset(D = c(5, 5, 5), nobs = 50, nlevels = 3, blocks = 3)
+dset <- gen_sample_dataset(D = c(4, 4, 4), nobs = 24, nlevels = 3, blocks = 3)
 
-# Create dissimilarity matrices for MANOVA design
-formula <- y ~ x1 + x2
-data_list <- list(
-  y = matrix(rnorm(9), nrow = 3),
-  x1 = matrix(rnorm(9), nrow = 3),
-  x2 = matrix(rnorm(9), nrow = 3)
-)
-design <- manova_design(formula, data_list)
+# MANOVA design: voxel patterns modelled by condition and block
+design <- manova_design(~ Y + block_var, dset$design$train_design)
 manova_model_obj <- manova_model(dset$dataset, design)
-} # }
 ```

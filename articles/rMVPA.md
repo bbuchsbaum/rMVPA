@@ -59,7 +59,8 @@ from uniform guessing is `1 / 8 = 12.5%`.
 
 In your own study, these rows would usually be trial-wise or
 condition-wise beta estimates from a first-level model. See
-[`vignette("Constructing_Datasets")`](https://bbuchsbaum.github.io/rMVPA/articles/Constructing_Datasets.md)
+[Constructing Datasets for MVPA
+Analysis](https://bbuchsbaum.github.io/rMVPA/articles/Constructing_Datasets.html)
 for file-backed images, masks, and other input layouts.
 
 ## What must remain independent?
@@ -184,8 +185,8 @@ A clean preflight is necessary, not magical. It can verify the design
 and fold structure represented in these objects; it cannot prove that
 upstream preprocessing was scientifically appropriate. Any data-driven
 scaling, feature selection, or tuning must also be learned without
-looking at the test observations.
-[`vignette("FeatureSelection")`](https://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.md)
+looking at the test observations. [Feature Selection in
+rMVPA](https://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.html)
 shows how to place feature selection inside the resampling loop.
 
 ## What does the held-out analysis find?
@@ -231,7 +232,7 @@ knitr::kable(result_summary, caption = "Performance pooled across 12 held-out ru
 
 | held_out_predictions | correct | accuracy | chance_accuracy | accuracy_above_chance | chance_centered_AUC |
 |---:|---:|:---|:---|:---|:---|
-| 96 | 88 | 91.7% | 12.5% | 79.2 points | 0.973 |
+| 96 | 88 | 91.7% | 12.5% | 79.2 points | 0.972 |
 
 Performance pooled across 12 held-out runs. {.table}
 
@@ -318,18 +319,18 @@ save_results(result, dir = "haxby-vt-results")
 
 ## Where should you go next?
 
-- **Bring your own images and masks:**
-  [`vignette("Constructing_Datasets")`](https://bbuchsbaum.github.io/rMVPA/articles/Constructing_Datasets.md).
+- **Bring your own images and masks:** [Constructing Datasets for MVPA
+  Analysis](https://bbuchsbaum.github.io/rMVPA/articles/Constructing_Datasets.html).
 - **Design leakage-resistant resampling:**
   [`vignette("CrossValidation")`](https://bbuchsbaum.github.io/rMVPA/articles/CrossValidation.md).
-- **Select voxels inside the training folds:**
-  [`vignette("FeatureSelection")`](https://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.md).
+- **Select voxels inside the training folds:** [Feature Selection in
+  rMVPA](https://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.html).
 - **Move from one region to a decoding map:**
   [`vignette("Searchlight_Analysis")`](https://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.md).
 - **Study representational geometry instead of category prediction:**
   [`vignette("RSA")`](https://bbuchsbaum.github.io/rMVPA/articles/RSA.md),
-  followed by
-  [`vignette("Kriegeskorte_92_Images")`](https://bbuchsbaum.github.io/rMVPA/articles/Kriegeskorte_92_Images.md)
+  followed by [Reproducing Kriegeskorte (2008) with
+  rMVPA](https://bbuchsbaum.github.io/rMVPA/articles/Kriegeskorte_92_Images.html)
   for a real-data example.
 
 The package’s core public workflow is now in view:

@@ -2,8 +2,8 @@
 
 ## Superseded
 
-This vignette has been superseded by
-[`vignette("CommandLine")`](https://bbuchsbaum.github.io/rMVPA/articles/CommandLine.md),
+This vignette has been superseded by [Command-Line MVPA
+Interfaces](https://bbuchsbaum.github.io/rMVPA/articles/CommandLine.html),
 which now documents the supported command-line interface for both:
 
 - `rmvpa-searchlight`
@@ -19,6 +19,6 @@ Use the unified vignette for:
 - regional-specific options and examples, including ROI masks and
   pooling
 
-If you arrived here from an older link, switch to
-[`vignette("CommandLine")`](https://bbuchsbaum.github.io/rMVPA/articles/CommandLine.md)
+If you arrived here from an older link, switch to [Command-Line MVPA
+Interfaces](https://bbuchsbaum.github.io/rMVPA/articles/CommandLine.html)
 for the current interface.

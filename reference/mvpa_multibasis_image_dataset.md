@@ -57,12 +57,10 @@ An object of class `mvpa_multibasis_image_dataset`.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-  # See mvpa_multibasis_dataset for examples
-  ds <- gen_sample_dataset(c(5,5,5), 20)
-  mb <- mvpa_multibasis_image_dataset(
-    list(ds$dataset$train_data, ds$dataset$train_data),
-    mask = ds$dataset$mask
-  )
-} # }
+# See mvpa_multibasis_dataset for details
+ds <- gen_sample_dataset(c(5,5,5), 20)
+mb <- mvpa_multibasis_image_dataset(
+  list(ds$dataset$train_data, ds$dataset$train_data),
+  mask = ds$dataset$mask
+)
 ```

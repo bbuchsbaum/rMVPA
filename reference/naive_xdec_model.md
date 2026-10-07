@@ -71,19 +71,27 @@ machine learning literature.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-  # Requires dataset with train_data and test_data
-  ds <- gen_sample_dataset(c(5,5,5), 20, external_test=TRUE)
-  model <- naive_xdec_model(ds$dataset, ds$design)
+ds <- gen_sample_dataset(c(5, 5, 5), 20, external_test = TRUE)
+model <- naive_xdec_model(ds$dataset, ds$design)
 
-  # Custom metric that uses a column from test_design
-  custom_fun <- function(result) {
-    vivid <- result$test_design$RateVivid
-    probs <- as.matrix(result$probs)
-    obs   <- as.character(result$observed)
-    true_p <- probs[cbind(seq_along(obs), match(obs, colnames(probs)))]
-    c(vivid_spearman = stats::cor(vivid, true_p, method = "spearman"))
-  }
-  model <- naive_xdec_model(ds$dataset, ds$design, performance = custom_fun)
-} # }
+# Custom metric: mean probability assigned to the true class
+custom_fun <- function(result) {
+  probs <- as.matrix(result$probs)
+  obs   <- as.character(result$observed)
+  true_p <- probs[cbind(seq_along(obs), match(obs, colnames(probs)))]
+  c(mean_true_prob = mean(true_p))
+}
+model2 <- naive_xdec_model(ds$dataset, ds$design, performance = custom_fun)
+res <- run_regional(model2, ds$dataset$mask)
+#> INFO [2026-10-07 05:02:10] 
+#> MVPA Iteration Complete
+#> - Total ROIs: 1
+#> - Processed: 1
+#> - Skipped: 0
+#> INFO [2026-10-07 05:02:10] run_regional: 1 ROIs processed (success=1, errors=0)
+res$performance_table
+#> # A tibble: 1 × 2
+#>   roinum mean_true_prob
+#>    <int>          <dbl>
+#> 1      1          0.197
 ```

@@ -42,9 +42,7 @@ provide conversions to ROI structures or data frames as needed.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-  ds <- gen_sample_dataset(c(5,5,5), 20)
-  vox <- sample(which(ds$dataset$mask > 0), 10)
-  samp <- data_sample(ds$dataset, vox)
-} # }
+ds <- gen_sample_dataset(c(5,5,5), 20)
+vox <- sample(which(ds$dataset$mask > 0), 10)
+samp <- data_sample(ds$dataset, vox)
 ```

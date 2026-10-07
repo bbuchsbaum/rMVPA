@@ -17,7 +17,7 @@ $$\hat Y_w = X_w + \lambda X_w \Delta,$$
 where \(\lambda \in [0,1]\) is chosen on the training items (prototype self-retrieval).
 Classification of held-out target trials is performed by correlating their whitened
 patterns with \(\hat Y_w\). When the data do not support a reliable residual, the
-method automatically shrinks to the naive cross-decoder (\(\lambda = 0\)).'></head><body>
+method automatically shrinks to the naive cross-decoder (\(\lambda = 0\)).'><link href="../albers.css" rel="stylesheet"><script>window.albersdownDefaults = window.albersdownDefaults || { family: "red", preset: "homage", style: "minimal" };</script><script src="../albers.js"></script></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -206,11 +206,10 @@ a fixed rank to obtain much faster single-fit adapters per ROI.</p>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
-<span class="r-in"><span>  <span class="co"># Requires dataset with paired train/test data</span></span></span>
-<span class="r-in"><span>  <span class="va">ds</span> <span class="op">&lt;-</span> <span class="fu"><a href="gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>,<span class="fl">5</span>,<span class="fl">5</span><span class="op">)</span>, <span class="fl">20</span>, external_test<span class="op">=</span><span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="va">model</span> <span class="op">&lt;-</span> <span class="fu">remap_rrr_model</span><span class="op">(</span><span class="va">ds</span><span class="op">$</span><span class="va">dataset</span>, <span class="va">ds</span><span class="op">$</span><span class="va">design</span>, rank<span class="op">=</span><span class="fl">5</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">ds</span> <span class="op">&lt;-</span> <span class="fu"><a href="gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">5</span>, <span class="fl">5</span><span class="op">)</span>, <span class="fl">20</span>, external_test <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu">remap_rrr_model</span><span class="op">(</span><span class="va">ds</span><span class="op">$</span><span class="va">dataset</span>, <span class="va">ds</span><span class="op">$</span><span class="va">design</span>, rank <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="va">model</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "remap_rrr_model" "model_spec"      "list"           </span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

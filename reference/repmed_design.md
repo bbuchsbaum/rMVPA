@@ -40,10 +40,8 @@ A list with elements:
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-  items <- letters[1:10]
-  X_rdm <- as.matrix(dist(matrix(rnorm(10*3), 10, 3)))
-  Y_rdm <- as.matrix(dist(matrix(rnorm(10*3), 10, 3)))
-  des <- repmed_design(items, X_rdm, Y_rdm)
-} # }
+items <- letters[1:10]
+X_rdm <- as.matrix(dist(matrix(rnorm(10*3), 10, 3)))
+Y_rdm <- as.matrix(dist(matrix(rnorm(10*3), 10, 3)))
+des <- repmed_design(items, X_rdm, Y_rdm)
 ```

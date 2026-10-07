@@ -11,6 +11,9 @@ extract_weights(object, ...)
 # S3 method for class 'sda'
 extract_weights(object, ...)
 
+# S3 method for class 'sda_native'
+extract_weights(object, ...)
+
 # S3 method for class 'glmnet'
 extract_weights(object, ...)
 

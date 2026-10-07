@@ -30,8 +30,13 @@ A searchlight_performance object
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-  # Internal function for creating searchlight performance objects
-  perf <- create_searchlight_performance(neurovol, "Accuracy")
-} # }
+vol <- neuroim2::NeuroVol(array(runif(27), c(3, 3, 3)),
+                          neuroim2::NeuroSpace(c(3, 3, 3)))
+perf <- create_searchlight_performance(vol, "Accuracy")
+str(perf$summary_stats)
+#> List of 4
+#>  $ mean: num 0.511
+#>  $ sd  : num 0.305
+#>  $ min : num 0.0337
+#>  $ max : num 0.999
 ```

@@ -283,7 +283,7 @@ connectivity. They are not redundant — they answer subtly different
 questions, and the right tool depends on whether you supply a *model* or
 a *feature space*:
 
-|  | **Feature-RSA connectivity** *(this vignette)* | **Model-space connectivity** *([`vignette("Model_Space_Connectivity")`](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md))* |
+|  | **Feature-RSA connectivity** *(this vignette)* | **Model-space connectivity** *([Model-Space Representational Connectivity](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.html))* |
 |:---|:---|:---|
 | **What you supply** | A feature matrix `F` (or similarity matrix `S`) | One or more explicit model RDMs |
 | **Fitting** | CV-fitted PLS / PCA / glmnet maps neural patterns ↔︎ feature space | No fitting — neural pair vectors are projected onto a fixed model-RDM basis |
@@ -302,10 +302,11 @@ often the most interesting result.
 ## Next steps
 
 If your transfer problem is across cognitive states rather than across
-ROIs, see
-[`vignette("Feature_RSA_Domain_Adaptation")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Domain_Adaptation.md).
+ROIs, see [Feature-RSA Across States: Domain Adaptation from Encoding to
+Recall](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Domain_Adaptation.html).
 If you want the broader decision map for within-ROI fits, cross-state
-transfer, and ROI-to-ROI generalization, see
-[`vignette("Feature_RSA_Advanced_Workflows")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Advanced_Workflows.md).
+transfer, and ROI-to-ROI generalization, see [Feature-RSA Advanced
+Workflows](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Advanced_Workflows.html).
 For the model-RDM-driven counterpart of the connectivity workflow, see
-[`vignette("Model_Space_Connectivity")`](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.md).
+[Model-Space Representational
+Connectivity](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.html).

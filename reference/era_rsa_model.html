@@ -5,7 +5,7 @@ run_regional() and run_searchlight() using the standard rMVPA
 iterators."><meta property="og:description" content="Combines first-order encoding-retrieval similarity (ERA) with second-order
 RSA between encoding and retrieval representational geometries. Works with
 run_regional() and run_searchlight() using the standard rMVPA
-iterators."></head><body>
+iterators."><link href="../albers.css" rel="stylesheet"><script>window.albersdownDefaults = window.albersdownDefaults || { family: "red", preset: "homage", style: "minimal" };</script><script src="../albers.js"></script></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -444,9 +444,28 @@ comparing nested full and reduced models on that same complete-case set.</p>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
-<span class="r-in"><span>  <span class="co"># See vignette for complete ERA-RSA workflow</span></span></span>
-<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Encoding (train) and retrieval (test) data share item labels</span></span></span>
+<span class="r-in"><span><span class="va">toy</span> <span class="op">&lt;-</span> <span class="fu"><a href="gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span>D <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">4</span>, <span class="fl">4</span>, <span class="fl">4</span><span class="op">)</span>, nobs <span class="op">=</span> <span class="fl">24</span>, nlevels <span class="op">=</span> <span class="fl">4</span>, blocks <span class="op">=</span> <span class="fl">3</span>,</span></span>
+<span class="r-in"><span>                          external_test <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">toy</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">train_design</span><span class="op">$</span><span class="va">Item</span> <span class="op">&lt;-</span> <span class="va">toy</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">train_design</span><span class="op">$</span><span class="va">Y</span></span></span>
+<span class="r-in"><span><span class="va">toy</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">test_design</span><span class="op">$</span><span class="va">Item</span>  <span class="op">&lt;-</span> <span class="va">toy</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">test_design</span><span class="op">$</span><span class="va">Ytest</span></span></span>
+<span class="r-in"><span><span class="co"># suppressWarnings(): no per-item run metadata is supplied in this toy example</span></span></span>
+<span class="r-in"><span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/warning.html" class="external-link">suppressWarnings</a></span><span class="op">(</span><span class="fu">era_rsa_model</span><span class="op">(</span><span class="va">toy</span><span class="op">$</span><span class="va">dataset</span>, <span class="va">toy</span><span class="op">$</span><span class="va">design</span>, key_var <span class="op">=</span> <span class="op">~</span> <span class="va">Item</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">toy</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-10-07 05:01:57] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">1</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">1</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-10-07 05:01:57] run_regional: 1 ROIs processed (success=1, errors=0)</span>
+<span class="r-in"><span><span class="va">res</span><span class="op">$</span><span class="va">performance_table</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 1 × 12</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   roinum n_items era_top1_acc era_diag_mean era_diag_minus_off geom_cor</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>              <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>      1       4            0       -<span style="color: #BB0000;">0.038</span><span style="color: #BB0000; text-decoration: underline;">8</span>            -<span style="color: #BB0000;">0.017</span><span style="color: #BB0000; text-decoration: underline;">2</span>   -<span style="color: #BB0000;">0.229</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># ℹ 6 more variables: era_diag_minus_off_same_block &lt;dbl&gt;,</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   era_diag_minus_off_diff_block &lt;dbl&gt;, era_lag_cor &lt;dbl&gt;,</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   geom_cor_partial &lt;dbl&gt;, geom_cor_run_partial &lt;dbl&gt;, geom_cor_xrun &lt;dbl&gt;</span></span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

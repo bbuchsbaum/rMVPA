@@ -12,6 +12,8 @@
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
 <script src="../extra.js"></script><meta property="og:title" content="Feature-RSA Advanced Workflows">
+<link href="../albers.css" rel="stylesheet">
+<script>window.albersdownDefaults = window.albersdownDefaults || { family: "red", preset: "homage", style: "minimal" };</script><script src="../albers.js"></script>
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -56,7 +58,7 @@
       <h1>Feature-RSA Advanced Workflows</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/rMVPA/blob/master/vignettes/Feature_RSA_Advanced_Workflows.Rmd" class="external-link"><code>vignettes/Feature_RSA_Advanced_Workflows.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/rMVPA/blob/master/vignettes/articles/Feature_RSA_Advanced_Workflows.Rmd" class="external-link"><code>vignettes/articles/Feature_RSA_Advanced_Workflows.Rmd</code></a></small>
       <div class="d-none name"><code>Feature_RSA_Advanced_Workflows.Rmd</code></div>
     </div>
 
@@ -177,8 +179,8 @@ and target mappings need not be identical.</p>
 abstract. It is whether a model that can adapt on target-train rows
 recovers more held-out target geometry than a source-only baseline. When
 the target-side representation is itself estimated from target data, use
-a fold-aware <code>target_builder</code> as shown in
-<code><a href="../articles/Feature_RSA_Domain_Adaptation.html">vignette("Feature_RSA_Domain_Adaptation")</a></code>.</p>
+a fold-aware <code>target_builder</code> as shown in <a href="https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Domain_Adaptation.html">Feature-RSA
+Across States: Domain Adaptation from Encoding to Recall</a>.</p>
 </div>
 <div class="section level2">
 <h2 id="when-do-you-want-roi_i---roi_j-transfer">When do you want ROI_i -&gt; ROI_j transfer?<a class="anchor" aria-label="anchor" href="#when-do-you-want-roi_i---roi_j-transfer"></a>
@@ -295,9 +297,10 @@ which nuisance pattern you are trying to remove.</li>
 <h2 id="next-steps">Next steps<a class="anchor" aria-label="anchor" href="#next-steps"></a>
 </h2>
 <p>For the full cross-state workflow, including fold-aware target
-rebuilding, see <code><a href="../articles/Feature_RSA_Domain_Adaptation.html">vignette("Feature_RSA_Domain_Adaptation")</a></code>.
-For the full ROI-to-ROI workflow and stripe-mitigation examples, see
-<code><a href="../articles/Feature_RSA_Connectivity.html">vignette("Feature_RSA_Connectivity")</a></code>.</p>
+rebuilding, see <a href="https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Domain_Adaptation.html">Feature-RSA
+Across States: Domain Adaptation from Encoding to Recall</a>. For the
+full ROI-to-ROI workflow and stripe-mitigation examples, see <a href="https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.html">Feature-RSA
+Connectivity: ROI-to-ROI Generalization and Offset Control</a>.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

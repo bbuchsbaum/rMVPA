@@ -83,8 +83,6 @@ A `dist` object or symmetric matrix (N x N)
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-  onsets <- c(0, 5, 10, 15, 20)
-  hrf_rdm <- temporal_hrf_overlap(onsets, TR=2, hrf="spm")
-} # }
+onsets <- c(0, 5, 10, 15, 20)
+hrf_rdm <- temporal_hrf_overlap(onsets, TR = 2, hrf = "spm")
 ```

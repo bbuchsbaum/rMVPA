@@ -25,7 +25,6 @@ Logical indicating if a test set exists.
 
 ``` r
 ds <- gen_sample_dataset(D = c(4, 4, 4), nobs = 10, external_test = TRUE)
-#> external test
 has_test_set(ds$design)
 #> [1] TRUE
 ```

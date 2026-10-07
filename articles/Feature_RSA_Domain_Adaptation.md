@@ -215,8 +215,9 @@ state.
 ## Next steps
 
 The next question is often no longer about one ROI. If you want to ask
-whether feature-RSA geometry generalizes across ROIs, see
-[`vignette("Feature_RSA_Connectivity")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.md).
+whether feature-RSA geometry generalizes across ROIs, see [Feature-RSA
+Connectivity: ROI-to-ROI Generalization and Offset
+Control](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Connectivity.html).
 If you want the broader decision map for within-ROI fits, cross-state
-transfer, and cross-ROI transfer, see
-[`vignette("Feature_RSA_Advanced_Workflows")`](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Advanced_Workflows.md).
+transfer, and cross-ROI transfer, see [Feature-RSA Advanced
+Workflows](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Advanced_Workflows.html).

@@ -265,7 +265,8 @@ data, check that `X_t` is built from the correct onsets/HRF and that
 - [`?item_model`](https://bbuchsbaum.github.io/rMVPA/reference/item_model.md),
   [`?item_design`](https://bbuchsbaum.github.io/rMVPA/reference/item_design.md)
   – full parameter documentation
-- [`vignette("Naive_Cross_Decoding")`](https://bbuchsbaum.github.io/rMVPA/articles/Naive_Cross_Decoding.md)
+- [Naive
+  Cross-Decoding](https://bbuchsbaum.github.io/rMVPA/articles/Naive_Cross_Decoding.html)
   – a no-learning cross-domain baseline
 - [`vignette("Searchlight_Analysis")`](https://bbuchsbaum.github.io/rMVPA/articles/Searchlight_Analysis.md)
   – general searchlight workflow

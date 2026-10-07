@@ -105,20 +105,27 @@ matrix if return_matrix=TRUE. The returned object has attributes:
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
+# Small synthetic NeuroVec: 4x4x4 volume, 12 time points, 3 conditions
+sp <- neuroim2::NeuroSpace(c(4, 4, 4, 12))
+scandat <- neuroim2::NeuroVec(array(rnorm(4 * 4 * 4 * 12), c(4, 4, 4, 12)), sp)
+mask <- neuroim2::LogicalNeuroVol(array(TRUE, c(4, 4, 4)),
+                                  neuroim2::NeuroSpace(c(4, 4, 4)))
+condition_labels <- rep(c("A", "B", "C"), times = 4)
+
 # Basic averaging
 averaged <- average_labels(scandat, condition_labels, mask)
 
 # With z-score normalization of each volume
-averaged_norm <- average_labels(scandat, condition_labels, mask, 
+averaged_norm <- average_labels(scandat, condition_labels, mask,
                                 normalize = "z", normalize_by = "volume")
 
 # Scale to unit norm for RSA
 averaged_unit <- average_labels(scandat, condition_labels, mask,
                                 normalize = "unit")
-                                
-# Get just the data matrix
+
+# Get just the data matrix (conditions x voxels)
 data_mat <- average_labels(scandat, condition_labels, mask,
                            return_matrix = TRUE)
-} # }
+dim(data_mat)
+#> [1]  3 64
 ```

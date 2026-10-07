@@ -645,6 +645,9 @@ All functions exported by rMVPA
 - [`rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md)
   : Construct an RSA (Representational Similarity Analysis) model
 
+- [`rsa_neural_rdm()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_neural_rdm.md)
+  : Compute a Neural RDM for RSA
+
 - [`run_analysis()`](https://bbuchsbaum.github.io/rMVPA/reference/run_analysis.md)
   : Run a Built Analysis
 
