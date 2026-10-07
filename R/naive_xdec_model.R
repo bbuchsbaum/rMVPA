@@ -266,7 +266,7 @@ print.naive_xdec_model <- function(x, ...) {
   if (is.null(colnames(scores))) {
     colnames(scores) <- levs
   }
-  pred <- factor(levs[max.col(scores)], levels = levs)
+  pred <- factor(levs[max.col(scores, ties.method = "first")], levels = levs)
 
   probs <- NULL
   if (isTRUE(return_probs)) {

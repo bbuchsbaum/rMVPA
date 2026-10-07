@@ -234,7 +234,7 @@ predict.class_model_fit <- function(object, newdata, sub_indices=NULL,...) {
     }
     
     colnames(probs) <- levels(object$y)
-    cpred <- max.col(probs)
+    cpred <- max.col(probs, ties.method = "first")
     cpred <- levels(object$y)[cpred]
     ret <- list(class=cpred, probs=probs)
     class(ret) <- c("classification_prediction", "prediction", "list")

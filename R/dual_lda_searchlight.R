@@ -716,7 +716,7 @@
 #' @keywords internal
 #' @noRd
 .dual_lda_metric_core <- function(observed, probs, classes, kind, class_metrics = FALSE) {
-  pred <- factor(classes[max.col(probs)], levels = classes)
+  pred <- factor(classes[max.col(probs, ties.method = "first")], levels = classes)
   acc <- mean(pred == observed)
 
   if (identical(kind, "binary")) {
@@ -1117,7 +1117,7 @@
   colnames(prob) <- classes
 
   obs <- factor(y_all[test_idx], levels = classes)
-  pred <- factor(classes[max.col(prob)], levels = classes)
+  pred <- factor(classes[max.col(prob, ties.method = "first")], levels = classes)
   classification_result(
     observed = obs,
     predicted = pred,

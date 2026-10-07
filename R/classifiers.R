@@ -132,7 +132,7 @@ predict_corsimFit <- function(modelFit, newData) {
   } else {
     cres <- cor(t(X), t(M), method = modelFit$method)
   }
-  res <- max.col(cres)
+  res <- max.col(cres, ties.method = "first")
   factor(modelFit$levs[res], levels = modelFit$levs)
 }
 
@@ -271,7 +271,7 @@ MVPAModels$pca_lda <- list(
 #' @noRd
 .dual_lda_predict_core <- function(modelFit, newdata) {
   probs <- .dual_lda_prob_core(modelFit, newdata)
-  factor(modelFit$classes[max.col(probs)], levels = modelFit$classes)
+  factor(modelFit$classes[max.col(probs, ties.method = "first")], levels = modelFit$classes)
 }
 
 #' @keywords internal
@@ -530,7 +530,7 @@ MVPAModels$lda_thomaz_boot <- list(
     preds <- lapply(modelFit$fits, function(fit) {
       ind <- attr(fit, "keep.ind")
       scores <- -t(predict(fit, newdata[,ind])$scores)
-      mc <- scores[cbind(seq_len(nrow(scores)), max.col(scores))]
+      mc <- scores[cbind(seq_len(nrow(scores)), max.col(scores, ties.method = "first"))]
       probs <- exp(scores - mc)
       zapsmall(probs/rowSums(probs))
     })
@@ -858,7 +858,7 @@ MVPAModels$naive_bayes <- list(
   predict = function(modelFit, newdata, preProc = NULL, submodels = NULL) {
     newdata <- as.matrix(newdata)
     log_post <- calculate_log_posteriors(modelFit, newdata)
-    factor(modelFit$classes[max.col(log_post)], levels = modelFit$classes)
+    factor(modelFit$classes[max.col(log_post, ties.method = "first")], levels = modelFit$classes)
   },
 
   prob = function(modelFit, newdata, preProc = NULL, submodels = NULL) {
@@ -1706,7 +1706,7 @@ MVPAModels$spacenet_tvl1 <- list(
     if (!is.null(modelFit$obsLevels)) {
       if (is.matrix(beta) && ncol(beta) > 1L) {
         eta <- sweep(X %*% beta, 2L, intercept, "+")
-        pred <- colnames(eta)[max.col(eta)]
+        pred <- colnames(eta)[max.col(eta, ties.method = "first")]
         factor(pred, levels = modelFit$obsLevels)
       } else {
         eta <- as.vector(X %*% as.numeric(beta) + as.numeric(intercept))

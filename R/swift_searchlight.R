@@ -265,7 +265,7 @@
   obs_idx <- as.integer(factor(observed, levels = classes))
   prob_flat <- matrix(probs, nrow = n_obs * n_centers, ncol = k)
 
-  pred_flat <- max.col(prob_flat)
+  pred_flat <- max.col(prob_flat, ties.method = "first")
   pred_idx <- matrix(pred_flat, nrow = n_obs, ncol = n_centers)
   acc <- colMeans(pred_idx == obs_idx)
 
