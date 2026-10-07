@@ -55,6 +55,16 @@
   arguments such as `verbose = FALSE` or `batch_size`. Those arguments were
   consumed and then forwarded a second time to the iterator ("formal argument
   'verbose' matched by multiple actual arguments").
+* Faster general-purpose searchlight and regional iteration. Debug logging is
+  now checked once per run instead of on every per-fold call. Each disabled
+  `futile.logger` call previously resolved the logger namespace before
+  comparing thresholds, and the general path made hundreds of thousands of such
+  calls. Measured on a 6x6x6 searchlight (100 trials, 5 folds, reference BLAS):
+  `corclass` went from 72 to 21 ms per centre and `sda_notune` from 93 to 42 ms
+  per centre. Results are unchanged.
+* `set_log_level("DEBUG")` is no longer undone at the start of every run in
+  interactive sessions. The internal logger setup compared a level name with a
+  number, so its guard was always false.
 
 # rMVPA 0.1.3
 

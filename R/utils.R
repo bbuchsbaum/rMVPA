@@ -247,7 +247,40 @@ set_log_level <- function(level = "INFO") {
   }
 
   futile.logger::flog.threshold(lvl_num)
+  .rmvpa_refresh_log_state()
   invisible(lvl_num)
+}
+
+# Debug logging is checked once per run, not on every call. A futile.logger
+# call pays for logger-namespace resolution (via capture.output(str(...)))
+# before it compares thresholds, about 1 ms per call. Hot per-fold loops made
+# hundreds of thousands of such calls even with debug output off.
+# .log_debug() tests a cached flag first. Because `...` is lazy, the message
+# arguments are not evaluated at all when debug is off. The flag is refreshed
+# by set_log_level() and at the start of each mvpa_iterate() run.
+.rmvpa_log_state <- new.env(parent = emptyenv())
+
+#' @keywords internal
+#' @noRd
+.rmvpa_refresh_log_state <- function() {
+  levels <- c(TRACE = 9, DEBUG = 8, INFO = 6, WARN = 4, ERROR = 2, FATAL = 1)
+  threshold <- futile.logger::flog.threshold()
+  level <- if (is.numeric(threshold)) threshold else unname(levels[toupper(threshold)])
+  .rmvpa_log_state$debug <- isTRUE(level >= levels[["DEBUG"]])
+  invisible(.rmvpa_log_state$debug)
+}
+
+#' @keywords internal
+#' @noRd
+.log_debug <- function(...) {
+  enabled <- .rmvpa_log_state$debug
+  if (is.null(enabled)) {
+    enabled <- .rmvpa_refresh_log_state()
+  }
+  if (isTRUE(enabled)) {
+    futile.logger::flog.debug(...)
+  }
+  invisible(NULL)
 }
 
 
