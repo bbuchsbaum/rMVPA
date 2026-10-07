@@ -17,7 +17,7 @@
       eligible = function(model_spec, method) TRUE
     ),
     swift = list(
-      label = "SWIFT multiclass fast path",
+      label = "SWIFT nearest-class-mean estimator (explicit opt-in only)",
       eligible = function(model_spec, method) {
         .swift_searchlight_enabled() && .is_swift_fast_path(model_spec, method)
       }
@@ -191,10 +191,10 @@ explain_searchlight_engine <- function(model_spec,
     return("dual_lda_fast")
   }
 
-  if (isTRUE(registry$swift$eligible(model_spec, method))) {
-    return("swift")
-  }
-
+  # SWIFT is never selected automatically: it computes its own z-scored
+  # nearest-class-mean estimator rather than the classifier in model_spec, so
+  # auto-selecting it would silently substitute a different model. It runs
+  # only on an explicit engine = "swift" request.
   "legacy"
 }
 
@@ -258,6 +258,7 @@ explain_searchlight_engine <- function(model_spec,
       )
     }
     attr(res, "searchlight_engine") <- "swift"
+    attr(res, "searchlight_estimator") <- "swift_nearest_mean"
     return(res)
   }
 
@@ -328,6 +329,18 @@ explain_searchlight_engine <- function(model_spec,
         method
       ),
       call. = FALSE
+    )
+  }
+
+  if (identical(engine, "swift")) {
+    message(
+      sprintf(
+        paste0(
+          "engine = 'swift' computes SWIFT's z-scored nearest-class-mean ",
+          "estimator, not the requested '%s' classifier."
+        ),
+        model_spec$model$label %||% "model"
+      )
     )
   }
 
