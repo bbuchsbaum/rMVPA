@@ -696,3 +696,19 @@ test_that("dual_lda chunk recovery falls back when native chunk returns NULL", {
   expect_gt(sum(keep), 0)
   expect_equal(acc_recovery[keep], acc_ref[keep], tolerance = 1e-6)
 })
+
+test_that("dual_lda fit solves p > n problems accurately in the dual", {
+  # With p > n, Sigma = gamma I + C'C is near-singular for small gamma; the
+  # n x n Woodbury solve is accurate where a p x p Cholesky is not.
+  set.seed(1501)
+  n <- 60; p <- 300
+  y <- factor(rep(1:4, 15))
+  x <- matrix(rnorm(n * p, 1500, 30), n) + outer(as.integer(y), rnorm(p))
+  fit <- rMVPA:::.dual_lda_fit_core(x, y, gamma = 0.01)
+  means <- rowsum(x, y) / as.vector(table(y))
+  C <- x - means[as.integer(y), ]
+  s <- svd(C)
+  d2 <- s$d^2
+  ref <- (t(means) - s$v %*% ((d2 / (d2 + 0.01)) * crossprod(s$v, t(means)))) / 0.01
+  expect_lt(max(abs(fit$inv_sigma_means - ref)) / max(abs(ref)), 1e-12)
+})

@@ -133,13 +133,13 @@
   104 ms.
 * `run_permutation_searchlight()` uses the exact searchlight engines
   (`aggregate_fast` for `corclass` and `naive_bayes`, `sda_fast` for
-  `sda_notune`) under both permutation strategies. Data, neighbourhoods, folds
-  and voxel validity do not depend on the labels, so they are prepared once and
-  each permutation only rescores. The default `"iterate"` strategy previously
+  `sda_notune`) under both permutation strategies with fixed folds. Data,
+  neighbourhoods, folds and voxel validity are prepared once and each
+  permutation only rescores. The default `"iterate"` strategy previously
   ran every permutation through the per-ROI iterator. Null distributions and
-  p-values are identical to before for the same seed. Permutation runs are
-  15-117x faster for these models (6x6x6 volume). Passing an explicit
-  `engine` (e.g. `"legacy"`) keeps the per-ROI path.
+  p-values matched for the same seed in the recorded blocked-CV benchmark,
+  with 15-117x faster runs for these models (6x6x6 volume). Passing an explicit
+  engine other than `"auto"` bypasses preparation reuse.
 * RSA searchlights (`rsa_model`) run on a new engine (`engine = "rsa_fast"`,
   selected automatically). It extracts the data once and calls
   `train_model.rsa_model()` per sphere on exactly the columns the per-ROI path
@@ -148,6 +148,18 @@
   including semipartial. Spearman ranking in RDM computation now uses
   `matrixStats` (identical ranks). This also speeds up the per-ROI path.
   Haxby VT Spearman RSA searchlight (r = 6 mm): 2.13 s -> 0.23 s.
+* `dual_lda` now solves problems with more features than training
+  observations (most ROIs) in the dual, via the Woodbury identity: an n x n
+  Cholesky instead of a p x p one. With small `gamma` the p x p system is
+  severely ill-conditioned. On a 577-voxel ROI the previous solve was off by
+  2e-8 relative and the dual solve by 2e-15, against a stable SVD reference.
+  Predictions and metrics are unchanged on the Haxby fixtures. Haxby VT
+  regional `dual_lda`: about 357 -> 126-195 ms.
+* Permutation engine preparation is reused only for built-in blocked CV and
+  explicit custom splits. Randomized CV keeps its existing per-permutation
+  fold draws and RNG behavior. Permutation p-values now use sorted null
+  lookups, preserving upper-tail ties and the +1 correction, and null results
+  are concatenated once instead of copied into a growing matrix on every draw.
 
 # rMVPA 0.1.3
 
