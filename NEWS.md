@@ -1,5 +1,38 @@
 # rMVPA (development version)
 
+* Parallel searchlights under the default (non-shard) backend no longer run
+  slower than sequential ones. Three causes, all in `run_future()` dispatch:
+  - the per-ROI worker closure captured the whole batch frame, so every
+    future serialized and hashed all of it; it is now built in a minimal
+    environment, as the shard backend already did;
+  - searchlight futures now carry at least 16 ROIs
+    (`options(rMVPA.searchlight_min_chunk)`), not 4;
+  - the automatic searchlight batch cap rises from `max(64, 8 * workers)` to
+    `max(256, 32 * workers)` centres; the memory budget
+    (`rMVPA.searchlight_mem_budget`) still bounds it.
+  A cross-validated `corclass` searchlight (10^3, 80 observations, 4
+  multisession workers) went from 35.4 s (22.2 s sequential) to 14.3 s.
+* The `rsa_fast` RSA searchlight engine:
+  - computes correlation-distance RDMs and the cached correlation/lm fits
+    directly for within-set designs (no pattern centring), with the same
+    arithmetic as `train_model.rsa_model()`. Maps stay bit-identical; spheres
+    with a single voxel or a constant pattern still go through
+    `train_model()`. About 2x faster per sphere;
+  - prepares sphere columns with one grid-to-column lookup instead of a
+    `match()` against all mask indices per sphere (which grew quadratically
+    with the mask), and builds each sphere once. At 32^3 centres the whole
+    searchlight went from 55 s to 9.4 s;
+  - in permutation searchlights, computes each sphere's RDM once and reindexes
+    it per permutation (item permutations only reorder rows). Values equal
+    recomputation up to BLAS summation order; the cache is bounded by
+    `options(rMVPA.rsa_perm_cache_bytes)` (512 MiB). 20 permutations over
+    4096 centres: 36.8 s to 4.1 s;
+  - runs contiguous chunks of spheres on future workers when a parallel plan
+    is set (`options(rMVPA.rsa_fast_parallel = FALSE)` disables), shipping
+    only each chunk's columns;
+  - writes centres whose fit is all NA (e.g. a constant pattern row) as NA,
+    as the general path does, instead of 0.
+
 * Native SDA retains weight extraction and training-data importance for global
   and regional analyses.
 * Thomaz LDA adapters accept unnamed ROI matrices and the current

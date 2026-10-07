@@ -140,7 +140,7 @@ test_that("automatic searchlight batching is bounded independently of center cou
 
   timing <- attr(res, "timing")
   requested <- vapply(timing$batch, `[[`, integer(1), "n_rois_requested")
-  expect_lte(max(requested), max(64L, future::nbrOfWorkers() * 8L))
+  expect_lte(max(requested), max(256L, future::nbrOfWorkers() * 32L))
   expect_gt(length(requested), 1L)
 })
 
@@ -163,7 +163,7 @@ test_that("shard batching amortizes dispatch for index-only task frames", {
     use_shard_backend = TRUE
   )
 
-  expect_identical(default_size, 128L)
+  expect_identical(default_size, 512L)
   expect_identical(shard_size, 2048L)
   expect_gt(shard_size, default_size)
 })
@@ -213,4 +213,23 @@ test_that("shard profiling records smaller index-only task frames", {
   expect_equal(shard_result$id, default_result$id)
   expect_equal(shard_result$error, default_result$error)
   expect_lt(shard_bytes, default_bytes)
+})
+
+test_that("searchlight futures carry at least a minimum number of ROIs", {
+  # 64 ROIs on 4 workers: one future per worker, not 16 futures of 4.
+  expect_identical(rMVPA:::.searchlight_chunk_size(64, 4), 16L)
+  # Large batches keep ~4 chunks per worker for load balancing.
+  expect_identical(rMVPA:::.searchlight_chunk_size(4096, 4), 256L)
+  # Never fewer chunks than workers, never below one item.
+  expect_identical(rMVPA:::.searchlight_chunk_size(10, 4), 3L)
+  expect_identical(rMVPA:::.searchlight_chunk_size(1, 8), 1L)
+})
+
+test_that("run_future worker closures do not capture the batch frame", {
+  fn <- rMVPA:::.run_future_item_fun(list(return_predictions = FALSE), NULL,
+                                     "searchlight", FALSE, FALSE)
+  env_names <- ls(environment(fn), all.names = TRUE)
+  expect_false("frame" %in% env_names)
+  map_fn <- rMVPA:::.run_future_map_fun(fn, NULL)
+  expect_setequal(ls(environment(map_fn), all.names = TRUE), c("process_item", "progress_tick"))
 })
