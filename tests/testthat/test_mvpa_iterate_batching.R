@@ -116,6 +116,7 @@ test_that("mvpa_iterate is stable under fail_fast toggle when processor succeeds
 })
 
 test_that("automatic searchlight batching is bounded independently of center count", {
+  skip_on_cran()
   old_opt <- options(
     rMVPA.profile_searchlight = TRUE,
     rMVPA.searchlight_backend_default = "default",

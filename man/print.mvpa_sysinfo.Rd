@@ -19,9 +19,8 @@ Formats and prints the system information gathered by \code{mvpa_sysinfo}.
 This method provides a user-friendly display of the system configuration.
 }
 \examples{
-\dontrun{
-  info <- mvpa_sysinfo()
-  print(info)
-}
+# mvpa_sysinfo() prints on creation; capture that output, then print explicitly
+invisible(utils::capture.output(info <- mvpa_sysinfo()))
+print(info)
 }
 \keyword{internal}

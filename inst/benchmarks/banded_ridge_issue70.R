@@ -132,14 +132,18 @@ issue70_one_replication <- function(seed,
 
 issue70_run <- function(seeds = 2026082801L + seq_len(30L),
                         output_file = file.path(
-                          "inst", "extdata", "banded_ridge_issue70_results.csv"
+                          "inst", "extdata", "banded_ridge_issue70_results.csv.gz"
                         )) {
   rows <- lapply(seeds, issue70_one_replication)
   out <- do.call(rbind, rows)
   out$package_version <- as.character(utils::packageVersion("rMVPA"))
   out$r_version <- R.version.string
   out$platform <- R.version$platform
-  utils::write.csv(out, output_file, row.names = FALSE)
+  # Gzip-compressed: the per-row fold/candidate manifests repeat, and the
+  # plain CSV would add about 1.7 MB to the installed package.
+  con <- if (grepl("[.]gz$", output_file)) gzfile(output_file, "w") else file(output_file, "w")
+  on.exit(close(con), add = TRUE)
+  utils::write.csv(out, con, row.names = FALSE)
   out
 }
 
@@ -147,7 +151,7 @@ if (sys.nframe() == 0L) {
   args <- commandArgs(trailingOnly = TRUE)
   n_replications <- if (length(args)) as.integer(args[[1L]]) else 30L
   output_file <- if (length(args) >= 2L) args[[2L]] else file.path(
-    "inst", "extdata", "banded_ridge_issue70_results.csv"
+    "inst", "extdata", "banded_ridge_issue70_results.csv.gz"
   )
   result <- issue70_run(
     seeds = 2026082801L + seq_len(n_replications),

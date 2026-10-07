@@ -16,10 +16,16 @@
 #'   - `mean_delta_frob`: mean Frobenius norm of the learned correction
 #'
 #' @examples
-#' \dontrun{
-#' res <- run_regional(model, region_mask, return_fits = TRUE)
+#' # Normally `res` comes from run_regional() on a remap_rrr_model(); here a
+#' # minimal regional result carrying REMAP columns in its performance table:
+#' res <- structure(
+#'   list(performance_table = data.frame(
+#'     roinum = 1:2, adapter_rank = c(2, 3), lambda_mean = c(0.25, 0.5),
+#'     remap_improv = c(0.30, 0.45), delta_frob_mean = c(1.2, 1.8)
+#'   )),
+#'   class = c("regional_mvpa_result", "list")
+#' )
 #' summarize_remap_roi(res)
-#' }
 #' @export
 summarize_remap_roi <- function(regional_res) {
   stopifnot(is.list(regional_res))
@@ -86,10 +92,15 @@ summarize_remap_roi <- function(regional_res) {
 #'   and `n_folds`.
 #'
 #' @examples
-#' \dontrun{
-#' res <- run_regional(model, region_mask, return_fits = TRUE)
-#' items_tbl <- summarize_remap_items(res, roi = 1)
-#' }
+#' # A predictor list as stored in regional_mvpa_result$fits when
+#' # run_regional(..., return_fits = TRUE) is used with remap_rrr_model():
+#' pred <- list(diag_by_fold = list(
+#'   list(train_items = c("a", "b"), item_res_naive = c(4, 8),
+#'        item_res_remap = c(2, 4)),
+#'   list(train_items = c("a", "b"), item_res_naive = c(6, 10),
+#'        item_res_remap = c(3, 5))
+#' ))
+#' summarize_remap_items(pred)
 #' @export
 summarize_remap_items <- function(x, roi = NULL) {
   diag_list <- NULL

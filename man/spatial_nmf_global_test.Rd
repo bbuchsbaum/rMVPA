@@ -106,10 +106,10 @@ learned component space.
 }
 }
 \examples{
-\dontrun{
-  result <- spatial_nmf_global_test(
-    matrix(rnorm(100*10), 100, 10),
-    k = 3, nperm = 99
-  )
-}
+set.seed(1)
+X <- matrix(runif(20 * 30), 20, 30)   # non-negative subject-by-voxel data
+groups <- factor(rep(c("A", "B"), each = 10))
+result <- spatial_nmf_global_test(X = X, groups = groups, k = 2,
+                                  nfolds = 3, nperm = 19, seed = 1)
+result$p_value
 }

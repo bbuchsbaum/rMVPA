@@ -43,7 +43,6 @@
 #' output into a convenient flat table.
 #'
 #' @examples
-#' \dontrun{
 #' # Generate sample dataset
 #' dset_info <- gen_sample_dataset(D = c(8,8,8), nobs = 50, nlevels = 2)
 #' dataset_obj <- dset_info$dataset
@@ -64,7 +63,6 @@
 #'
 #' custom_results <- run_custom_regional(dataset_obj, region_mask_vol, my_roi_stats)
 #' print(custom_results)
-#' }
 #' @importFrom dplyr bind_rows select rename all_of
 #' @importFrom tidyr unnest_wider
 #' @importFrom tibble tibble is_tibble
@@ -333,9 +331,9 @@ process_roi.custom_internal_model_spec <- function(mod_spec, roi, rnum, ...) {
 #' scalar metrics for every sphere it successfully processes.
 #'
 #' @examples
-#' \dontrun{
-#' # Generate sample dataset
-#' dset_info <- gen_sample_dataset(D = c(10, 10, 10), nobs = 30, nlevels = 2)
+#' \donttest{
+#' # Generate a small sample dataset
+#' dset_info <- gen_sample_dataset(D = c(6, 6, 6), nobs = 20, nlevels = 2)
 #' dataset_obj <- dset_info$dataset
 #'
 #' # Define a custom function: calculate mean and sd within the sphere
@@ -356,13 +354,13 @@ process_roi.custom_internal_model_spec <- function(mod_spec, roi, rnum, ...) {
 #'
 #' # Run the custom searchlight (standard method)
 #' custom_sl_results <- run_custom_searchlight(dataset_obj, my_sl_stats,
-#'                                             radius = 3, method = "standard")
+#'                                             radius = 2, method = "standard")
 #' print(custom_sl_results)
 #'
 #' # Run randomized searchlight
 #' custom_sl_rand <- run_custom_searchlight(dataset_obj, my_sl_stats,
-#'                                          radius = 3, method = "randomized",
-#'                                          niter = 50)
+#'                                          radius = 2, method = "randomized",
+#'                                          niter = 2)
 #' print(custom_sl_rand)
 #' }
 #'
@@ -606,10 +604,10 @@ run_custom_searchlight <- function(dataset, custom_func, radius,
 #' @param indices Numeric vector of center indices (optional)
 #' @return A searchlight_performance object
 #' @examples
-#' \dontrun{
-#'   # Internal function for creating searchlight performance objects
-#'   perf <- create_searchlight_performance(neurovol, "Accuracy")
-#' }
+#' vol <- neuroim2::NeuroVol(array(runif(27), c(3, 3, 3)),
+#'                           neuroim2::NeuroSpace(c(3, 3, 3)))
+#' perf <- create_searchlight_performance(vol, "Accuracy")
+#' str(perf$summary_stats)
 #' @export
 #' @keywords internal
 create_searchlight_performance <- function(data, metric_name, indices = NULL) {

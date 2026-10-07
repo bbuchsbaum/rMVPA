@@ -266,6 +266,7 @@ test_that("mvpa_regional with 5 ROIS and random forest and k-fold cross-validati
 })
 
 test_that("mvpa_regional with 5 ROIS and corclass and k-fold cross-validation without error", {
+  skip_on_cran()
   
   model <- load_model("corclass")
   tune_grid <- expand.grid(method=c("pearson", "kendall", "spearman"), robust=c(TRUE,FALSE))

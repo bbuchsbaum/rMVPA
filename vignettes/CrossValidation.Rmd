@@ -16,7 +16,6 @@ resource_files:
 - albers.css
 - albers.js
 - albers-header.html
-- fonts
 
 vignette: |
   %\VignetteIndexEntry{Cross-Validation Strategies in rMVPA}

@@ -116,9 +116,7 @@ a fixed rank to obtain much faster single-fit adapters per ROI.
 }
 
 \examples{
-\dontrun{
-  # Requires dataset with paired train/test data
-  ds <- gen_sample_dataset(c(5,5,5), 20, external_test=TRUE)
-  model <- remap_rrr_model(ds$dataset, ds$design, rank=5)
-}
+ds <- gen_sample_dataset(c(5, 5, 5), 20, external_test = TRUE)
+model <- remap_rrr_model(ds$dataset, ds$design, rank = 5)
+class(model)
 }

@@ -329,9 +329,10 @@ feature_sets_design <- function(X_train,
 #' @param ... ignored
 #' @return Invisibly returns the input object \code{x} (called for side effects).
 #' @examples
-#' \dontrun{
-#'   # print method called on feature_sets_design object
-#' }
+#' X <- matrix(rnorm(10 * 5), 10, 5)
+#' fs <- feature_sets(X, blocks(low = 2, high = 3))
+#' des <- feature_sets_design(fs, block_var_train = rep(1:2, each = 5))
+#' print(des)
 #' @export
 print.feature_sets_design <- function(x, ...) {
   cat("feature_sets_design\n")

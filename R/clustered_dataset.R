@@ -20,10 +20,8 @@
 #'   }
 #'
 #' @examples
-#' \dontrun{
-#'   ds <- gen_clustered_sample_dataset(K=5, nobs=20)
-#'   print(ds$dataset)
-#' }
+#' ds <- gen_clustered_sample_dataset(D = c(5, 5, 5), nobs = 20, K = 5)
+#' print(ds$dataset)
 #' @importFrom assertthat assert_that
 #' @importFrom neuroim2 NeuroVol space num_clusters
 #' @export

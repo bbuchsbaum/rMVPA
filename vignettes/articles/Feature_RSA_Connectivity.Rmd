@@ -1,0 +1,358 @@
+---
+title: 'Feature-RSA Connectivity: ROI-to-ROI Generalization and Offset Control'
+output:
+  rmarkdown::html_vignette:
+    toc: yes
+    toc_depth: 2.0
+    css: ../albers.css
+    includes:
+      in_header: ../albers-header.html
+params:
+  family: red
+  preset: interaction
+resource_files:
+- albers.css
+- albers.js
+- albers-header.html
+- fonts
+
+vignette: |
+  %\VignetteIndexEntry{Feature-RSA Connectivity: ROI-to-ROI Generalization and Offset Control}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+if (requireNamespace("ragg", quietly = TRUE)) knitr::opts_chunk$set(dev = "ragg_png")
+if (requireNamespace("systemfonts", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE) && "albers_register_fonts" %in% getNamespaceExports("albersdown")) albersdown::albers_register_fonts()
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE) && "theme_albers" %in% getNamespaceExports("albersdown")) ggplot2::theme_set(albersdown::theme_albers(family = params$family, preset = params$preset))
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  message = FALSE,
+  warning = FALSE
+)
+
+library(rMVPA)
+library(neuroim2)
+```
+
+```{r albers-classes, echo=FALSE, results='asis'}
+cat(sprintf(
+  paste0(
+    '<script>document.addEventListener("DOMContentLoaded",function(){',
+    'document.body.classList.remove("palette-red","palette-lapis","palette-ochre","palette-teal","palette-green","palette-violet","preset-homage","preset-interaction","preset-study","preset-structural","preset-adobe","preset-midnight");',
+    'document.body.classList.add("palette-%s","preset-%s");',
+    '});</script>'
+  ),
+  params$family,
+  params$preset
+))
+```
+
+```{r helpers, include = FALSE}
+build_connectivity_example <- function(seed = 7, dims = c(5, 5, 5), nobs = 36, nroi = 4) {
+  set.seed(seed)
+
+  toy <- gen_sample_dataset(D = dims, nobs = nobs, blocks = 3, nlevels = 2)
+
+  latent <- matrix(rnorm(nobs * 4), nobs, 4)
+  loadings <- matrix(rnorm(4 * 6), 4, 6)
+  feature_mat <- latent %*% loadings + 0.2 * matrix(rnorm(nobs * 6), nobs, 6)
+
+  design <- feature_rsa_design(
+    F = base::scale(feature_mat),
+    labels = paste0("trial_", seq_len(nobs)),
+    max_comps = 3
+  )
+
+  region_mask <- NeuroVol(
+    sample(seq_len(nroi), size = length(toy$dataset$mask), replace = TRUE),
+    space(toy$dataset$mask)
+  )
+
+  spec <- feature_rsa_model(
+    dataset = toy$dataset,
+    design = design,
+    method = "pca",
+    crossval = blocked_cross_validation(toy$design$block_var),
+    return_rdm_vectors = TRUE
+  )
+
+  res <- run_regional(spec, region_mask)
+  vecs <- feature_rsa_rdm_vectors(res)
+
+  list(
+    result = res,
+    vecs = vecs,
+    predicted_connectivity = feature_rsa_connectivity(vecs, method = "spearman"),
+    cross_raw = feature_rsa_cross_connectivity(vecs, method = "spearman")
+  )
+}
+
+build_striping_example <- function() {
+  common <- c(1, -1, 1, -1, 1, -1)
+  u1 <- c(1, 1, -1, -1, 0, 0)
+  u2 <- c(-1, 0, 1, 0, -1, 1)
+  u3 <- c(0, 1, 0, -1, 1, -1)
+  u4 <- c(1, 0, 0, -1, -1, 1)
+
+  pred <- list(
+    1.4 * common + 0.3 * u1,
+    1.1 * common + 0.5 * u2,
+    0.6 * common + 0.8 * u3,
+    0.2 * common + 1.0 * u4
+  )
+
+  obs <- list(
+    1.5 * common + 0.2 * u1,
+    1.2 * common + 0.4 * u2,
+    0.7 * common + 0.7 * u3,
+    0.1 * common + 1.0 * u4
+  )
+
+  vec_tbl <- tibble::tibble(
+    roinum = 1:4,
+    observation_index = replicate(4, 1:4, simplify = FALSE),
+    rdm_vec = pred,
+    observed_rdm_vec = obs
+  )
+
+  double_centered <- feature_rsa_cross_connectivity(
+    vec_tbl,
+    method = "pearson",
+    adjust = "double_center",
+    return_components = TRUE
+  )
+
+  list(
+    raw = feature_rsa_cross_connectivity(vec_tbl, method = "pearson"),
+    double_centered = double_centered$matrix,
+    residualized = feature_rsa_cross_connectivity(
+      vec_tbl,
+      method = "pearson",
+      adjust = "residualize_mean"
+    ),
+    offsets = data.frame(
+      roinum = 1:4,
+      source_offset = unname(double_centered$source_offset),
+      target_offset = unname(double_centered$target_offset)
+    )
+  )
+}
+
+build_model_space_example <- function(seed = 17, n_items = 8, nroi = 5) {
+  set.seed(seed)
+  n_pairs <- n_items * (n_items - 1L) / 2L
+
+  common <- rnorm(n_pairs)
+  change_1 <- rnorm(n_pairs)
+  change_2 <- rnorm(n_pairs)
+
+  model_vecs <- cbind(
+    A1 = common + 0.25 * change_1 + rnorm(n_pairs, sd = 0.15),
+    A2 = common - 0.15 * change_1 + rnorm(n_pairs, sd = 0.15),
+    A3 = common + 0.30 * change_2 + rnorm(n_pairs, sd = 0.15),
+    A4 = common - 0.25 * change_2 + rnorm(n_pairs, sd = 0.15)
+  )
+
+  roi_weights <- matrix(c(
+    1.0,  0.4,  0.1,  0.0,
+    0.8,  0.3,  0.2,  0.1,
+    0.3, -0.6,  0.7,  0.2,
+    0.2, -0.7,  0.6, -0.1,
+    0.1,  0.2, -0.8,  0.7
+  ), nrow = 4)
+
+  roi_vecs <- model_vecs %*% roi_weights +
+    matrix(rnorm(n_pairs * nroi, sd = 0.35), n_pairs, nroi)
+  colnames(roi_vecs) <- paste0("ROI", seq_len(nroi))
+
+  list(
+    conn = rdm_model_space_connectivity(roi_vecs, model_vecs, method = "pearson"),
+    model_cor = stats::cor(model_vecs)
+  )
+}
+```
+
+Feature-RSA normally stops at one ROI at a time: does the learned geometry explain held-out data in that ROI? Sometimes the next question is larger. If ROI 3 learns a useful geometry, does that geometry show up in ROI 7 as well? If one target ROI is easy for every source ROI, how do you separate that global effect from pair-specific transfer?
+
+`feature_rsa_connectivity()` and `feature_rsa_cross_connectivity()` answer those questions at the level of representational geometry rather than voxel weights. That matters because ROI sizes can differ and you still get a clean ROI x ROI summary.
+
+## What does the cross-ROI matrix look like?
+
+The quick example below fits feature-RSA in four synthetic parcels, stores the predicted and observed RDM vectors for each ROI, and then builds the asymmetric ROI_i -> ROI_j matrix.
+
+```{r quick-win}
+conn_example <- build_connectivity_example()
+
+knitr::kable(round(conn_example$cross_raw, 2))
+```
+
+```{r quick-win-heatmap, echo = FALSE, fig.cap = "Asymmetric ROI x ROI cross-connectivity. Rows are source ROIs (the geometry learned there), columns are target ROIs (the geometry observed there). Diagonal = within-ROI feature-RSA fit; off-diagonals = cross-ROI generalization.", out.width = "60%", fig.width = 4.8, fig.height = 4.2}
+M <- conn_example$cross_raw
+op <- par(mar = c(3.2, 3.2, 1.5, 0.5))
+image(seq_len(nrow(M)), seq_len(ncol(M)), M,
+      col = hcl.colors(48, "Blue-Red 3"), axes = FALSE,
+      xlab = "target ROI", ylab = "source ROI", main = "")
+axis(1, at = seq_len(ncol(M)), labels = colnames(M))
+axis(2, at = seq_len(nrow(M)), labels = rownames(M), las = 1)
+box()
+par(op)
+```
+
+```{r quick-win-checks, include = FALSE}
+stopifnot(is.matrix(conn_example$predicted_connectivity))
+stopifnot(is.matrix(conn_example$cross_raw))
+stopifnot(all(is.finite(conn_example$predicted_connectivity)))
+stopifnot(all(is.finite(conn_example$cross_raw)))
+stopifnot(isTRUE(all.equal(
+  conn_example$predicted_connectivity,
+  t(conn_example$predicted_connectivity),
+  tolerance = 1e-8
+)))
+```
+
+Rows are source ROIs: the predicted geometry learned in that ROI. Columns are target ROIs: the observed geometry in held-out data from that ROI. The diagonal is the familiar within-ROI feature-RSA fit. The off-diagonal entries are cross-ROI generalization scores.
+
+## How do you extract the per-ROI geometry?
+
+The only extra requirement is `return_rdm_vectors = TRUE` when you fit `feature_rsa_model()`. That stores compact lower-triangle RDM vectors for each ROI, and `feature_rsa_rdm_vectors()` pulls them into a tibble.
+
+```{r rdm-vectors}
+head(conn_example$vecs[, c("roinum", "n_obs")])
+```
+
+This is the bridge between ordinary per-ROI feature-RSA and the ROI-to-ROI summaries. You still fit ROI models in the usual way. The difference is that you keep the predicted and observed geometry vectors around for a second-stage comparison.
+
+## When do you want the symmetric matrix?
+
+`feature_rsa_connectivity()` asks whether the predicted geometries themselves are similar across ROIs. It correlates predicted RDM vectors with predicted RDM vectors, so the result is symmetric.
+
+```{r predicted-connectivity}
+predicted_connectivity <- feature_rsa_connectivity(
+  conn_example$vecs,
+  method = "spearman"
+)
+
+knitr::kable(round(predicted_connectivity, 2))
+```
+
+Use this matrix when you want a network summary of learned representational geometry itself. It is useful for asking which ROIs sit near each other in model-predicted representational space.
+
+## What if the model RDMs are correlated?
+
+Sometimes the question is not whether two ROI RDMs are similar in full, but whether they are similar in the part of their geometry explained by a family of model RDMs. If the models are correlated, treat them as one model space rather than four separate targets.
+
+`rdm_model_space_connectivity()` projects each ROI RDM into the subspace spanned by the model RDMs, gives each ROI a decorrelated model-space fingerprint, and then compares those fingerprints.
+
+```{r model-space-connectivity}
+model_space <- build_model_space_example()
+
+knitr::kable(round(model_space$conn$profile_similarity, 2))
+```
+
+The profile matrix asks whether ROIs express the same relative pattern across the model-space axes, ignoring overall strength. The strength-sensitive version is stored in `model_space$conn$similarity`.
+
+```{r model-space-loadings}
+knitr::kable(round(model_space$conn$model_axis_cor, 2))
+```
+
+The axis table is the interpretation key. With `basis = "pca"`, `PC1` usually captures what the correlated model RDMs share, while later axes capture ways the models differ. The object also stores `common_similarity`, `difference_similarity`, `raw_similarity`, and `residual_similarity` so you can separate the model-mediated part of ROI similarity from the part outside the model space.
+
+```{r model-space-checks, include = FALSE}
+stopifnot(is.matrix(model_space$conn$profile_similarity))
+stopifnot(is.matrix(model_space$conn$similarity))
+stopifnot(all(is.finite(model_space$conn$similarity)))
+stopifnot(isTRUE(all.equal(
+  model_space$conn$raw_similarity,
+  model_space$conn$similarity + model_space$conn$residual_similarity,
+  tolerance = 1e-8
+)))
+stopifnot(isTRUE(all.equal(
+  Reduce(`+`, model_space$conn$component_similarity),
+  model_space$conn$similarity,
+  tolerance = 1e-8
+)))
+```
+
+## When do you want the asymmetric matrix?
+
+`feature_rsa_cross_connectivity()` answers the transfer question directly: does the geometry predicted from ROI i match the held-out observed geometry in ROI j?
+
+```{r cross-connectivity}
+cross_connectivity <- feature_rsa_cross_connectivity(
+  conn_example$vecs,
+  method = "spearman"
+)
+
+knitr::kable(round(cross_connectivity, 2))
+```
+
+This matrix is the right one when you care about directional cross-ROI generalization. In general `ROI_i -> ROI_j` and `ROI_j -> ROI_i` need not agree, because the rows come from predicted geometry and the columns come from observed geometry.
+
+## What creates stripes in the ROI x ROI matrix?
+
+Striping usually means one of two things:
+
+- some source ROIs are globally strong predictors of many targets
+- some target ROIs are globally easy to predict because they share a large common geometry with many sources
+
+The synthetic example below creates that second pattern on purpose by making some ROIs carry more of a shared representational backbone than others.
+
+```{r stripe-example}
+stripe_example <- build_striping_example()
+
+knitr::kable(round(stripe_example$raw, 2))
+```
+
+In the raw matrix, ROIs 1 and 2 are easy targets across the board, while ROI 4 is globally harder. That is the kind of vertical stripe pattern you often see when a common geometry dominates the matrix.
+
+## How do the adjustment options differ?
+
+`adjust = "double_center"` removes additive row and column main effects from the ROI x ROI matrix itself. It is the clean default when you want pair-specific transfer after discounting globally strong sources and globally easy targets.
+
+```{r double-centered}
+knitr::kable(round(stripe_example$double_centered, 2))
+```
+
+```{r offsets}
+knitr::kable(stripe_example$offsets, digits = 2)
+```
+
+The `source_offset` and `target_offset` columns quantify the striping directly. Positive source offsets mark ROIs that predict many targets well. Positive target offsets mark ROIs that are easy to predict from many sources.
+
+`adjust = "residualize_mean"` takes a different approach. It removes the grand-mean RDM component before the cross-correlation is computed, which is better when the stripe pattern reflects one dominant shared geometry present in nearly every ROI.
+
+```{r residualized}
+knitr::kable(round(stripe_example$residualized, 2))
+```
+
+## Which version should you report?
+
+- Report the raw asymmetric matrix when you want the full descriptive picture, including globally strong sources and globally easy targets.
+- Use `adjust = "double_center"` for visualizations or analyses that are meant to emphasize pair-specific cross-ROI generalization.
+- Use `adjust = "residualize_mean"` when you think a single common geometry is driving much of the matrix and you want to see what remains after removing it.
+
+These adjustments answer different questions, so it is often worth saving both the raw matrix and one adjusted matrix rather than choosing only one.
+
+## Feature-RSA vs. model-space connectivity
+
+rMVPA exposes two ways to compute ROI-to-ROI representational connectivity. They are not redundant — they answer subtly different questions, and the right tool depends on whether you supply a *model* or a *feature space*:
+
+| | **Feature-RSA connectivity** *(this vignette)* | **Model-space connectivity** *([Model-Space Representational Connectivity](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.html))* |
+|:--|:--|:--|
+| **What you supply** | A feature matrix `F` (or similarity matrix `S`) | One or more explicit model RDMs |
+| **Fitting** | CV-fitted PLS / PCA / glmnet maps neural patterns ↔ feature space | No fitting — neural pair vectors are projected onto a fixed model-RDM basis |
+| **What gets compared across ROIs** | Predicted trial-by-trial RDM vectors (length `n_pairs`) | Whitened projections onto the model-RDM subspace (length K, the number of model RDMs after orthogonalisation) |
+| **Sensitive to** | All representational geometry the feature space can capture, including structure beyond the supplied features | Only structure within the declared model-RDM subspace |
+| **Memory per ROI** | O(n_pairs); often hundreds of thousands of numbers | O(K); typically 2–10 numbers |
+| **Best when** | You don't have a clean theoretical RDM; you want a data-driven, model-free similarity measure | You have specific theoretical RDMs (semantic, visual, motor…) and want to ask which regions express each |
+| **Diagonal of the connectivity matrix** | ROI's CV-predicted-vs-observed RDM alignment | ROI's strength of model-RDM expression |
+| **Cross-domain pairs (set A vs set B)** | Implicit through cross-validated prediction | First-class via `pair_rsa_design(..., pairs = "between")` |
+
+A useful rule of thumb: **declared model → model-space connectivity; learned model → feature-RSA connectivity.** When in doubt, run both: they make different statistical commitments, and where they disagree is often the most interesting result.
+
+## Next steps
+
+If your transfer problem is across cognitive states rather than across ROIs, see [Feature-RSA Across States: Domain Adaptation from Encoding to Recall](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Domain_Adaptation.html). If you want the broader decision map for within-ROI fits, cross-state transfer, and ROI-to-ROI generalization, see [Feature-RSA Advanced Workflows](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA_Advanced_Workflows.html). For the model-RDM-driven counterpart of the connectivity workflow, see [Model-Space Representational Connectivity](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.html).

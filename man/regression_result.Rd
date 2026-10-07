@@ -29,6 +29,10 @@ A list with class attributes "regression_result", "classification_result", and "
 \description{
 This function creates a regression result object containing the observed and predicted values, test design, test indices, and predictor.
 }
+\examples{
+res <- regression_result(observed = c(1, 2, 3), predicted = c(1.1, 1.9, 3.2))
+performance(res)
+}
 \seealso{
 Other classification_result: 
 \code{\link{binary_classification_result}()},

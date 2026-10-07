@@ -24,9 +24,12 @@
 #'     \item \code{confound_rdms}: named list of confound RDM matrices
 #'   }
 #' @examples
-#' \dontrun{
-#'   des <- repnet_design(design, ~ ImageID, seed_rdm=my_rdm)
-#' }
+#' trials <- data.frame(ImageID = rep(letters[1:4], 3), run = rep(1:3, each = 4))
+#' design <- mvpa_design(trials, y_train = ~ ImageID, block_var = ~ run)
+#' my_rdm <- as.matrix(dist(matrix(rnorm(4 * 3), 4, 3)))
+#' rownames(my_rdm) <- colnames(my_rdm) <- letters[1:4]
+#' des <- repnet_design(design, ~ ImageID, seed_rdm = my_rdm)
+#' str(des, max.level = 1)
 #' @export
 repnet_design <- function(design,
                           key_var,
@@ -118,12 +121,10 @@ repnet_design <- function(design,
 #'     \item \code{confound_rdms}: named list of confound RDM matrices
 #'   }
 #' @examples
-#' \dontrun{
-#'   items <- letters[1:10]
-#'   X_rdm <- as.matrix(dist(matrix(rnorm(10*3), 10, 3)))
-#'   Y_rdm <- as.matrix(dist(matrix(rnorm(10*3), 10, 3)))
-#'   des <- repmed_design(items, X_rdm, Y_rdm)
-#' }
+#' items <- letters[1:10]
+#' X_rdm <- as.matrix(dist(matrix(rnorm(10*3), 10, 3)))
+#' Y_rdm <- as.matrix(dist(matrix(rnorm(10*3), 10, 3)))
+#' des <- repmed_design(items, X_rdm, Y_rdm)
 #' @export
 repmed_design <- function(items,
                           X_rdm,
@@ -185,11 +186,9 @@ repmed_design <- function(items,
 #'     \item \code{seed_features}: K x P feature matrix with rownames = items
 #'   }
 #' @examples
-#' \dontrun{
-#'   items <- letters[1:10]
-#'   seed_features <- matrix(rnorm(10*5), 10, 5)
-#'   des <- repmap_design(items, seed_features)
-#' }
+#' items <- letters[1:10]
+#' seed_features <- matrix(rnorm(10*5), 10, 5)
+#' des <- repmap_design(items, seed_features)
 #' @export
 repmap_design <- function(items,
                           seed_features) {

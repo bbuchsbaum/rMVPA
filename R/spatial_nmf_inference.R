@@ -43,12 +43,12 @@
 #'   \item \code{p_global} tests whether any component is significant.
 #' }
 #' @examples
-#' \dontrun{
-#'   # Requires completed spatial NMF fit
-#'   W <- matrix(rnorm(20*5), 20, 5)
-#'   groups <- factor(rep(c("A","B"), each=10))
-#'   result <- spatial_nmf_component_test(W=W, groups=groups, nperm=100)
-#' }
+#' # Subject-by-component loadings (normally taken from a spatial NMF fit)
+#' set.seed(1)
+#' W <- matrix(runif(20 * 3), 20, 3)
+#' groups <- factor(rep(c("A", "B"), each = 10))
+#' result <- spatial_nmf_component_test(W = W, groups = groups, nperm = 50, seed = 1)
+#' result$table
 #' @export
 spatial_nmf_component_test <- function(fit = NULL,
                                        W = NULL,
@@ -250,12 +250,12 @@ spatial_nmf_component_test <- function(fit = NULL,
 #'   folds and refits NMF for each permutation (more expensive).
 #' }
 #' @examples
-#' \dontrun{
-#'   result <- spatial_nmf_global_test(
-#'     matrix(rnorm(100*10), 100, 10),
-#'     k = 3, nperm = 99
-#'   )
-#' }
+#' set.seed(1)
+#' X <- matrix(runif(20 * 30), 20, 30)   # non-negative subject-by-voxel data
+#' groups <- factor(rep(c("A", "B"), each = 10))
+#' result <- spatial_nmf_global_test(X = X, groups = groups, k = 2,
+#'                                   nfolds = 3, nperm = 19, seed = 1)
+#' result$p_value
 #' @export
 spatial_nmf_global_test <- function(x = NULL,
                                     X = NULL,
@@ -448,12 +448,11 @@ spatial_nmf_global_test <- function(x = NULL,
 #'   \item \code{component_similarity}: average similarity to the reference components.
 #' }
 #' @examples
-#' \dontrun{
-#'   stab <- spatial_nmf_stability(
-#'     matrix(rnorm(100*10), 100, 10),
-#'     k = 3, nruns = 5
-#'   )
-#' }
+#' set.seed(1)
+#' X <- matrix(runif(20 * 30), 20, 30)
+#' fit <- spatial_nmf(X, k = 2)$fit
+#' stab <- spatial_nmf_stability(X = X, fit = fit, n_boot = 5, seed = 1)
+#' dim(stab$mean)
 #' @export
 spatial_nmf_stability <- function(x = NULL,
                                   X = NULL,
@@ -618,9 +617,18 @@ spatial_nmf_stability <- function(x = NULL,
 #'
 #' @return A list with `z` and `p` component maps.
 #' @examples
-#' \dontrun{
-#'   # stats <- spatial_nmf_voxelwise_stats(nmf_result, design_matrix)
-#' }
+#' set.seed(1)
+#' X <- matrix(runif(20 * 50), 20, 50)
+#' fit <- spatial_nmf(X, k = 2)$fit
+#' stab <- spatial_nmf_stability(X = X, fit = fit, n_boot = 5, seed = 1)
+#'
+#' # Attach bootstrap mean/SD component maps on a small 5 x 5 x 2 grid
+#' sp <- neuroim2::NeuroSpace(c(5, 5, 2))
+#' to_vol <- function(v) neuroim2::NeuroVol(array(v, c(5, 5, 2)), sp)
+#' stab$maps <- list(mean = lapply(1:2, function(i) to_vol(stab$mean[i, ])),
+#'                   sd   = lapply(1:2, function(i) to_vol(stab$sd[i, ])))
+#' stats <- spatial_nmf_voxelwise_stats(stability = stab)
+#' names(stats)
 #' @importFrom neuroim2 values
 #' @export
 spatial_nmf_voxelwise_stats <- function(x = NULL,
@@ -685,12 +693,20 @@ spatial_nmf_voxelwise_stats <- function(x = NULL,
     p_vals <- 2 * stats::pnorm(-abs(z_vals))
     ref <- mean_maps[[i]]
     if (inherits(ref, "SparseNeuroVol")) {
+      # values() of a SparseNeuroVol is dense over the volume, and
+      # neuroim2 has no indices() method for it; keep the mask voxels
+      # (or, without a mask, the stored nonzero positions).
+      idx <- if (!is.null(mask_indices)) {
+        as.integer(mask_indices)
+      } else {
+        as.integer(ref@data@i)
+      }
       z_maps[[i]] <- neuroim2::SparseNeuroVol(
-        data = as.numeric(z_vals), space = neuroim2::space(ref),
-        indices = as.integer(neuroim2::indices(ref)))
+        data = as.numeric(z_vals)[idx], space = neuroim2::space(ref),
+        indices = idx)
       p_maps[[i]] <- neuroim2::SparseNeuroVol(
-        data = as.numeric(p_vals), space = neuroim2::space(ref),
-        indices = as.integer(neuroim2::indices(ref)))
+        data = as.numeric(p_vals)[idx], space = neuroim2::space(ref),
+        indices = idx)
     } else if (inherits(ref, "NeuroSurface")) {
       z_maps[[i]] <- neurosurf::NeuroSurface(
         geometry = neurosurf::geometry(ref),

@@ -277,9 +277,9 @@ feature_sets <- function(x, spec = NULL, set_order = NULL, row_weights = NULL) {
 #' @param ... ignored
 #' @return Invisibly returns the input object \code{x} (called for side effects).
 #' @examples
-#' \dontrun{
-#'   # print method called on feature_sets object
-#' }
+#' X <- matrix(rnorm(10 * 5), 10, 5)
+#' fs <- feature_sets(X, blocks(low = 2, high = 3))
+#' print(fs)
 #' @export
 print.feature_sets <- function(x, ...) {
   cat("feature_sets\n")

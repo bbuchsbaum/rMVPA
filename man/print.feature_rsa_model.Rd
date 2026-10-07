@@ -18,8 +18,10 @@ Invisibly returns the input object \code{x} (called for side effects).
 Print Method for Feature RSA Model
 }
 \examples{
-\dontrun{
-  mdl <- feature_rsa_model(dataset, des)
-  print(mdl)
-}
+sample_ds <- gen_sample_dataset(c(4, 4, 4), nobs = 12, blocks = 2)
+des <- feature_rsa_design(F = matrix(rnorm(12 * 4), 12, 4),
+                          labels = paste0("t", 1:12),
+                          block_var = sample_ds$design$block_var)
+mdl <- feature_rsa_model(sample_ds$dataset, des, method = "pca")
+print(mdl)
 }

@@ -50,6 +50,7 @@ test_that("feature RSA benchmark validates parity without timing thresholds", {
 })
 
 test_that("ridge accuracy suite summarizes predeclared linear-fixture margins", {
+  skip_on_cran()
   script <- testthat::test_path(
     "..", "..", "inst", "benchmarks", "feature_rsa_hotpaths.R"
   )
@@ -206,10 +207,10 @@ test_that("feature RSA ridge benchmark receipt is source-bound", {
 
 test_that("feature RSA documentation distinguishes selector estimands", {
   feature_vignette <- testthat::test_path(
-    "..", "..", "vignettes", "Feature_RSA.Rmd"
+    "..", "..", "vignettes", "articles", "Feature_RSA.Rmd"
   )
   parallel_vignette <- testthat::test_path(
-    "..", "..", "vignettes", "Parallelism.Rmd"
+    "..", "..", "vignettes", "articles", "Parallelism.Rmd"
   )
   skip_if_not(
     file.exists(feature_vignette) && file.exists(parallel_vignette),

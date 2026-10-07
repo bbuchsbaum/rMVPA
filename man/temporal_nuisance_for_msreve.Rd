@@ -54,23 +54,30 @@ modeled at the condition level rather than trial level. It computes aggregate te
 relationships between conditions based on the temporal structure of individual trials.
 }
 \examples{
-\dontrun{
+# Small synthetic design with 4 conditions
+ds <- gen_sample_dataset(D = c(4, 4, 4), nobs = 24, nlevels = 4, blocks = 3)
+mvpa_des <- ds$design
+
 # Create temporal nuisance for MS-ReVE
 temp_K <- temporal_nuisance_for_msreve(
   mvpa_design = mvpa_des,
   time_idx = seq_len(nrow(mvpa_des$train_design)),
   reduce = "min",
-  kernel = "exp", 
+  kernel = "exp",
   lambda = 3,
   within_blocks_only = TRUE
 )
+dim(temp_K)
 
 # Use in msreve_design
+C_mat <- matrix(c(1, 1, -1, -1,
+                  1, -1, 0, 0), nrow = 4,
+                dimnames = list(levels(mvpa_des$y_train),
+                                c("AB_vs_CD", "A_vs_B")))
 msreve_des <- msreve_design(
   mvpa_design = mvpa_des,
   contrast_matrix = C_mat,
   nuisance_rdms = list(temp_decay = temp_K)
 )
-}
 
 }

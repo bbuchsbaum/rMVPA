@@ -70,11 +70,11 @@ random forests, \code{region_importance} is the recommended approach.
 }
 \examples{
 \donttest{
-  ds <- gen_sample_dataset(c(5,5,5), 40, nlevels=2, blocks=3)
+  ds <- gen_sample_dataset(c(4,4,4), 30, nlevels=2, blocks=3)
   cval <- blocked_cross_validation(ds$design$block_var)
   mdl <- load_model("sda_notune")
   mspec <- mvpa_model(mdl, ds$dataset, ds$design,
     "classification", crossval=cval)
-  imp <- region_importance(mspec, n_regions=5, n_subsets=10)
+  imp <- region_importance(mspec, n_regions=4, n_subsets=5)
 }
 }

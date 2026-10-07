@@ -75,14 +75,14 @@ dataset <- gen_sample_dataset(
   nlevels = 2
 )
 
-# Generate continuous surface dataset
-\dontrun{
-surf_data <- gen_sample_dataset(
-  D = 1000,  # number of vertices
-  nobs = 50,
-  response_type = "continuous",
-  data_mode = "surface"
-)
+# Generate continuous surface dataset (requires the neurosurf package)
+if (requireNamespace("neurosurf", quietly = TRUE)) {
+  surf_data <- gen_sample_dataset(
+    D = 1000,  # ignored for surfaces: uses the neurosurf example mesh
+    nobs = 20,
+    response_type = "continuous",
+    data_mode = "surface"
+  )
 }
 
 # Generate dataset with external test set

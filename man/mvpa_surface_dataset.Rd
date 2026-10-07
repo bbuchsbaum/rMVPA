@@ -34,16 +34,24 @@ If no mask is provided, one will be created automatically using the indices from
 The mask will be a numeric vector with length equal to the number of nodes in the surface geometry.
 }
 \examples{
-\dontrun{
-# Create surface dataset with automatic mask
-train_surf <- NeuroSurfaceVector(geometry, data)
-dataset <- mvpa_surface_dataset(train_surf, name="lh")
+if (requireNamespace("neurosurf", quietly = TRUE)) {
+  fname <- system.file("extdata/std.8_lh.inflated.asc", package = "neurosurf")
+  geometry <- neurosurf::read_surf_geometry(fname)
+  nvert <- nrow(neurosurf::vertices(geometry))
 
-# Create dataset with test data and custom mask
-test_surf <- NeuroSurfaceVector(geometry, test_data)
-mask <- numeric(length(nodes(geometry)))
-mask[roi_indices] <- 1
-dataset <- mvpa_surface_dataset(train_surf, test_surf, mask, name="rh")
+  # Create surface dataset with automatic mask
+  train_surf <- neurosurf::NeuroSurfaceVector(
+    geometry, seq_len(nvert), matrix(rnorm(nvert * 6), nvert, 6)
+  )
+  dataset <- mvpa_surface_dataset(train_surf, name = "lh")
+
+  # Create dataset with test data and custom mask
+  test_surf <- neurosurf::NeuroSurfaceVector(
+    geometry, seq_len(nvert), matrix(rnorm(nvert * 4), nvert, 4)
+  )
+  mask <- numeric(nvert)
+  mask[1:50] <- 1
+  dataset <- mvpa_surface_dataset(train_surf, test_surf, mask, name = "lh")
 }
 
 }

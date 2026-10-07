@@ -216,10 +216,10 @@ coalesce_join2 <- function(x, y,
 #' @return Invisibly returns the numeric log level.
 #'
 #' @examples
-#' \dontrun{
-#'   rMVPA::set_log_level("DEBUG")
-#'   rMVPA::set_log_level("WARN")
-#' }
+#' old <- futile.logger::flog.threshold()   # remember current level
+#' set_log_level("DEBUG")
+#' set_log_level("WARN")
+#' set_log_level(old)                         # restore
 #'
 #' @export
 set_log_level <- function(level = "INFO") {
@@ -366,15 +366,10 @@ utils::globalVariables(c(
 #'         the formatted information to the console.
 #' @export
 #' @examples
-#' \dontrun{
-#' # Display system information in the console
-#' mvpa_sysinfo()
-#'
-#' # Capture the information in a variable
+#' # Display system information and capture it in a variable
 #' sys_info <- mvpa_sysinfo()
-#' print(sys_info$r_version)
-#' print(sys_info$dependencies$rsample)
-#' }
+#' sys_info$platform
+#' sys_info$dependencies$rsample
 mvpa_sysinfo <- function() {
   info <- list()
 
@@ -482,10 +477,9 @@ mvpa_sysinfo <- function() {
 #' @param ... Ignored.
 #' @return Invisibly returns the input object \code{x} (called for side effects).
 #' @examples
-#' \dontrun{
-#'   info <- mvpa_sysinfo()
-#'   print(info)
-#' }
+#' # mvpa_sysinfo() prints on creation; capture that output, then print explicitly
+#' invisible(utils::capture.output(info <- mvpa_sysinfo()))
+#' print(info)
 #' @export
 #' @keywords internal
 print.mvpa_sysinfo <- function(x, ...) {

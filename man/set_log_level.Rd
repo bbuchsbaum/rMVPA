@@ -31,9 +31,9 @@ Typical usage:
 This affects all rMVPA logging performed via \pkg{futile.logger}.
 }
 \examples{
-\dontrun{
-  rMVPA::set_log_level("DEBUG")
-  rMVPA::set_log_level("WARN")
-}
+old <- futile.logger::flog.threshold()   # remember current level
+set_log_level("DEBUG")
+set_log_level("WARN")
+set_log_level(old)                         # restore
 
 }

@@ -1,5 +1,5 @@
 test_that("parallelism vignette separates the three runtime layers", {
-  vignette_path <- testthat::test_path("..", "..", "vignettes", "Parallelism.Rmd")
+  vignette_path <- testthat::test_path("..", "..", "vignettes", "articles", "Parallelism.Rmd")
   skip_if_not(file.exists(vignette_path),
               "source vignette is not installed in the package tarball")
   text <- paste(readLines(vignette_path, warn = FALSE), collapse = "\n")
@@ -124,5 +124,5 @@ test_that("parallelism vignette is published in the site navigation", {
     collapse = "\n"
   )
   expect_match(pkgdown, "title: Performance and Deployment", fixed = TRUE)
-  expect_match(pkgdown, "- Parallelism", fixed = TRUE)
+  expect_match(pkgdown, "- articles/Parallelism", fixed = TRUE)
 })
