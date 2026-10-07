@@ -168,3 +168,22 @@ test_that("vector_rsa regional analysis maintains valid correlation values", {
   }
 })
 
+
+test_that("vector_rsa regional analysis accepts runner arguments such as verbose", {
+  # Regression: verbose/processor were consumed from the dots and then the
+  # original `...` was forwarded as well, so mvpa_iterate received them twice.
+  set.seed(31)
+  dset <- gen_sample_dataset(c(4, 4, 4), 30, blocks = 3)
+  labels <- paste0("Label", 1:5)
+  D <- as.matrix(dist(matrix(rnorm(25), 5, 5)))
+  dimnames(D) <- list(labels, labels)
+  rdes <- vector_rsa_design(D = D, labels = rep(labels, length.out = 30),
+                            block_var = dset$design$block_var)
+  mspec <- vector_rsa_model(dset$dataset, rdes, distfun = cordist())
+  region_mask <- NeuroVol(rep(1:2, length.out = length(dset$dataset$mask)),
+                          space(dset$dataset$mask))
+
+  res_default <- run_regional(mspec, region_mask)
+  res_verbose <- run_regional(mspec, region_mask, verbose = FALSE, batch_size = 1L)
+  expect_equal(res_verbose$performance_table, res_default$performance_table)
+})

@@ -51,6 +51,10 @@
   - SWIFT remains available through an explicit `engine = "swift"`. It then
     emits a message naming the substitution and records
     `attr(result, "searchlight_estimator") == "swift_nearest_mean"`.
+* `run_regional()` for `vector_rsa_model` no longer fails when given runner
+  arguments such as `verbose = FALSE` or `batch_size`. Those arguments were
+  consumed and then forwarded a second time to the iterator ("formal argument
+  'verbose' matched by multiple actual arguments").
 
 # rMVPA 0.1.3
 
