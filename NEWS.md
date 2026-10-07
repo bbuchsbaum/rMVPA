@@ -105,6 +105,16 @@
   searchlight and regional analyses. The output schema did not declare the
   per-class `AUC_<class>` columns, so every ROI failed the schema width check
   and regional performance tables came back empty.
+* **Metric change (changes results):** multiclass one-vs-rest AUC now ranks
+  each class's own probability, as scikit-learn's
+  `roc_auc_score(multi_class = "ovr")` does. The former score,
+  `p_k - mean(p_-k)`, is a monotone function of `p_k` when probabilities sum
+  to one, so it gives the same AUC in exact arithmetic. But rounding the mean
+  turned tiny, distinct class probabilities into last-bit ties that counted
+  as half credit. AUC values change only in such cases. In the Haxby VT
+  regional fixtures this moved AUC by 0.2% (`sda_notune`), 0.4%
+  (`naive_bayes`) and 1.6% (`dual_lda`, whose probabilities saturate). rMVPA's
+  multiclass AUC now equals scikit-learn's to 15 digits on those data.
 
 # rMVPA 0.1.3
 
