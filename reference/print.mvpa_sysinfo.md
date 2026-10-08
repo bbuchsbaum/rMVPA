@@ -43,7 +43,7 @@ print(info)
 #> 
 #> Key Dependencies:
 #>   - neuroim2 : 0.19.1
-#>   - neurosurf: 0.1.0.9004
+#>   - neurosurf: 0.1.0
 #>   - rsample  : 1.3.2
 #>   - yardstick: 1.4.0
 #>   - future   : 1.76.0

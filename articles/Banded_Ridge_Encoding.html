@@ -463,9 +463,9 @@ comparing</td>
 </table>
 <p>The bundled fixed-shape performance receipt likewise characterizes,
 rather than proves superiority. On the recorded Apple M3 Max / R 4.5.1
-run, the <code>n = 60, p = 512, V = 12</code> public workflow took
+run (commit f0c90e0), the n = 60, p = 512, V = 12 public workflow took
 median 0.226 seconds with the direct backend and 0.099 seconds with each
-optimized backend over five runs. The solver planner estimated 2.15 MB,
+optimized backend over 5 runs. The solver planner estimated 2.15 MB,
 0.33 MB, and 0.17 MB of intermediate storage respectively. Wall times
 are tracked as snapshots; CI enforces structural shape, batching,
 allocation, cache, and numerical-parity contracts instead of brittle

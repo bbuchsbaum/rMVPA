@@ -301,7 +301,7 @@ classification fixture with 18 regions, five batches of at most four
 regions, and `sda_notune`. Non-sequential plans configured two workers.
 OpenMP and BLAS were fixed at one thread. Each scheduler/data-backend
 pairing ran in three fresh R processes from a clean installed rMVPA
-0.1.3 tarball.
+tarball.
 
 | Future plan  | Data backend | Median (s) | Range (s)    | Task frames (MiB) |
 |:-------------|:-------------|-----------:|:-------------|------------------:|
@@ -314,8 +314,12 @@ pairing ran in three fresh R processes from a clean installed rMVPA
 | mirai        | default      |      6.843 | 6.756–10.372 |            12.531 |
 | mirai        | shard        |      7.774 | 6.341–7.848  |             0.101 |
 
-Local fresh-process characterization on an Apple M3 Max (36 GB). Timings
+Local fresh-process characterization on Apple M3 Max (36 GB). Timings
 are descriptive, not thresholds. {.table}
+
+These timings were recorded with rMVPA 0.1.3 at commit 2cea63b on
+2026-10-06. They describe that source on that machine; later changes to
+the package are reflected only when the driver below is re-run.
 
 All eight paths produced identical canonical result vectors in every
 fixture repetition (`max_abs_result_error = 0`). The default frames

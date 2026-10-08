@@ -439,17 +439,20 @@ than .01 at the median or .03 at the lower decile.
 | Ridge blocked | 12.00 | 9.8 | 0.888 | 0.0018 | 0.0018 |
 | glmnet ridge blocked CV | 923.50 | 0.1 | 2.624 | -0.0100 | -0.0126 |
 
-Twenty-seed dense-linear characterization on Apple M3 Max. Accuracy
-columns are relative to PLS LOO; timings are descriptive. {.table}
+Twenty-seed dense-linear characterization on aarch64-apple-darwin20 (R
+4.5.1). Accuracy columns are relative to PLS LOO; timings are
+descriptive. {.table}
 
 All three ridge selectors cleared the declared margin. Median MSE was
 11–12% lower than PLS LOO, while median pattern and RDM correlations
-were slightly higher. GCV was about 39 times faster than PLS LOO;
-analytic LOO and blocked ridge were about 10 and 9 times faster. Blocked
-PLS was also about 11 times faster than PLS LOO and had essentially
-identical accuracy here, so users who specifically need PLS should
-prefer a scientifically valid block unit rather than changing estimators
-only for speed.
+were slightly higher. GCV was about 41 times faster than PLS LOO;
+analytic LOO and blocked ridge were about 11 and 10 times faster.
+Blocked PLS was also about 11 times faster than PLS LOO and had
+essentially identical accuracy here, so users who specifically need PLS
+should prefer a scientifically valid block unit rather than changing
+estimators only for speed. These timings were recorded with rMVPA 0.1.3
+at commit 2cea63b on 2026-10-06; re-run the driver to describe later
+source or another machine.
 
 The `glmnet` result is not a general ranking: it reports that package’s
 blocked-CV choice on this particular dense fixture, where it selected a

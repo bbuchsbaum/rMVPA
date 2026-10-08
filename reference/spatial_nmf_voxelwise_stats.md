@@ -65,8 +65,8 @@ set.seed(1)
 X <- matrix(runif(20 * 50), 20, 50)
 fit <- spatial_nmf(X, k = 2)$fit
 stab <- spatial_nmf_stability(X = X, fit = fit, n_boot = 5, seed = 1)
-#> INFO [2026-10-07 05:02:35] Spatial NMF stability: 5 bootstrap samples (serial)
-#> INFO [2026-10-07 05:02:35] Spatial NMF stability: bootstrap complete.
+#> INFO [2026-10-08 02:06:42] Spatial NMF stability: 5 bootstrap samples (serial)
+#> INFO [2026-10-08 02:06:42] Spatial NMF stability: bootstrap complete.
 
 # Attach bootstrap mean/SD component maps on a small 5 x 5 x 2 grid
 sp <- neuroim2::NeuroSpace(c(5, 5, 2))

@@ -83,12 +83,12 @@ region_mask <- neuroim2::NeuroVol(
   neuroim2::space(sample_ds$dataset$mask)
 )
 res <- run_regional(mdl, region_mask)
-#> INFO [2026-10-07 05:01:59] 
+#> INFO [2026-10-08 02:06:13] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 3
 #> - Processed: 3
 #> - Skipped: 0
-#> INFO [2026-10-07 05:01:59] run_regional: 3 ROIs processed (success=3, errors=0)
+#> INFO [2026-10-08 02:06:13] run_regional: 3 ROIs processed (success=3, errors=0)
 cross_conn <- feature_rsa_cross_connectivity(res, method = "spearman")
 cross_dc <- feature_rsa_cross_connectivity(
   res,

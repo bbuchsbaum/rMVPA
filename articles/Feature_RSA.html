@@ -59,7 +59,7 @@
                         <h4 data-toc-skip class="author">Bradley
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-10-07</h4>
+            <h4 data-toc-skip class="date">2026-10-08</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/rMVPA/blob/master/vignettes/articles/Feature_RSA.Rmd" class="external-link"><code>vignettes/articles/Feature_RSA.Rmd</code></a></small>
       <div class="d-none name"><code>Feature_RSA.Rmd</code></div>
@@ -622,9 +622,9 @@ required median MSE no more than 5% worse than PLS LOO, 90th-percentile
 MSE no more than 20% worse, and pattern/RDM correlation losses no larger
 than .01 at the median or .03 at the lower decile.</p>
 <table class="table">
-<caption>Twenty-seed dense-linear characterization on Apple M3 Max.
-Accuracy columns are relative to PLS LOO; timings are
-descriptive.</caption>
+<caption>Twenty-seed dense-linear characterization on
+aarch64-apple-darwin20 (R 4.5.1). Accuracy columns are relative to PLS
+LOO; timings are descriptive.</caption>
 <colgroup>
 <col width="27%">
 <col width="11%">
@@ -694,12 +694,14 @@ descriptive.</caption>
 </table>
 <p>All three ridge selectors cleared the declared margin. Median MSE was
 11–12% lower than PLS LOO, while median pattern and RDM correlations
-were slightly higher. GCV was about 39 times faster than PLS LOO;
-analytic LOO and blocked ridge were about 10 and 9 times faster. Blocked
-PLS was also about 11 times faster than PLS LOO and had essentially
-identical accuracy here, so users who specifically need PLS should
-prefer a scientifically valid block unit rather than changing estimators
-only for speed.</p>
+were slightly higher. GCV was about 41 times faster than PLS LOO;
+analytic LOO and blocked ridge were about 11 and 10 times faster.
+Blocked PLS was also about 11 times faster than PLS LOO and had
+essentially identical accuracy here, so users who specifically need PLS
+should prefer a scientifically valid block unit rather than changing
+estimators only for speed. These timings were recorded with rMVPA 0.1.3
+at commit 2cea63b on 2026-10-06; re-run the driver to describe later
+source or another machine.</p>
 <p>The <code>glmnet</code> result is not a general ranking: it reports
 that package’s blocked-CV choice on this particular dense fixture, where
 it selected a different penalty and missed the fixture-specific

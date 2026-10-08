@@ -62,12 +62,12 @@ rownames(X) <- colnames(X) <- rownames(Y) <- colnames(Y) <- items
 repmed_des <- repmed_design(items = items, X_rdm = X, Y_rdm = Y)
 model <- repmed_model(ds$dataset, ds$design, repmed_des, key_var = ~ .rownum)
 res <- run_regional(model, ds$dataset$mask)
-#> INFO [2026-10-07 05:02:23] 
+#> INFO [2026-10-08 02:06:33] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 1
 #> - Processed: 1
 #> - Skipped: 0
-#> INFO [2026-10-07 05:02:23] run_regional: 1 ROIs processed (success=1, errors=0)
+#> INFO [2026-10-08 02:06:33] run_regional: 1 ROIs processed (success=1, errors=0)
 res$performance_table
 #> # A tibble: 1 × 10
 #>   roinum n_items n_pairs   med_a med_b med_cprime  med_c med_indirect

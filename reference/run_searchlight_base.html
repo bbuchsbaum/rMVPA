@@ -132,16 +132,16 @@ is compatible with <code>do_standard(...)</code> or <code>do_randomized(...)</co
 <span class="r-in"><span><span class="va">mspec</span> <span class="op">&lt;-</span> <span class="fu"><a href="mvpa_model.html">mvpa_model</a></span><span class="op">(</span><span class="fu"><a href="load_model.html">load_model</a></span><span class="op">(</span><span class="st">"corclass"</span><span class="op">)</span>, dataset <span class="op">=</span> <span class="va">ds</span><span class="op">$</span><span class="va">dataset</span>,</span></span>
 <span class="r-in"><span>                    design <span class="op">=</span> <span class="va">ds</span><span class="op">$</span><span class="va">design</span>, crossval <span class="op">=</span> <span class="va">cval</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu">run_searchlight_base</span><span class="op">(</span><span class="va">mspec</span>, radius <span class="op">=</span> <span class="fl">2</span>, method <span class="op">=</span> <span class="st">"standard"</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-10-07 05:02:31] Running standard searchlight with radius = 2</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-10-07 05:02:31] creating standard searchlight</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-10-07 05:02:31] running standard searchlight iterator</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-10-07 05:02:31] Using automatic searchlight batch size 27 for 27 centers (memory budget 512.0 MiB).</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-10-07 05:02:31] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-10-08 02:06:39] Running standard searchlight with radius = 2</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-10-08 02:06:39] creating standard searchlight</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-10-08 02:06:39] running standard searchlight iterator</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-10-08 02:06:39] Using automatic searchlight batch size 27 for 27 centers (memory budget 512.0 MiB).</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-10-08 02:06:39] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">27</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">27</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-10-07 05:02:31] searchlight (standard): 27 ROIs processed (success=27, errors=0)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-10-08 02:06:39] searchlight (standard): 27 ROIs processed (success=27, errors=0)</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">res</span><span class="op">$</span><span class="va">results</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "Accuracy" "AUC"     </span>
 </code></pre></div>

@@ -96,7 +96,7 @@ cval <- blocked_cross_validation(ds$design$block_var)
 mspec <- mvpa_model(load_model("corclass"), dataset = ds$dataset,
                     design = ds$design, crossval = cval)
 res <- run_searchlight(mspec, radius = 2, method = "standard")
-#> INFO [2026-10-07 05:02:31] searchlight engine: aggregate_fast
+#> INFO [2026-10-08 02:06:39] searchlight engine: aggregate_fast
 names(res$results)
 #> [1] "Accuracy" "AUC"     
 ```
