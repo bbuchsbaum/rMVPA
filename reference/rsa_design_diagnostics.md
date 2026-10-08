@@ -39,6 +39,10 @@ when the design contains only that predictor.
 
 ## Details
 
+With an explicit `pair_mask`, only items participating in retained pairs
+count toward effective support. The full item universe is still used for
+condition alignment and item permutations.
+
 For
 [`pair_rsa_design`](https://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md)
 objects in between-domain mode the item count is `n_a + n_b`, since each

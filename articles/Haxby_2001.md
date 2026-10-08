@@ -286,11 +286,11 @@ panel <- rbind(
 panel <- panel[order(-panel$accuracy), ]
 panel
 #>    classifier accuracy   auc seconds
-#> 5  sda_notune    0.917 0.972     0.2
+#> 5  sda_notune    0.917 0.972     0.4
 #> 4   svmLinear    0.656 0.847     0.9
-#> 3          rf    0.510 0.710     8.4
-#> 2 naive_bayes    0.375 0.479     0.7
-#> 1    corclass    0.271 0.289     0.1
+#> 3          rf    0.510 0.710     8.7
+#> 2 naive_bayes    0.375 0.479     0.4
+#> 1    corclass    0.271 0.289     0.4
 ```
 
 ![Cross-validated accuracy under the available classifiers, all on the

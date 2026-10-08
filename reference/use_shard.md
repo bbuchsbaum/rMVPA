@@ -43,22 +43,22 @@ if (requireNamespace("shard", quietly = TRUE)) {
                              niter = 1)
   shard_cleanup(mspec$shard_data)
 }
-#> INFO [2026-10-08 02:06:45] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)
-#> INFO [2026-10-08 02:06:45] shard backend [volumetric]: shared 24 x 64 matrix (64 masked voxels)
-#> INFO [2026-10-08 02:06:45] searchlight engine: general-purpose iterator (no eligible fast path)
-#> INFO [2026-10-08 02:06:45] Running randomized searchlight with radius = 2 and niter = 1
-#> INFO [2026-10-08 02:06:45] Starting randomized searchlight analysis:
-#> INFO [2026-10-08 02:06:45] - Radius: 2
-#> INFO [2026-10-08 02:06:45] - Iterations: 1
-#> INFO [2026-10-08 02:06:45] 
+#> INFO [2026-10-08 15:55:53] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)
+#> INFO [2026-10-08 15:55:53] shard backend [volumetric]: shared 24 x 64 matrix (64 masked voxels)
+#> INFO [2026-10-08 15:55:53] searchlight engine: general-purpose iterator (no eligible fast path)
+#> INFO [2026-10-08 15:55:53] Running randomized searchlight with radius = 2 and niter = 1
+#> INFO [2026-10-08 15:55:53] Starting randomized searchlight analysis:
+#> INFO [2026-10-08 15:55:53] - Radius: 2
+#> INFO [2026-10-08 15:55:53] - Iterations: 1
+#> INFO [2026-10-08 15:55:53] 
 #> Iteration 1/1
-#> INFO [2026-10-08 02:06:45] Using automatic searchlight batch size 8 for 8 centers (memory budget 512.0 MiB).
-#> INFO [2026-10-08 02:06:45] 
+#> INFO [2026-10-08 15:55:53] Using automatic searchlight batch size 8 for 8 centers (memory budget 512.0 MiB).
+#> INFO [2026-10-08 15:55:53] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 8
 #> - Processed: 8
 #> - Skipped: 0
-#> INFO [2026-10-08 02:06:45] searchlight (randomized): 8 ROIs processed (success=7, errors=1)
-#> WARN [2026-10-08 02:06:45] searchlight (randomized): 1 of 8 ROIs failed (12.5%)
-#> WARN [2026-10-08 02:06:45]   - [1 ROIs] error: less than 2 features
+#> INFO [2026-10-08 15:55:53] searchlight (randomized): 8 ROIs processed (success=7, errors=1)
+#> WARN [2026-10-08 15:55:53] searchlight (randomized): 1 of 8 ROIs failed (12.5%)
+#> WARN [2026-10-08 15:55:53]   - [1 ROIs] error: less than 2 features
 ```

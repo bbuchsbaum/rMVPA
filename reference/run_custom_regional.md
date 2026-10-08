@@ -102,20 +102,20 @@ my_roi_stats <- function(roi_data, roi_info) {
 }
 
 custom_results <- run_custom_regional(dataset_obj, region_mask_vol, my_roi_stats)
-#> INFO [2026-10-08 02:06:35] Starting custom regional analysis...
-#> INFO [2026-10-08 02:06:35] Using automatic searchlight batch size 3 for 3 centers (memory budget 512.0 MiB).
-#> INFO [2026-10-08 02:06:35] 
+#> INFO [2026-10-08 15:55:41] Starting custom regional analysis...
+#> INFO [2026-10-08 15:55:41] Using automatic searchlight batch size 3 for 3 centers (memory budget 512.0 MiB).
+#> INFO [2026-10-08 15:55:41] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 3
 #> - Processed: 3
 #> - Skipped: 0
-#> INFO [2026-10-08 02:06:35] Custom regional analysis iteration complete.
-#> INFO [2026-10-08 02:06:35] Finished formatting custom regional results.
+#> INFO [2026-10-08 15:55:41] Custom regional analysis iteration complete.
+#> INFO [2026-10-08 15:55:41] Finished formatting custom regional results.
 print(custom_results)
 #> # A tibble: 3 × 6
 #>      id mean_signal sd_signal n_features error error_message
 #>   <int>       <dbl>     <dbl>      <int> <lgl> <chr>        
-#> 1     1     0.00927     1.01          64 FALSE ~            
-#> 2     2     0.00654     0.994         64 FALSE ~            
-#> 3     3     0.0170      1.00          64 FALSE ~            
+#> 1     1     0.00563     1.00          64 FALSE ~            
+#> 2     2     0.00426     1.02          64 FALSE ~            
+#> 3     3     0.00185     0.998         64 FALSE ~            
 ```

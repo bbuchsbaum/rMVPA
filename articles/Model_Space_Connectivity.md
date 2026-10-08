@@ -347,6 +347,26 @@ fdes$model_mat$feat_distance
 The function is evaluated once over the pair table; you don’t need to
 materialize a square matrix.
 
+### Relationships whose strength varies with attributes
+
+The same pair design accepts `modulation`, a named list of regression
+formulas that multiply the corresponding model templates. For example,
+`modulation = list(item = ~ b.precision * b.vividness)` describes
+retrieval-side modulation of an item-correspondence template.
+Within-domain formulas must declare a symmetric rule for combining the
+two observations’ attributes. See the [RSA
+vignette](https://bbuchsbaum.github.io/rMVPA/articles/RSA.html#let-a-relationship-vary-with-trial-attributes)
+for a within-domain example and the [ERA-RSA
+vignette](https://bbuchsbaum.github.io/rMVPA/articles/ERA_RSA_Cross_Decoding.html#model-item-correspondence-with-vividness-and-precision)
+for rectangular correspondence, backgrounds, and coefficient contrasts.
+
+Expanded model columns define the model subspace available to
+fingerprint construction; nuisance columns remain excluded. A
+fingerprint is a projection onto that subspace, whereas
+`statistic = "beta"` returns adjusted regression coefficients.
+Connectivity between fingerprints does not test a difference between
+modulation coefficients or supply their inferential uncertainty.
+
 ## Searchlight: the n_centers² problem and how to avoid it
 
 Searchlights have ~10⁵–10⁶ centers. The full center-by-center

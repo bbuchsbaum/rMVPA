@@ -385,6 +385,100 @@ print(results)
 # neuroim2::write_vol(rsa_map, "RSA_results.nii.gz")
 ```
 
+## Let a relationship vary with trial attributes
+
+Suppose the relationship predicted by an RDM changes with a trial
+attribute, such as vividness or task difficulty. Keep the neural
+measurement fixed and model the strength of that relationship.
+[`pair_rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md)
+adds this to the same
+[`rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md)
+workflow: `model` defines the relationship, and `modulation` supplies a
+regression formula for its coefficient.
+
+For a within-domain RDM, both sides of a pair have attributes. Declare
+how they combine. Reusing the 40-trial dataset `ds` from the first
+example, we use the **average** quality of the two observations; a
+product or an absolute difference would ask a different question.
+
+``` r
+
+set.seed(614)
+n_trials <- dim(ds$dataset$train_data)[4]
+trial_features <- data.frame(quality = as.numeric(scale(rnorm(n_trials))))
+order_rdm <- as.matrix(stats::dist(seq_len(n_trials)))
+
+quality_design <- pair_rsa_design(
+  items_a = paste0("trial_", seq_len(n_trials)),
+  features_a = trial_features,
+  model = list(order = order_rdm),
+  modulation = list(order = ~ I((a.quality + b.quality) / 2))
+)
+
+quality_design$model_predictors
+#> [1] "order"                           "order.I..a.quality.b.quality..2"
+```
+
+The formula generates the original `order` template and its product with
+mean pair quality. Metadata names `a.quality` and `b.quality` refer to
+the two observations. Within-domain formulas must be symmetric under
+exchanging the sides; a formula using only `b.quality` is rejected.
+Standardize attributes in the feature table, as above, when the intended
+scale is over trials rather than over pairs. Feature names `row` and
+`item` are reserved for pair metadata.
+
+Request coefficients explicitly:
+
+``` r
+
+quality_model <- rsa_model(
+  dataset = ds$dataset,
+  design = quality_design,
+  distmethod = "pearson",
+  measure = "distance",     # neural response is 1 - Pearson correlation
+  regtype = "lm",
+  statistic = "beta"
+)
+quality_result <- run_regional(
+  quality_model, region_mask = ds$dataset$mask, verbose = FALSE
+)
+quality_result$performance_table
+#> # A tibble: 1 × 3
+#>   roinum      order order.I..a.quality.b.quality..2
+#>    <int>      <dbl>                           <dbl>
+#> 1      1 -0.0000710                       -0.000254
+```
+
+The `order` coefficient describes the RDM association at mean pair
+quality zero. The second coefficient describes how that slope changes
+with pair quality, conditional on the first. These are coefficients in
+neural-distance units per predictor unit. `regtype = "lm"` alone retains
+the existing default statistic; `statistic = "beta"` selects
+unconstrained least-squares coefficients. The synthetic attribute was
+not used to generate these neural data, so this example illustrates
+specification rather than an expected quality effect.
+
+For encoding–retrieval correspondence, use `pairs = "between"`, an
+item-ID matching template, and retrieval-side attributes such as
+`~ b.precision * b.vividness`. Set `measure = "similarity"` when a
+positive coefficient should mean greater neural correlation rather than
+greater dissimilarity. These measurements have different
+interpretations; changing between them is a scientific specification
+choice. The [ERA-RSA
+vignette](https://bbuchsbaum.github.io/rMVPA/articles/ERA_RSA_Cross_Decoding.html#model-item-correspondence-with-vividness-and-precision)
+shows that complete workflow, retrieval-specific backgrounds, and
+coefficient contrasts.
+
+Pairs that share observations are dependent. These coefficients are
+participant-level estimates, without calibrated pairwise standard errors
+or population inference. Population analyses need a sampling design that
+retains participant and, where relevant, stimulus dependence.
+Multi-predictor RSA permutations support an explicit joint
+no-association null; they do not provide a conditional test for an
+individual modulation coefficient. Regression adjustment also does not
+correct biased neural measurements or measurement error in neural
+predictors.
+
 ## Summary
 
 The rMVPA package provides a comprehensive RSA implementation with
@@ -421,6 +515,10 @@ for the full workflow, including cross-domain pair designs
   Connectivity](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.html)
   – model-space fingerprints, ROI-to-ROI connectivity, pair_rsa_design,
   and searchlight anchor maps
+- [ERA-RSA
+  Cross-Decoding](https://bbuchsbaum.github.io/rMVPA/articles/ERA_RSA_Cross_Decoding.html)
+  – cross-phase correspondence, geometry preservation, and modulation by
+  retrieval attributes
 - [Feature-Based
   RSA](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA.html) –
   Feature-Based RSA: predicting neural patterns from a feature matrix

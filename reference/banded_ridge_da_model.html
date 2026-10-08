@@ -283,12 +283,12 @@ where \(R^2_{-g}\) is obtained by refitting the model without feature set \(g\).
 <span class="r-in"><span><span class="va">region_mask</span> <span class="op">&lt;-</span> <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/NeuroVol.html" class="external-link">NeuroVol</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/array.html" class="external-link">array</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">3</span><span class="op">)</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>                                  <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/space-methods.html" class="external-link">space</a></span><span class="op">(</span><span class="va">dset</span><span class="op">$</span><span class="va">mask</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">ms</span>, <span class="va">region_mask</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-10-08 02:06:04] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-10-08 15:55:07] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">1</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">1</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-10-08 02:06:04] run_regional: 1 ROIs processed (success=1, errors=0)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-10-08 15:55:07] run_regional: 1 ROIs processed (success=1, errors=0)</span>
 <span class="r-in"><span><span class="va">res</span><span class="op">$</span><span class="va">performance_table</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 1 × 8</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   roinum recall_r2_full recall_mse_full target_r2_full target_mse_full</span>

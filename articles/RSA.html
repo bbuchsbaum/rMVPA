@@ -426,6 +426,92 @@ temporal structure.</p>
 </div>
 </div>
 <div class="section level2">
+<h2 id="let-a-relationship-vary-with-trial-attributes">Let a relationship vary with trial attributes<a class="anchor" aria-label="anchor" href="#let-a-relationship-vary-with-trial-attributes"></a>
+</h2>
+<p>Suppose the relationship predicted by an RDM changes with a trial
+attribute, such as vividness or task difficulty. Keep the neural
+measurement fixed and model the strength of that relationship.
+<code><a href="../reference/pair_rsa_design.html">pair_rsa_design()</a></code> adds this to the same
+<code><a href="../reference/rsa_model.html">rsa_model()</a></code> workflow: <code>model</code> defines the
+relationship, and <code>modulation</code> supplies a regression formula
+for its coefficient.</p>
+<p>For a within-domain RDM, both sides of a pair have attributes.
+Declare how they combine. Reusing the 40-trial dataset <code>ds</code>
+from the first example, we use the <strong>average</strong> quality of
+the two observations; a product or an absolute difference would ask a
+different question.</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">614</span><span class="op">)</span></span>
+<span><span class="va">n_trials</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">ds</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">train_data</span><span class="op">)</span><span class="op">[</span><span class="fl">4</span><span class="op">]</span></span>
+<span><span class="va">trial_features</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>quality <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n_trials</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">order_rdm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/dist.html" class="external-link">dist</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n_trials</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">quality_design</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pair_rsa_design.html">pair_rsa_design</a></span><span class="op">(</span></span>
+<span>  items_a <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"trial_"</span>, <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n_trials</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  features_a <span class="op">=</span> <span class="va">trial_features</span>,</span>
+<span>  model <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>order <span class="op">=</span> <span class="va">order_rdm</span><span class="op">)</span>,</span>
+<span>  modulation <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>order <span class="op">=</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/base/AsIs.html" class="external-link">I</a></span><span class="op">(</span><span class="op">(</span><span class="va">a.quality</span> <span class="op">+</span> <span class="va">b.quality</span><span class="op">)</span> <span class="op">/</span> <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">quality_design</span><span class="op">$</span><span class="va">model_predictors</span></span>
+<span><span class="co">#&gt; [1] "order"                           "order.I..a.quality.b.quality..2"</span></span></code></pre></div>
+<p>The formula generates the original <code>order</code> template and
+its product with mean pair quality. Metadata names
+<code>a.quality</code> and <code>b.quality</code> refer to the two
+observations. Within-domain formulas must be symmetric under exchanging
+the sides; a formula using only <code>b.quality</code> is rejected.
+Standardize attributes in the feature table, as above, when the intended
+scale is over trials rather than over pairs. Feature names
+<code>row</code> and <code>item</code> are reserved for pair
+metadata.</p>
+<p>Request coefficients explicitly:</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">quality_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rsa_model.html">rsa_model</a></span><span class="op">(</span></span>
+<span>  dataset <span class="op">=</span> <span class="va">ds</span><span class="op">$</span><span class="va">dataset</span>,</span>
+<span>  design <span class="op">=</span> <span class="va">quality_design</span>,</span>
+<span>  distmethod <span class="op">=</span> <span class="st">"pearson"</span>,</span>
+<span>  measure <span class="op">=</span> <span class="st">"distance"</span>,     <span class="co"># neural response is 1 - Pearson correlation</span></span>
+<span>  regtype <span class="op">=</span> <span class="st">"lm"</span>,</span>
+<span>  statistic <span class="op">=</span> <span class="st">"beta"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">quality_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span></span>
+<span>  <span class="va">quality_model</span>, region_mask <span class="op">=</span> <span class="va">ds</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">quality_result</span><span class="op">$</span><span class="va">performance_table</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 1 × 3</span></span></span>
+<span><span class="co">#&gt;   roinum      order order.I..a.quality.b.quality..2</span></span>
+<span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>                           <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>      1 -<span style="color: #BB0000;">0.000</span><span style="color: #BB0000; text-decoration: underline;">071</span><span style="color: #BB0000;">0</span>                       -<span style="color: #BB0000;">0.000</span><span style="color: #BB0000; text-decoration: underline;">254</span></span></span></code></pre></div>
+<p>The <code>order</code> coefficient describes the RDM association at
+mean pair quality zero. The second coefficient describes how that slope
+changes with pair quality, conditional on the first. These are
+coefficients in neural-distance units per predictor unit.
+<code>regtype = "lm"</code> alone retains the existing default
+statistic; <code>statistic = "beta"</code> selects unconstrained
+least-squares coefficients. The synthetic attribute was not used to
+generate these neural data, so this example illustrates specification
+rather than an expected quality effect.</p>
+<p>For encoding–retrieval correspondence, use
+<code>pairs = "between"</code>, an item-ID matching template, and
+retrieval-side attributes such as
+<code>~ b.precision * b.vividness</code>. Set
+<code>measure = "similarity"</code> when a positive coefficient should
+mean greater neural correlation rather than greater dissimilarity. These
+measurements have different interpretations; changing between them is a
+scientific specification choice. The <a href="https://bbuchsbaum.github.io/rMVPA/articles/ERA_RSA_Cross_Decoding.html#model-item-correspondence-with-vividness-and-precision">ERA-RSA
+vignette</a> shows that complete workflow, retrieval-specific
+backgrounds, and coefficient contrasts.</p>
+<p>Pairs that share observations are dependent. These coefficients are
+participant-level estimates, without calibrated pairwise standard errors
+or population inference. Population analyses need a sampling design that
+retains participant and, where relevant, stimulus dependence.
+Multi-predictor RSA permutations support an explicit joint
+no-association null; they do not provide a conditional test for an
+individual modulation coefficient. Regression adjustment also does not
+correct biased neural measurements or measurement error in neural
+predictors.</p>
+</div>
+<div class="section level2">
 <h2 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>
 </h2>
 <p>The rMVPA package provides a comprehensive RSA implementation with
@@ -462,6 +548,10 @@ cross-domain pair designs
 <a href="https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.html">Model-Space
 Representational Connectivity</a> – model-space fingerprints, ROI-to-ROI
 connectivity, pair_rsa_design, and searchlight anchor maps</li>
+<li>
+<a href="https://bbuchsbaum.github.io/rMVPA/articles/ERA_RSA_Cross_Decoding.html">ERA-RSA
+Cross-Decoding</a> – cross-phase correspondence, geometry preservation,
+and modulation by retrieval attributes</li>
 <li>
 <a href="https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA.html">Feature-Based
 RSA</a> – Feature-Based RSA: predicting neural patterns from a feature

@@ -162,8 +162,8 @@ X <- matrix(runif(20 * 30), 20, 30)   # non-negative subject-by-voxel data
 groups <- factor(rep(c("A", "B"), each = 10))
 result <- spatial_nmf_global_test(X = X, groups = groups, k = 2,
                                   nfolds = 3, nperm = 19, seed = 1)
-#> INFO [2026-10-08 02:06:42] Spatial NMF global test: 19 permutations (labels, serial)
-#> INFO [2026-10-08 02:06:42] Spatial NMF global test: permutations complete.
+#> INFO [2026-10-08 15:55:48] Spatial NMF global test: 19 permutations (labels, serial)
+#> INFO [2026-10-08 15:55:48] Spatial NMF global test: permutations complete.
 result$p_value
 #> [1] 0.4
 ```

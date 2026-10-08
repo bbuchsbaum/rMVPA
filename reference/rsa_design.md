@@ -12,7 +12,9 @@ rsa_design(
   block_var = NULL,
   split_by = NULL,
   keep_intra_run = FALSE,
-  nuisance = list()
+  nuisance = list(),
+  pair_mask = NULL,
+  condition_ids = NULL
 )
 ```
 
@@ -50,6 +52,25 @@ rsa_design(
   appended to the RSA model matrix, included in regression fits, and
   tagged as nuisance so `rsa_model(..., return_fingerprint = TRUE)`
   excludes them from model-space fingerprints.
+
+- pair_mask:
+
+  Optional logical vector in `dist`/lower-triangle order, or symmetric
+  item-by-item logical matrix with a FALSE diagonal. TRUE retains that
+  distinct-item pair. Missing values, wrong dimensions and empty
+  selections are rejected. Intersects the existing `block_var` exclusion
+  and applies identically to neural responses, predictors, nuisance
+  terms and diagnostics. Included predictor/nuisance cells must be
+  finite. `split_by` does not restrict fitted pairs. For
+  within-recording comparisons, use a mask built from recording
+  equality; `block_var` alone excludes same-block pairs.
+
+- condition_ids:
+
+  Optional unique IDs in the exact order of design items. Required for
+  crossvalidated Euclidean RSA. Named RDMs and masks must match this
+  order; these IDs identify conditions, not runs or repeated
+  observations.
 
 ## Value
 

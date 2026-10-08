@@ -68,7 +68,8 @@ rows when <code>features_a</code> / <code>features_b</code> are supplied.</p>
 <span>  block_var_b <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  keep_intra_run <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  row_idx_a <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  row_idx_b <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  row_idx_b <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  modulation <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -103,7 +104,10 @@ arguments are row-aligned pair tables.</p></dd>
 <dd><p>Optional named list of nuisance pair predictors using the
 same accepted forms as <code>model</code>. Included in the RSA design matrix
 but excluded from model-space fingerprints returned by
-<code>rsa_model(..., return_fingerprint = TRUE)</code>.</p></dd>
+<code>rsa_model(..., return_fingerprint = TRUE)</code>. Alternatively, a
+right-hand-side formula evaluated on pair metadata, e.g.
+<code>~ factor(b.row)</code> for retrieval-observation intercepts. Its intercept
+is supplied by the regression engine, rather than duplicated here.</p></dd>
 
 
 <dt id="arg-pairs">pairs<a class="anchor" aria-label="anchor" href="#arg-pairs"></a></dt>
@@ -149,6 +153,14 @@ neural sub-blocks.</p></dd>
 <dd><p>Integer vector of dataset row indices for <code>items_b</code>.
 Required for <code>pairs = "between"</code>.</p></dd>
 
+
+<dt id="arg-modulation">modulation<a class="anchor" aria-label="anchor" href="#arg-modulation"></a></dt>
+<dd><p>Optional named list of right-hand-side formulas, keyed
+by names in <code>model</code>. Each formula's design columns multiply that
+relationship template. For example, <code>list(item = ~ b.precision *
+b.vividness)</code> expands <code>item</code> into an intercept and three modulated
+columns. Templates omitted from this list are unchanged.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -184,6 +196,17 @@ with the existing <code>train_model.rsa_model</code> path; between-domain
 designs are dispatched on the <code>pair_kind</code> field, which causes
 <code>train_model.rsa_model</code> to compute a rectangular neural-pair
 dissimilarity block instead of the lower triangle.</p>
+<p>Formula metadata exposes <code>a.row</code>/<code>b.row</code> (observation
+  positions), <code>a.item</code>/<code>b.item</code> (item IDs), and feature columns
+  prefixed with <code>a.</code>/<code>b.</code>. Repeated item IDs retain separate
+  observations. Within-domain formulas must be invariant to swapping the
+  two sides; declare a symmetric rule such as
+  <code>~ I((a.vividness + b.vividness) / 2)</code>. Formula evaluation retains
+  missing rows; coefficient fitting uses complete eligible pairs.
+  Formula transformations operate on pair metadata before masking. To
+  standardize a trial attribute over observations rather than pairs,
+  standardize it in <code>features_a</code>/<code>features_b</code> first. Background
+  columns must remain identifiable on the complete eligible pairs.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -202,6 +225,22 @@ dissimilarity block instead of the lower triangle.</p>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/lengths.html" class="external-link">lengths</a></span><span class="op">(</span><span class="va">des</span><span class="op">$</span><span class="va">model_mat</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> rdm1 rdm2 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   28   28 </span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Item correspondence modulated by retrieval attributes.</span></span></span>
+<span class="r-in"><span><span class="co"># Neural observations occupy encoding rows 1:8 and retrieval rows 9:16.</span></span></span>
+<span class="r-in"><span><span class="va">retrieval</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>precision <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">8</span><span class="op">)</span>, vividness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">8</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">relational</span> <span class="op">&lt;-</span> <span class="fu">pair_rsa_design</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  items_a <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">8</span>, items_b <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">8</span>, pairs <span class="op">=</span> <span class="st">"between"</span>,</span></span>
+<span class="r-in"><span>  row_idx_a <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">8</span>, row_idx_b <span class="op">=</span> <span class="fl">9</span><span class="op">:</span><span class="fl">16</span>, features_b <span class="op">=</span> <span class="va">retrieval</span>,</span></span>
+<span class="r-in"><span>  model <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>item <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">a</span>, <span class="va">b</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">a</span> <span class="op">==</span> <span class="va">b</span><span class="op">)</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  modulation <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>item <span class="op">=</span> <span class="op">~</span> <span class="va">b.precision</span> <span class="op">*</span> <span class="va">b.vividness</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  nuisance <span class="op">=</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">b.row</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">relational</span><span class="op">$</span><span class="va">model_predictors</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "item"                         "item.b.precision"            </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3] "item.b.vividness"             "item.b.precision.b.vividness"</span>
+<span class="r-in"><span><span class="co"># Pass to rsa_model(dataset, relational, distmethod = "pearson",</span></span></span>
+<span class="r-in"><span><span class="co">#   measure = "similarity", regtype = "lm", statistic = "beta").</span></span></span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

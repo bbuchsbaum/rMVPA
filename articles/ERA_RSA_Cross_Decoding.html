@@ -415,6 +415,234 @@ rows. It does not emit raw beta or per-term unsigned R-squared maps.
 Before conventional second-level analysis, Fisher-transform
 subject-level correlation or part-r maps where that model’s assumptions
 call for it.</p>
+<div class="section level3">
+<h3 id="model-item-correspondence-with-vividness-and-precision">Model item correspondence with vividness and precision<a class="anchor" aria-label="anchor" href="#model-item-correspondence-with-vividness-and-precision"></a>
+</h3>
+<p>To ask how several variables jointly modulate a representational
+relationship, use the existing pair-design and RSA model APIs. This
+keeps the neural measurement fixed: the relationship template defines
+<strong>what</strong> is represented, and a regression formula defines
+<strong>what changes its strength</strong>.</p>
+<p>For item correspondence, the response is the encoding–retrieval
+neural correlation matrix and the template is an item-ID match
+indicator. The model is</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>Y</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo>=</mo><msub><mi>a</mi><mi>j</mi></msub><mo>+</mo><msub><mi>M</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mrow><mo stretchy="true" form="prefix">(</mo><msub><mi>β</mi><mn>0</mn></msub><mo>+</mo><msub><mi>β</mi><mi>P</mi></msub><msub><mi>P</mi><mi>j</mi></msub><mo>+</mo><msub><mi>β</mi><mi>V</mi></msub><msub><mi>V</mi><mi>j</mi></msub><mo>+</mo><msub><mi>β</mi><mrow><mi>P</mi><mi>V</mi></mrow></msub><msub><mi>P</mi><mi>j</mi></msub><msub><mi>V</mi><mi>j</mi></msub><mo stretchy="true" form="postfix">)</mo></mrow><mo>+</mo><msub><mi>ε</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo>,</mo></mrow><annotation encoding="application/x-tex">
+Y_{ij} = a_j + M_{ij}\left(\beta_0 + \beta_P P_j +
+\beta_V V_j + \beta_{PV}P_jV_j\right) + \varepsilon_{ij},
+</annotation></semantics></math></p>
+<p>where
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>M</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">M_{ij}=1</annotation></semantics></math>
+for matching item IDs and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>a</mi><mi>j</mi></msub><annotation encoding="application/x-tex">a_j</annotation></semantics></math>
+is a separate background similarity for each retrieval observation.
+Precision and vividness describe the same retrieval trial; they do not
+create separate neural outcomes.</p>
+<p>First put both sets of neural observations in one dataset.
+Pair-design row indices address its training series, so an external test
+series must be concatenated explicitly:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">relational_dataset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mvpa_dataset.html">mvpa_dataset</a></span><span class="op">(</span></span>
+<span>  train_data <span class="op">=</span> <span class="fu">neuroim2</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/neuroim2/reference/concat-methods.html" class="external-link">concat</a></span><span class="op">(</span></span>
+<span>    <span class="va">toy</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">train_data</span>, <span class="va">toy</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">test_data</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  mask <span class="op">=</span> <span class="va">toy</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">n_encoding</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">toy</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">train_design</span><span class="op">)</span></span></code></pre></div>
+<p>Add a synthetic precision attribute and use retrieval trials with
+complete ratings. We retain all encoding observations and deliberately
+reverse the retrieval order. This produces a <strong>24 × 22</strong>
+relationship matrix, with correspondence determined by IDs rather than a
+diagonal. The two excluded retrieval trials change the analysis sample;
+the stored neural patterns are unchanged.</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">615</span><span class="op">)</span></span>
+<span><span class="va">retrieval_ratings</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  precision <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">item_keys</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  vividness <span class="op">=</span> <span class="va">toy</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">test_design</span><span class="op">$</span><span class="va">vividness</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">retrieval_rows</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rev.html" class="external-link">rev</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/complete.cases.html" class="external-link">complete.cases</a></span><span class="op">(</span><span class="va">retrieval_ratings</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">retrieval_features</span> <span class="op">&lt;-</span> <span class="va">retrieval_ratings</span><span class="op">[</span><span class="va">retrieval_rows</span>, , drop <span class="op">=</span> <span class="cn">FALSE</span><span class="op">]</span></span>
+<span><span class="va">retrieval_features</span><span class="op">[</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span></span>
+<span>  <span class="va">retrieval_features</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>Both attributes now use a one-standard-deviation scale over the
+retained retrieval observations. This makes a difference between their
+slopes a comparison on declared scales, rather than on arbitrary
+original units. Scale attributes before building the pair table. Pass
+only attribute columns as features: <code>item</code> and
+<code>row</code> are reserved metadata names.</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">relational_design</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pair_rsa_design.html">pair_rsa_design</a></span><span class="op">(</span></span>
+<span>  items_a <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="va">toy</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">train_design</span><span class="op">$</span><span class="va">item</span><span class="op">)</span>,</span>
+<span>  items_b <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="va">toy</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">test_design</span><span class="op">$</span><span class="va">item</span><span class="op">[</span><span class="va">retrieval_rows</span><span class="op">]</span><span class="op">)</span>,</span>
+<span>  pairs <span class="op">=</span> <span class="st">"between"</span>,</span>
+<span>  row_idx_a <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n_encoding</span><span class="op">)</span>,</span>
+<span>  row_idx_b <span class="op">=</span> <span class="va">n_encoding</span> <span class="op">+</span> <span class="va">retrieval_rows</span>,</span>
+<span>  features_b <span class="op">=</span> <span class="va">retrieval_features</span>,</span>
+<span>  model <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>item <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">a</span>, <span class="va">b</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">a</span> <span class="op">==</span> <span class="va">b</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  modulation <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>item <span class="op">=</span> <span class="op">~</span> <span class="va">b.precision</span> <span class="op">*</span> <span class="va">b.vividness</span><span class="op">)</span>,</span>
+<span>  nuisance <span class="op">=</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">b.row</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">relational_design</span><span class="op">$</span><span class="va">model_predictors</span></span>
+<span><span class="co">#&gt; [1] "item"                         "item.b.precision"            </span></span>
+<span><span class="co">#&gt; [3] "item.b.vividness"             "item.b.precision.b.vividness"</span></span></code></pre></div>
+<p>The four model columns are <code>item</code>,
+<code>item.b.precision</code>, <code>item.b.vividness</code>, and
+<code>item.b.precision.b.vividness</code>. The <code>item</code>
+coefficient is the matching advantage at precision and vividness zero;
+the next two are its conditional slopes, and the last is their
+interaction. <code>b.row</code> identifies the retrieval observation’s
+position in the pair design, independently of its item ID or dataset row
+index. Its factor supplies the retrieval-specific backgrounds. The model
+engine supplies the overall intercept.</p>
+<p>Do not add standalone <code>b.precision</code> or
+<code>b.vividness</code> to that background formula: unrestricted
+retrieval intercepts already absorb those predictors. Their products
+with item correspondence remain identifiable. The coefficient compiler
+rejects aliased designs. Missing feature values remove affected pairs
+during fitting; a background column without support on the remaining
+pairs can also make a design unidentifiable. Here, the explicit
+complete-case selection avoids creating intercepts for excluded
+retrieval trials.</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">relational_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/rsa_model.html">rsa_model</a></span><span class="op">(</span></span>
+<span>  dataset <span class="op">=</span> <span class="va">relational_dataset</span>,</span>
+<span>  design <span class="op">=</span> <span class="va">relational_design</span>,</span>
+<span>  distmethod <span class="op">=</span> <span class="st">"pearson"</span>,</span>
+<span>  measure <span class="op">=</span> <span class="st">"similarity"</span>,  <span class="co"># Pearson correlation, not 1 - correlation</span></span>
+<span>  regtype <span class="op">=</span> <span class="st">"lm"</span>,</span>
+<span>  statistic <span class="op">=</span> <span class="st">"beta"</span>,</span>
+<span>  contrasts <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    precision_minus_vividness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>      item.b.precision <span class="op">=</span> <span class="fl">1</span>, item.b.vividness <span class="op">=</span> <span class="op">-</span><span class="fl">1</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">relational_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span></span>
+<span>  <span class="va">relational_model</span>, <span class="va">region_mask</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">relational_metrics</span> <span class="op">&lt;-</span> <span class="va">relational_result</span><span class="op">$</span><span class="va">performance_table</span><span class="op">[</span></span>
+<span>  , <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"roinum"</span>, <span class="va">relational_design</span><span class="op">$</span><span class="va">model_predictors</span>,</span>
+<span>      <span class="st">"contrast_precision_minus_vividness"</span><span class="op">)</span></span>
+<span><span class="op">]</span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span></span>
+<span>  <span class="va">relational_metrics</span>, digits <span class="op">=</span> <span class="fl">4</span>,</span>
+<span>  col.names <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"ROI"</span>, <span class="st">"Item"</span>, <span class="st">"Precision"</span>, <span class="st">"Vividness"</span>, <span class="st">"P × V"</span>,</span>
+<span>                <span class="st">"Precision − vividness"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<thead><tr class="header">
+<th align="right">ROI</th>
+<th align="right">Item</th>
+<th align="right">Precision</th>
+<th align="right">Vividness</th>
+<th align="right">P × V</th>
+<th align="right">Precision − vividness</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="right">1</td>
+<td align="right">-0.0076</td>
+<td align="right">-0.0403</td>
+<td align="right">0.0056</td>
+<td align="right">0.0242</td>
+<td align="right">-0.0459</td>
+</tr>
+<tr class="even">
+<td align="right">2</td>
+<td align="right">-0.0560</td>
+<td align="right">-0.0034</td>
+<td align="right">-0.0175</td>
+<td align="right">0.0782</td>
+<td align="right">0.0141</td>
+</tr>
+<tr class="odd">
+<td align="right">3</td>
+<td align="right">0.0161</td>
+<td align="right">0.0119</td>
+<td align="right">-0.0490</td>
+<td align="right">0.1138</td>
+<td align="right">0.0609</td>
+</tr>
+</tbody>
+</table>
+<p>Positive slopes mean that item-specific neural correlation increases
+with the corresponding attribute, conditional on the other attribute and
+their interaction. The contrast compares the two slopes at the other
+attribute’s zero value. Nuisance coefficients are fitted internally and
+omitted from the default result table. The same specification can be
+passed to <code><a href="../reference/run_searchlight.html">run_searchlight()</a></code> to produce coefficient and
+contrast maps.</p>
+<p>The attributes here are illustrative and precision was not used to
+generate the neural patterns. The table demonstrates the estimands; it
+supplies no evidence for a precision or vividness effect in experimental
+data.</p>
+<div class="section level4">
+<h4 id="recovering-the-familiar-matching-minus-nonmatching-analysis">Recovering the familiar matching-minus-nonmatching analysis<a class="anchor" aria-label="anchor" href="#recovering-the-familiar-matching-minus-nonmatching-analysis"></a>
+</h4>
+<p>With just an intercept and the item template
+(<code>modulation = list(item = ~ 1)</code> and no nuisance terms), the
+coefficient is exactly mean matching similarity minus mean nonmatching
+similarity over eligible pairs. With the retrieval-specific backgrounds
+above, every retained retrieval has one match and 23 nonmatches. Equally
+weighted pairwise least squares therefore gives the same coefficients as
+the trial-level regression</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>d</mi><mi>j</mi></msub><mo>=</mo><msub><mi>β</mi><mn>0</mn></msub><mo>+</mo><msub><mi>β</mi><mi>P</mi></msub><msub><mi>P</mi><mi>j</mi></msub><mo>+</mo><msub><mi>β</mi><mi>V</mi></msub><msub><mi>V</mi><mi>j</mi></msub><mo>+</mo><msub><mi>β</mi><mrow><mi>P</mi><mi>V</mi></mrow></msub><msub><mi>P</mi><mi>j</mi></msub><msub><mi>V</mi><mi>j</mi></msub><mo>+</mo><msub><mi>e</mi><mi>j</mi></msub><mo>,</mo><mspace width="2.0em"></mspace><msub><mi>d</mi><mi>j</mi></msub><mo>=</mo><msub><mi>Y</mi><mrow><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">h</mi></mrow><mo>,</mo><mi>j</mi></mrow></msub><mo>−</mo><msub><mover><mi>Y</mi><mo accent="true">¯</mo></mover><mrow><mrow><mi mathvariant="normal">n</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">m</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">h</mi></mrow><mo>,</mo><mi>j</mi></mrow></msub><mi>.</mi></mrow><annotation encoding="application/x-tex">
+d_j = \beta_0 + \beta_P P_j + \beta_V V_j + \beta_{PV}P_jV_j + e_j,
+\qquad
+d_j = Y_{\mathrm{match},j} - \overline{Y}_{\mathrm{nonmatch},j}.
+</annotation></semantics></math></p>
+<p>The vignette checks this identity numerically in each ROI, using item
+IDs to find the match after retrieval reordering.</p>
+<p>Item IDs can repeat, and the two observation sets can differ in size.
+Actual repeated presentations or retrieval attempts retain their own
+neural rows and attributes; the design does not average them. When
+eligible matching and nonmatching counts vary across retrieval
+observations, the reduced regression uses weights
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>m</mi><mi>j</mi></msub><msub><mi>r</mi><mi>j</mi></msub><mi>/</mi><mo stretchy="false" form="prefix">(</mo><msub><mi>m</mi><mi>j</mi></msub><mo>+</mo><msub><mi>r</mi><mi>j</mi></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">m_jr_j/(m_j+r_j)</annotation></semantics></math>,
+where
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>m</mi><mi>j</mi></msub><annotation encoding="application/x-tex">m_j</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>r</mi><mi>j</mi></msub><annotation encoding="application/x-tex">r_j</annotation></semantics></math>
+are those counts. The equal-weight identity above depends on its stated
+comparison structure. Additional relationship templates or structured
+background terms generally require the full joint model.</p>
+</div>
+<div class="section level4">
+<h4 id="extending-the-specification-and-keeping-its-limits-clear">Extending the specification and keeping its limits clear<a class="anchor" aria-label="anchor" href="#extending-the-specification-and-keeping-its-limits-clear"></a>
+</h4>
+<p>A measured retrieval-level hippocampal score can enter
+<code>features_b</code> as <code>hippocampal_ers</code>; its moderation
+formula could be
+<code>~ b.precision * b.vividness + b.hippocampal_ers * (b.precision + b.vividness)</code>.
+A feature or task factor can likewise enter the formula. A semantic or
+feature relationship belongs in another named <code>model</code>
+template, optionally with its own modulation formula. These are changes
+to the design, using the same fit and ROI/searchlight execution.</p>
+<p>This cross-phase model estimates <strong>direct item
+correspondence</strong>. Preserved encoding and retrieval geometry uses
+a different observable: relationships within each phase. An orthogonal
+rotation can preserve geometry while changing direct correspondence.
+<code><a href="../reference/era_rsa_model.html">era_rsa_model()</a></code> retains its geometry and top-1
+identification summaries; top-1 accuracy is a nonlinear readout, not a
+relational regression coefficient. The present fixed-template interface
+does not automatically construct an ROI-specific encoding-geometry
+predictor.</p>
+<p>Treat these coefficients as participant-level estimates. Pairwise
+cells share neural observations, so their count does not provide an
+independent sample size for conventional t or F inference. The
+coefficient path does not provide calibrated standard errors, a
+population model, or conditional permutation tests for individual
+slopes. Multi-predictor RSA permutation support is for an explicitly
+specified joint no-association null. Population inference must respect
+participant sampling and, when the claim generalizes over stimuli,
+stimulus sampling. Nuisance adjustment does not remove first-level
+measurement bias. Estimated hippocampal scores or neural geometry
+predictors also need independent measurement partitions or an
+appropriate measurement model for claims that go beyond conditional
+associations.</p>
+</div>
+</div>
 </div>
 <div class="section level2">
 <h2 id="when-do-you-need-era-partitioning">4. When do you need ERA partitioning?<a class="anchor" aria-label="anchor" href="#when-do-you-need-era-partitioning"></a>
@@ -429,7 +657,7 @@ structure is accounted for?</p>
 compressed. For example, two regions could have similar top-1 accuracy,
 but one may carry item-specific diagonal similarity while another mainly
 preserves the relative geometry among items.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">partition_ms</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/era_partition_model.html">era_partition_model</a></span><span class="op">(</span></span>
 <span>  dataset <span class="op">=</span> <span class="va">toy</span><span class="op">$</span><span class="va">dataset</span>,</span>
 <span>  design  <span class="op">=</span> <span class="va">toy</span><span class="op">$</span><span class="va">design</span>,</span>
@@ -441,7 +669,7 @@ preserves the relative geometry among items.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">partition_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">partition_ms</span>, <span class="va">region_mask</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">partition_cols</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>  <span class="st">"roinum"</span>,</span>
 <span>  <span class="st">"n_items"</span>,</span>
@@ -515,7 +743,7 @@ or when there are too few paired items for stable held-out alignment;
 </h2>
 <p>We can also run ERA-RSA in a searchlight mode to obtain whole-brain
 maps of the same metrics.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">456</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">era_sl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span></span>
@@ -556,7 +784,7 @@ maps of the same metrics.</p>
 <code>results</code>: a list of <code>NeuroVol</code> maps, one per
 metric.</li>
 </ul>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">era_sl</span><span class="op">$</span><span class="va">metrics</span></span>
 <span><span class="co">#&gt;  [1] "n_items"                       "era_diag_mean"                </span></span>
 <span><span class="co">#&gt;  [3] "era_diag_minus_off"            "era_diag_minus_off_same_block"</span></span>
@@ -567,7 +795,7 @@ metric.</li>
 <span><span class="co">#&gt; [13] "era_assoc_n"                   "era_assoc_df_resid"</span></span></code></pre></div>
 <p>We can save the searchlight maps using
 <code><a href="../reference/save_results.html">save_results()</a></code>:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">out_dir</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="st">"era_rsa_sl_"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/files2.html" class="external-link">dir.create</a></span><span class="op">(</span><span class="va">out_dir</span>, showWarnings <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span></span>
@@ -579,7 +807,7 @@ metric.</li>
 favorite neuroimaging software.</p>
 <p>For association-focused HPC analyses, combine the item-only model
 above with the shard backend:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">era_sl_hpc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_searchlight.html">run_searchlight</a></span><span class="op">(</span></span>
 <span>  <span class="va">era_assoc_ms</span>,</span>
 <span>  radius <span class="op">=</span> <span class="fl">2</span>,</span>
@@ -624,7 +852,7 @@ keys.</p>
 by the cross-run diagnostic. You pass <code>item_run_enc</code> and
 <code>item_run_ret</code>; ERA-RSA derives the same-run RDMs internally
 for <code>geom_cor_run_partial</code>.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">items</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/levels.html" class="external-link">levels</a></span><span class="op">(</span><span class="va">toy</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">train_design</span><span class="op">$</span><span class="va">item</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">Mode</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">{</span> <span class="va">ux</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span>; <span class="va">ux</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/which.min.html" class="external-link">which.max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tabulate.html" class="external-link">tabulate</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/match.html" class="external-link">match</a></span><span class="op">(</span><span class="va">x</span>, <span class="va">ux</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">]</span> <span class="op">}</span></span>
@@ -642,7 +870,7 @@ for <code>geom_cor_run_partial</code>.</p>
 <p>You can add temporal or block RDMs to <code>confound_rdms</code> and
 choose which groups enter the general partial-geometry metric with
 <code>partial_against</code>.</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">time_enc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">items</span><span class="op">)</span>, <span class="va">items</span><span class="op">)</span></span>
 <span><span class="va">time_enc_rdm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/outer.html" class="external-link">outer</a></span><span class="op">(</span><span class="va">time_enc</span>, <span class="va">time_enc</span>, <span class="st">"-"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">time_enc_rdm</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">time_enc_rdm</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">items</span></span>
@@ -659,7 +887,7 @@ choose which groups enter the general partial-geometry metric with
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">era_conf_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">era_ms_conf</span>, <span class="va">region_mask</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">era_conf_res</span><span class="op">$</span><span class="va">performance_table</span><span class="op">[</span></span>
 <span>  ,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"roinum"</span>, <span class="st">"geom_cor"</span>, <span class="st">"geom_cor_partial"</span>,</span>
@@ -708,7 +936,7 @@ computes item-level whole-mask RDMs once and adds them as
 <code>global_nuisance</code> makes the effective partial model
 <code>c("run", "global")</code>; set <code>partial_against</code>
 explicitly if you want a different nuisance set.</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">item_block</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">item_run_enc</span>, levels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sort.html" class="external-link">sort</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">item_run_enc</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">era_ms_global</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/era_rsa_model.html">era_rsa_model</a></span><span class="op">(</span></span>
@@ -723,7 +951,7 @@ explicitly if you want a different nuisance set.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">era_global_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">era_ms_global</span>, <span class="va">region_mask</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">era_global_res</span><span class="op">$</span><span class="va">performance_table</span><span class="op">[</span></span>
 <span>  ,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"roinum"</span>, <span class="st">"geom_cor_partial"</span>, <span class="st">"geom_cor_run_partial"</span>,</span>
@@ -741,7 +969,7 @@ explicitly if you want a different nuisance set.</p>
 </h3>
 <p><code>item_block</code> encodes a per-item block/condition, typically
 derived from <code>design$train_design$block_var</code>:</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">era_ms_block</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/era_rsa_model.html">era_rsa_model</a></span><span class="op">(</span></span>
 <span>  dataset    <span class="op">=</span> <span class="va">toy</span><span class="op">$</span><span class="va">dataset</span>,</span>
 <span>  design     <span class="op">=</span> <span class="va">toy</span><span class="op">$</span><span class="va">design</span>,</span>
@@ -786,7 +1014,7 @@ separates first-order cross-state similarity from second-order geometry
 preservation. When <code>auto_nuisance</code> includes
 <code>"run"</code>, the model adds same-run nuisance regressors to both
 levels of the partition.</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">partition_nuis_ms</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/era_partition_model.html">era_partition_model</a></span><span class="op">(</span></span>
 <span>  dataset <span class="op">=</span> <span class="va">toy</span><span class="op">$</span><span class="va">dataset</span>,</span>
 <span>  design  <span class="op">=</span> <span class="va">toy</span><span class="op">$</span><span class="va">design</span>,</span>
@@ -800,7 +1028,7 @@ levels of the partition.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">partition_nuis_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">partition_nuis_ms</span>, <span class="va">region_mask</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">partition_nuis_res</span><span class="op">$</span><span class="va">performance_table</span><span class="op">[</span></span>
 <span>  ,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"roinum"</span>, <span class="st">"first_order_delta_r2"</span>, <span class="st">"second_order_delta_r2"</span>,</span>
@@ -827,7 +1055,7 @@ and <code>second_order_nuisance</code>.</p>
 first-order partition receives <code>global_cross</code>; the
 second-order partition receives <code>global_enc</code> and
 <code>global_ret</code>.</p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">partition_global_ms</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/era_partition_model.html">era_partition_model</a></span><span class="op">(</span></span>
 <span>  dataset <span class="op">=</span> <span class="va">toy</span><span class="op">$</span><span class="va">dataset</span>,</span>
 <span>  design  <span class="op">=</span> <span class="va">toy</span><span class="op">$</span><span class="va">design</span>,</span>
@@ -838,7 +1066,7 @@ second-order partition receives <code>global_enc</code> and
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">partition_global_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">partition_global_ms</span>, <span class="va">region_mask</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">partition_global_res</span><span class="op">$</span><span class="va">performance_table</span><span class="op">[</span></span>
 <span>  ,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"roinum"</span>, <span class="st">"first_order_delta_r2"</span>, <span class="st">"second_order_delta_r2"</span>,</span>
@@ -872,6 +1100,11 @@ variables.</li>
 <code><a href="../reference/era_partition_model.html">era_partition_model()</a></code> separates direct item transfer,
 variance uniquely explained by same-item similarity, and variance
 explained by preserved second-order geometry.</li>
+<li>
+<code>pair_rsa_design(..., modulation = ...)</code> with
+<code>rsa_model(..., measure = "similarity", regtype = "lm", statistic = "beta")</code>
+models how item correspondence varies jointly with retrieval attributes,
+using explicit backgrounds and coefficient contrasts.</li>
 <li>It integrates naturally with:
 <ul>
 <li>

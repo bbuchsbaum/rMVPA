@@ -102,12 +102,12 @@ confound RDMs.</p>
 <span class="r-in"><span><span class="va">repmed_des</span> <span class="op">&lt;-</span> <span class="fu"><a href="repmed_design.html">repmed_design</a></span><span class="op">(</span>items <span class="op">=</span> <span class="va">items</span>, X_rdm <span class="op">=</span> <span class="va">X</span>, Y_rdm <span class="op">=</span> <span class="va">Y</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu">repmed_model</span><span class="op">(</span><span class="va">ds</span><span class="op">$</span><span class="va">dataset</span>, <span class="va">ds</span><span class="op">$</span><span class="va">design</span>, <span class="va">repmed_des</span>, key_var <span class="op">=</span> <span class="op">~</span> <span class="va">.rownum</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="run_regional-methods.html">run_regional</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">ds</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">mask</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-10-08 02:06:33] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-10-08 15:55:39] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">1</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">1</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-10-08 02:06:33] run_regional: 1 ROIs processed (success=1, errors=0)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-10-08 15:55:39] run_regional: 1 ROIs processed (success=1, errors=0)</span>
 <span class="r-in"><span><span class="va">res</span><span class="op">$</span><span class="va">performance_table</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 1 × 10</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   roinum n_items n_pairs   med_a med_b med_cprime  med_c med_indirect</span>

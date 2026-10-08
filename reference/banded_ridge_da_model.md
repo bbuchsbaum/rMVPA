@@ -274,12 +274,12 @@ ms <- grouped_ridge_da_model(
 region_mask <- neuroim2::NeuroVol(array(1, c(3, 3, 3)),
                                   neuroim2::space(dset$mask))
 res <- run_regional(ms, region_mask)
-#> INFO [2026-10-08 02:06:04] 
+#> INFO [2026-10-08 15:55:07] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 1
 #> - Processed: 1
 #> - Skipped: 0
-#> INFO [2026-10-08 02:06:04] run_regional: 1 ROIs processed (success=1, errors=0)
+#> INFO [2026-10-08 15:55:07] run_regional: 1 ROIs processed (success=1, errors=0)
 res$performance_table
 #> # A tibble: 1 × 8
 #>   roinum recall_r2_full recall_mse_full target_r2_full target_mse_full

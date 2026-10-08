@@ -24,7 +24,8 @@ pair_rsa_design(
   block_var_b = NULL,
   keep_intra_run = FALSE,
   row_idx_a = NULL,
-  row_idx_b = NULL
+  row_idx_b = NULL,
+  modulation = NULL
 )
 ```
 
@@ -55,7 +56,10 @@ pair_rsa_design(
   Optional named list of nuisance pair predictors using the same
   accepted forms as `model`. Included in the RSA design matrix but
   excluded from model-space fingerprints returned by
-  `rsa_model(..., return_fingerprint = TRUE)`.
+  `rsa_model(..., return_fingerprint = TRUE)`. Alternatively, a
+  right-hand-side formula evaluated on pair metadata, e.g.
+  `~ factor(b.row)` for retrieval-observation intercepts. Its intercept
+  is supplied by the regression engine, rather than duplicated here.
 
 - pairs:
 
@@ -97,6 +101,14 @@ pair_rsa_design(
 
   Integer vector of dataset row indices for `items_b`. Required for
   `pairs = "between"`.
+
+- modulation:
+
+  Optional named list of right-hand-side formulas, keyed by names in
+  `model`. Each formula's design columns multiply that relationship
+  template. For example, `list(item = ~ b.precision * b.vividness)`
+  expands `item` into an intercept and three modulated columns.
+  Templates omitted from this list are unchanged.
 
 ## Value
 
@@ -142,6 +154,17 @@ between-domain designs are dispatched on the `pair_kind` field, which
 causes `train_model.rsa_model` to compute a rectangular neural-pair
 dissimilarity block instead of the lower triangle.
 
+Formula metadata exposes `a.row`/`b.row` (observation positions),
+`a.item`/`b.item` (item IDs), and feature columns prefixed with
+`a.`/`b.`. Repeated item IDs retain separate observations. Within-domain
+formulas must be invariant to swapping the two sides; declare a
+symmetric rule such as `~ I((a.vividness + b.vividness) / 2)`. Formula
+evaluation retains missing rows; coefficient fitting uses complete
+eligible pairs. Formula transformations operate on pair metadata before
+masking. To standardize a trial attribute over observations rather than
+pairs, standardize it in `features_a`/`features_b` first. Background
+columns must remain identifiable on the complete eligible pairs.
+
 ## See also
 
 [`rsa_design`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_design.md),
@@ -160,4 +183,20 @@ des <- pair_rsa_design(items, model = list(rdm1 = R1, rdm2 = R2))
 lengths(des$model_mat)
 #> rdm1 rdm2 
 #>   28   28 
+
+# Item correspondence modulated by retrieval attributes.
+# Neural observations occupy encoding rows 1:8 and retrieval rows 9:16.
+retrieval <- data.frame(precision = rnorm(8), vividness = rnorm(8))
+relational <- pair_rsa_design(
+  items_a = 1:8, items_b = 1:8, pairs = "between",
+  row_idx_a = 1:8, row_idx_b = 9:16, features_b = retrieval,
+  model = list(item = function(a, b) as.numeric(a == b)),
+  modulation = list(item = ~ b.precision * b.vividness),
+  nuisance = ~ factor(b.row)
+)
+relational$model_predictors
+#> [1] "item"                         "item.b.precision"            
+#> [3] "item.b.vividness"             "item.b.precision.b.vividness"
+# Pass to rsa_model(dataset, relational, distmethod = "pearson",
+#   measure = "similarity", regtype = "lm", statistic = "beta").
 ```

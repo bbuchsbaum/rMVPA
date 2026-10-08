@@ -470,6 +470,27 @@ attributes than as a precomputed matrix:</p>
 <p>The function is evaluated once over the pair table; you don’t need to
 materialize a square matrix.</p>
 </div>
+<div class="section level3">
+<h3 id="relationships-whose-strength-varies-with-attributes">Relationships whose strength varies with attributes<a class="anchor" aria-label="anchor" href="#relationships-whose-strength-varies-with-attributes"></a>
+</h3>
+<p>The same pair design accepts <code>modulation</code>, a named list of
+regression formulas that multiply the corresponding model templates. For
+example,
+<code>modulation = list(item = ~ b.precision * b.vividness)</code>
+describes retrieval-side modulation of an item-correspondence template.
+Within-domain formulas must declare a symmetric rule for combining the
+two observations’ attributes. See the <a href="RSA.html#let-a-relationship-vary-with-trial-attributes">RSA
+vignette</a> for a within-domain example and the <a href="ERA_RSA_Cross_Decoding.html#model-item-correspondence-with-vividness-and-precision">ERA-RSA
+vignette</a> for rectangular correspondence, backgrounds, and
+coefficient contrasts.</p>
+<p>Expanded model columns define the model subspace available to
+fingerprint construction; nuisance columns remain excluded. A
+fingerprint is a projection onto that subspace, whereas
+<code>statistic = "beta"</code> returns adjusted regression
+coefficients. Connectivity between fingerprints does not test a
+difference between modulation coefficients or supply their inferential
+uncertainty.</p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="searchlight-the-n_centers²-problem-and-how-to-avoid-it">Searchlight: the n_centers² problem and how to avoid it<a class="anchor" aria-label="anchor" href="#searchlight-the-n_centers%C2%B2-problem-and-how-to-avoid-it"></a>

@@ -35,7 +35,7 @@ print(info)
 #> R Version                : N/A
 #> Platform                 : x86_64-pc-linux-gnu
 #> Operating System         : Linux 6.17.0-1022-azure
-#> Node Name                : runnervm8df0l
+#> Node Name                : runnervmmprz5
 #> User                     : runner
 #> Locale                   : LC_CTYPE=C.UTF-8;LC_NUMERIC=C;LC_TIME=C.UTF-8;LC_COLLATE=C;LC_MONETARY=C.UTF-8;LC_MESSAGES=C.UTF-8;LC_PAPER=C.UTF-8;LC_NAME=C;LC_ADDRESS=C;LC_TELEPHONE=C;LC_MEASUREMENT=C.UTF-8;LC_IDENTIFICATION=C
 #> rMVPA Version            : 0.1.3

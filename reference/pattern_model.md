@@ -215,14 +215,14 @@ res$performance_table
 #> # A tibble: 1 × 4
 #>   Accuracy    AUC logloss rank_mean
 #>      <dbl>  <dbl>   <dbl>     <dbl>
-#> 1      0.3 -0.125    3.32      1.33
+#> 1    0.367 0.0517    3.49      1.67
 
 # sparse forward patterns, with the penalty chosen by nested CV
 sparse_spec <- pattern_model(ds$dataset, ds$design, rank = 1,
                              penalty = list(sparse = "auto"))
 run_global(sparse_spec)$performance_table
 #> # A tibble: 1 × 5
-#>   Accuracy    AUC logloss rank_mean n_selected
-#>      <dbl>  <dbl>   <dbl>     <dbl>      <dbl>
-#> 1    0.267 -0.106    1.32         1       13.3
+#>   Accuracy   AUC logloss rank_mean n_selected
+#>      <dbl> <dbl>   <dbl>     <dbl>      <dbl>
+#> 1      0.4 0.106    1.16         1       15.7
 ```

@@ -304,12 +304,41 @@
 
 ## rMVPA 0.1.3
 
+- Ordinary
+  [`rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md)
+  now supports `distmethod = "crossvalidated_euclidean"` with explicit
+  condition IDs and independent, complete partitions. Squared
+  per-feature distances retain negative values and are not labelled
+  Mahalanobis. `rsa_design(pair_mask = ...)` selects the same
+  distinct-item pairs for neural responses, predictors, nuisance terms
+  and diagnostics. Missing condition/run cells are rejected.
+  Crossvalidated Euclidean searchlights use the general dispatcher;
+  unsupported optimized engines are explicitly rejected.
+
 - [`rsa_neural_rdm()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_neural_rdm.md)
   exposes full Pearson or Spearman neural correlation-distance matrices
   for reliability and noise-ceiling workflows. It preserves observation
   names and order, supports stimulus-mean centering, and rejects
   nonfinite inputs and constant centered patterns. Run/item exclusions
   remain with the caller or RSA design.
+
+- [`pair_rsa_design()`](https://bbuchsbaum.github.io/rMVPA/reference/pair_rsa_design.md)
+  supports per-template `modulation` formulas and formula-based nuisance
+  terms using side-qualified observation metadata. Repeated item IDs
+  retain separate observations; within-domain formulas require an
+  explicit symmetric rule. Aliases are checked against the full
+  regression design, including its intercept.
+
+- [`rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md)
+  adds opt-in correlation similarity (`measure = "similarity"`), raw
+  model coefficients (`regtype = "lm", statistic = "beta"`), and named
+  coefficient contrasts. Cached QR queries contract directly with finite
+  normalized patterns; missing neural cells use an eligible-pair
+  fallback. Classical and modulated ERA are exact special cases under
+  their stated weighting/background assumptions. These are
+  participant-level effects; calibrated conditional inference and
+  measurement-error modeling remain separate requirements. Existing
+  distance and statistic defaults are unchanged.
 
 - Pattern-model vignettes now teach the method as a three-article path:
   [`vignette("Pattern_Model")`](https://bbuchsbaum.github.io/rMVPA/articles/Pattern_Model.md)

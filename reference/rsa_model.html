@@ -52,7 +52,12 @@
 <span>  pattern_center <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"none"</span>, <span class="st">"stimulus_mean"</span><span class="op">)</span>,</span>
 <span>  return_fingerprint <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  fingerprint_method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pearson"</span>, <span class="st">"spearman"</span><span class="op">)</span>,</span>
-<span>  fingerprint_basis <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pca"</span>, <span class="st">"qr"</span><span class="op">)</span></span>
+<span>  fingerprint_basis <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pca"</span>, <span class="st">"qr"</span><span class="op">)</span>,</span>
+<span>  measure <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"distance"</span>, <span class="st">"similarity"</span><span class="op">)</span>,</span>
+<span>  statistic <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  contrasts <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  condition_labels <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  crossval <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -70,7 +75,8 @@
 
 <dt id="arg-distmethod">distmethod<a class="anchor" aria-label="anchor" href="#arg-distmethod"></a></dt>
 <dd><p>A character string specifying the method used to compute distances between observations.
-One of: <code>"pearson"</code> or <code>"spearman"</code> (defaults to "spearman").</p></dd>
+One of: <code>"pearson"</code>, <code>"spearman"</code> (default), or
+<code>"crossvalidated_euclidean"</code> (see below).</p></dd>
 
 
 <dt id="arg-regtype">regtype<a class="anchor" aria-label="anchor" href="#arg-regtype"></a></dt>
@@ -122,6 +128,43 @@ or <code>"spearman"</code> (rank-then-standardize). Default <code>"pearson"</cod
 <dd><p>Basis used to span the model RDM subspace when
 <code>return_fingerprint = TRUE</code>: <code>"pca"</code> (default) or <code>"qr"</code>.</p></dd>
 
+
+<dt id="arg-measure">measure<a class="anchor" aria-label="anchor" href="#arg-measure"></a></dt>
+<dd><p>Neural pair measurement: <code>"distance"</code> (default,
+correlation distance) or <code>"similarity"</code> (correlation). The choice
+applies after pattern centering and uses <code>distmethod</code> in either case.</p></dd>
+
+
+<dt id="arg-statistic">statistic<a class="anchor" aria-label="anchor" href="#arg-statistic"></a></dt>
+<dd><p><code>NULL</code> preserves the existing output selected by
+<code>regtype</code>/<code>semipartial</code>. Use <code>"beta"</code> with ordinary,
+unconstrained <code>regtype = "lm"</code> to return raw model coefficients.
+Nuisance coefficients remain internal. Fixed designs cache QR coefficient
+queries; missing neural cells rebuild the query for eligible pairs.</p></dd>
+
+
+<dt id="arg-contrasts">contrasts<a class="anchor" aria-label="anchor" href="#arg-contrasts"></a></dt>
+<dd><p>Optional uniquely named list of named numeric coefficient
+weights, available with <code>statistic = "beta"</code>. Coefficient names are
+those in <code>design$model_mat</code>, plus <code>"(Intercept)"</code>. Outputs are
+named <code>contrast_&lt;name&gt;</code>.</p></dd>
+
+
+<dt id="arg-condition-labels">condition_labels<a class="anchor" aria-label="anchor" href="#arg-condition-labels"></a></dt>
+<dd><p>Observation-aligned vector of condition IDs, required
+with <code>distmethod = "crossvalidated_euclidean"</code>. Repeated observations
+of a condition are averaged within each partition. Its unique values must
+equal <code>design$condition_ids</code>; the RDM order comes from the design.</p></dd>
+
+
+<dt id="arg-crossval">crossval<a class="anchor" aria-label="anchor" href="#arg-crossval"></a></dt>
+<dd><p>Independent-partition specification, for example
+<code>blocked_cross_validation(run_ids)</code>. Required only for crossvalidated
+Euclidean RSA and stored as <code>model$crossval</code>. Partitions must be disjoint,
+nonempty, exhaustive and at least two in number. Every condition must be
+observed in every partition. Missing cells are rejected at construction;
+nonfinite neural values fail the affected ROI rather than becoming zeros.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -134,6 +177,47 @@ or <code>"spearman"</code> (rank-then-standardize). Default <code>"pearson"</cod
 <li><p><code>design_diagnostics</code>: an <code>rsa_design_diagnostics</code> object
         (see <code><a href="rsa_design_diagnostics.html">rsa_design_diagnostics</a></code>)</p></li>
 </ul></div>
+    <div class="section level2">
+    <h2 id="crossvalidated-euclidean-distances">Crossvalidated Euclidean distances<a class="anchor" aria-label="anchor" href="#crossvalidated-euclidean-distances"></a></h2>
+
+
+<p>For each distinct condition pair, average the inner products of its difference
+patterns over all ordered pairs of independent partitions, then divide by the
+number of features. This estimates a squared Euclidean distance per feature,
+  in squared input units, and retains negative estimates. No whitening is
+performed: this is not a Mahalanobis distance. All declared ROI features,
+including constant columns, are retained in the normalization; nonfinite
+columns fail the ROI instead of being removed by the shared ROI filter. Independent run IDs must be
+supplied separately from the unique condition IDs used by the feature RDMs.
+The caller is responsible for physical independence of partitions.</p>
+<p>This mode supports ordinary <code>rsa_design</code>, <code>measure = "distance"</code>,
+and the general searchlight dispatcher (<code>engine = "auto"</code> or
+<code>"legacy"</code>). Optimized engines, including <code>"rsa_fast"</code>, are
+explicitly rejected. Correlation fits use <code>regtype</code> to select Pearson
+or Spearman association; historical correlation-distance behavior is unchanged.
+It does not change <code>contrast_rsa_model</code>'s second-moment estimand.
+Item permutations relabel conditions jointly across all partitions and must
+preserve an explicit pair mask; specify suitable exchangeability blocks using
+<code>block_var</code> and <code>keep_intra_run = TRUE</code> when retaining within-block
+pairs. Pair masks alone do not establish exchangeability.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="relational-coefficients">Relational coefficients<a class="anchor" aria-label="anchor" href="#relational-coefficients"></a></h2>
+
+
+<p>Combine <code>pair_rsa_design(..., modulation = ...)</code> with
+<code>measure = "similarity", regtype = "lm", statistic = "beta"</code> to
+estimate modulated relationships. For balanced one-to-one correspondence
+and retrieval-observation intercepts, these coefficients equal regression
+on matching-minus-nonmatching ERA scores. Unequal eligible candidate counts
+generally imply a weighted reduction. Coefficient queries are conditional
+on the specified measurement and fixed templates; they do not correct
+first-level measurement bias or error in estimated neural predictors.
+Pair cells are dependent. These outputs provide participant-level effects,
+not calibrated standard errors or population inference. Existing label
+permutations retain their joint-null restriction for multiple predictors;
+they do not test a modulation coefficient conditional on other terms.</p>
+    </div>
     <div class="section level2">
     <h2 id="effective-support-of-the-design">Effective support of the design<a class="anchor" aria-label="anchor" href="#effective-support-of-the-design"></a></h2>
 
@@ -200,6 +284,21 @@ are anti-conservative.</p>
 <span class="r-in"><span><span class="co"># Train the model using a trial-by-feature matrix</span></span></span>
 <span class="r-in"><span><span class="va">fit_params</span> <span class="op">&lt;-</span> <span class="fu"><a href="train_model.html">train_model</a></span><span class="op">(</span><span class="va">rsa_mod_sp</span>, <span class="va">data_mat</span>, y <span class="op">=</span> <span class="cn">NULL</span>, indices <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="co"># 'fit_params' = named vector of semi-partial correlations for each predictor</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Condition-level feature RSA across three independent runs:</span></span></span>
+<span class="r-in"><span><span class="va">ids</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"item"</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">6</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">recording</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">2</span>, each <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">pairs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/outer.html" class="external-link">outer</a></span><span class="op">(</span><span class="va">recording</span>, <span class="va">recording</span>, <span class="va">`==`</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/diag.html" class="external-link">diag</a></span><span class="op">(</span><span class="va">pairs</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="cn">FALSE</span></span></span>
+<span class="r-in"><span><span class="va">cv_design</span> <span class="op">&lt;-</span> <span class="fu"><a href="rsa_design.html">rsa_design</a></span><span class="op">(</span><span class="op">~</span> <span class="va">feature</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>feature <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/dist.html" class="external-link">dist</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">6</span><span class="op">)</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                        condition_ids <span class="op">=</span> <span class="va">ids</span>, pair_mask <span class="op">=</span> <span class="va">pairs</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">cv_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="gen_sample_dataset.html">gen_sample_dataset</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">2</span>, <span class="fl">2</span><span class="op">)</span>, <span class="fl">18</span>, blocks <span class="op">=</span> <span class="fl">3</span><span class="op">)</span><span class="op">$</span><span class="va">dataset</span></span></span>
+<span class="r-in"><span><span class="va">cv_model</span> <span class="op">&lt;-</span> <span class="fu">rsa_model</span><span class="op">(</span><span class="va">cv_data</span>, <span class="va">cv_design</span>,</span></span>
+<span class="r-in"><span>  distmethod <span class="op">=</span> <span class="st">"crossvalidated_euclidean"</span>,</span></span>
+<span class="r-in"><span>  condition_labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="va">ids</span>, <span class="fl">3</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  crossval <span class="op">=</span> <span class="fu"><a href="cross_validation.html">blocked_cross_validation</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">3</span>, each <span class="op">=</span> <span class="fl">6</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="co"># run_searchlight(cv_model, radius = 4, engine = "legacy")</span></span></span>
+<span class="r-in"><span><span class="co"># Six recordings with ten unique conditions each would retain 270 pairs.</span></span></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

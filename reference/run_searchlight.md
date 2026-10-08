@@ -121,7 +121,7 @@ Without progressr, only coarse batch-level log messages are shown.
     radius = 3,            # 3mm radius
     method = "standard"    # Use standard searchlight
   )
-#> INFO [2026-10-08 02:06:39] searchlight engine: sda_fast
+#> INFO [2026-10-08 15:55:45] searchlight engine: sda_fast
   
   # Run with custom batch size for memory management
   # results <- run_searchlight(

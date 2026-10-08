@@ -100,7 +100,10 @@ predictors, it does not certify those that can.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>For <code><a href="pair_rsa_design.html">pair_rsa_design</a></code> objects in between-domain mode the item
+    <p>With an explicit <code>pair_mask</code>, only items participating in retained pairs
+count toward effective support. The full item universe is still used for
+condition alignment and item permutations.</p>
+<p>For <code><a href="pair_rsa_design.html">pair_rsa_design</a></code> objects in between-domain mode the item
 count is <code>n_a + n_b</code>, since each item of either set enters every pair
 with the other set.</p>
     </div>
