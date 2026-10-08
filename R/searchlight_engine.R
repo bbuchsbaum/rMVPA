@@ -134,6 +134,9 @@ explain_searchlight_engine <- function(model_spec,
                                             gamma = NULL,
                                             verbose = FALSE,
                                             ...) {
+  if (inherits(model_spec, "rsa_model")) {
+    .resolve_searchlight_engine(model_spec, method, engine)
+  }
   list(
     handled = FALSE,
     result = NULL,
@@ -158,6 +161,11 @@ explain_searchlight_engine <- function(model_spec,
 #' @keywords internal
 #' @noRd
 .resolve_searchlight_engine <- function(model_spec, method, engine = "auto") {
+  if (inherits(model_spec, "rsa_model") &&
+      !engine %in% c("auto", "legacy")) {
+    stop("Ordinary RSA supports engine = 'auto' or 'legacy' only; 'rsa_fast' and other optimized engines are not implemented for this model.",
+         call. = FALSE)
+  }
   if (inherits(model_spec, "era_rsa_model")) {
     return(.resolve_searchlight_engine.era_rsa_model(model_spec, method, engine))
   }

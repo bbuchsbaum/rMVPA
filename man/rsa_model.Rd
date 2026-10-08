@@ -18,7 +18,9 @@ rsa_model(
   fingerprint_basis = c("pca", "qr"),
   measure = c("distance", "similarity"),
   statistic = NULL,
-  contrasts = NULL
+  contrasts = NULL,
+  condition_labels = NULL,
+  crossval = NULL
 )
 }
 \arguments{
@@ -27,7 +29,8 @@ rsa_model(
 \item{design}{An instance of an \code{rsa_design} created by \code{rsa_design()}.}
 
 \item{distmethod}{A character string specifying the method used to compute distances between observations. 
-One of: \code{"pearson"} or \code{"spearman"} (defaults to "spearman").}
+One of: \code{"pearson"}, \code{"spearman"} (default), or
+\code{"crossvalidated_euclidean"} (see below).}
 
 \item{regtype}{A character string specifying the analysis method. 
 One of: \code{"pearson"}, \code{"spearman"}, \code{"lm"}, or \code{"rfit"} (defaults to "pearson").}
@@ -77,6 +80,18 @@ queries; missing neural cells rebuild the query for eligible pairs.}
 weights, available with \code{statistic = "beta"}. Coefficient names are
 those in \code{design$model_mat}, plus \code{"(Intercept)"}. Outputs are
 named \code{contrast_<name>}.}
+
+\item{condition_labels}{Observation-aligned vector of condition IDs, required
+with \code{distmethod = "crossvalidated_euclidean"}. Repeated observations
+of a condition are averaged within each partition. Its unique values must
+equal \code{design$condition_ids}; the RDM order comes from the design.}
+
+\item{crossval}{Independent-partition specification, for example
+\code{blocked_cross_validation(run_ids)}. Required only for crossvalidated
+Euclidean RSA and stored as \code{model$crossval}. Partitions must be disjoint,
+nonempty, exhaustive and at least two in number. Every condition must be
+observed in every partition. Missing cells are rejected at construction;
+nonfinite neural values fail the affected ROI rather than becoming zeros.}
 }
 \value{
 An object of class \code{"rsa_model"} (and \code{"list"}), containing:
@@ -94,6 +109,30 @@ An object of class \code{"rsa_model"} (and \code{"list"}), containing:
 \description{
 This function creates an RSA model object by taking an MVPA (Multi-Variate Pattern Analysis) dataset and an RSA design.
 }
+\section{Crossvalidated Euclidean distances}{
+
+For each distinct condition pair, average the inner products of its difference
+patterns over all ordered pairs of independent partitions, then divide by the
+number of features. This estimates a squared Euclidean distance per feature,
+  in squared input units, and retains negative estimates. No whitening is
+performed: this is not a Mahalanobis distance. All declared ROI features,
+including constant columns, are retained in the normalization; nonfinite
+columns fail the ROI instead of being removed by the shared ROI filter. Independent run IDs must be
+supplied separately from the unique condition IDs used by the feature RDMs.
+The caller is responsible for physical independence of partitions.
+
+This mode supports ordinary \code{rsa_design}, \code{measure = "distance"},
+and the general searchlight dispatcher (\code{engine = "auto"} or
+\code{"legacy"}). Optimized engines, including \code{"rsa_fast"}, are
+explicitly rejected. Correlation fits use \code{regtype} to select Pearson
+or Spearman association; historical correlation-distance behavior is unchanged.
+It does not change \code{contrast_rsa_model}'s second-moment estimand.
+Item permutations relabel conditions jointly across all partitions and must
+preserve an explicit pair mask; specify suitable exchangeability blocks using
+\code{block_var} and \code{keep_intra_run = TRUE} when retaining within-block
+pairs. Pair masks alone do not establish exchangeability.
+}
+
 \section{Relational coefficients}{
 
 Combine \code{pair_rsa_design(..., modulation = ...)} with
@@ -163,6 +202,21 @@ rsa_mod_sp <- rsa_model(mvpa_data, rdes, regtype = "lm",
 # Train the model using a trial-by-feature matrix
 fit_params <- train_model(rsa_mod_sp, data_mat, y = NULL, indices = NULL)
 # 'fit_params' = named vector of semi-partial correlations for each predictor
+
+# Condition-level feature RSA across three independent runs:
+ids <- paste0("item", 1:6)
+recording <- rep(1:2, each = 3)
+pairs <- outer(recording, recording, `==`)
+diag(pairs) <- FALSE
+cv_design <- rsa_design(~ feature, list(feature = dist(1:6)),
+                        condition_ids = ids, pair_mask = pairs)
+cv_data <- gen_sample_dataset(c(2, 2, 2), 18, blocks = 3)$dataset
+cv_model <- rsa_model(cv_data, cv_design,
+  distmethod = "crossvalidated_euclidean",
+  condition_labels = rep(ids, 3),
+  crossval = blocked_cross_validation(rep(1:3, each = 6)))
+# run_searchlight(cv_model, radius = 4, engine = "legacy")
+# Six recordings with ten unique conditions each would retain 270 pairs.
 
 }
 \seealso{

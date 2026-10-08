@@ -1,5 +1,13 @@
 # rMVPA 0.1.3
 
+* Ordinary `rsa_model()` now supports `distmethod = "crossvalidated_euclidean"`
+  with explicit condition IDs and independent, complete partitions. Squared
+  per-feature distances retain negative values and are not labelled Mahalanobis.
+  `rsa_design(pair_mask = ...)` selects the same distinct-item pairs for neural
+  responses, predictors, nuisance terms and diagnostics. Missing condition/run
+  cells are rejected. Ordinary searchlights use the general dispatcher;
+  unsupported optimized engines are explicitly rejected.
+
 * `rsa_neural_rdm()` exposes full Pearson or Spearman neural correlation-distance
   matrices for reliability and noise-ceiling workflows. It preserves observation
   names and order, supports stimulus-mean centering, and rejects nonfinite inputs

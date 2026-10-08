@@ -77,7 +77,7 @@ validate_analysis.mvpa_model <- function(x, verbose = TRUE, ...) {
 #' @export
 validate_analysis.model_spec <- function(x, verbose = TRUE, ...) {
   .do_validate(
-    design = x$design,
+    design = x$.condition_design %||% x$design,
     crossval = x$crossval,
     dataset = x$dataset,
     verbose = verbose

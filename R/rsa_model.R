@@ -24,6 +24,17 @@ sanitize <- function(name) {
 #'   predictors are appended to the RSA model matrix, included in regression
 #'   fits, and tagged as nuisance so \code{rsa_model(...,
 #'   return_fingerprint = TRUE)} excludes them from model-space fingerprints.
+#' @param pair_mask Optional logical vector in \code{dist}/lower-triangle order,
+#'   or symmetric item-by-item logical matrix with a FALSE diagonal. TRUE retains
+#'   that distinct-item pair. Missing values, wrong dimensions and empty selections
+#'   are rejected. Intersects the existing \code{block_var} exclusion and applies
+#'   identically to neural responses, predictors, nuisance terms and diagnostics.
+#'   Included predictor/nuisance cells must be finite. \code{split_by} does not
+#'   restrict fitted pairs. For within-recording comparisons, use a mask built
+#'   from recording equality; \code{block_var} alone excludes same-block pairs.
+#' @param condition_ids Optional unique IDs in the exact order of design items.
+#'   Required for crossvalidated Euclidean RSA. Named RDMs and masks must match
+#'   this order; these IDs identify conditions, not runs or repeated observations.
 #' @return A list with class attributes "rsa_design" and "list", containing:
 #'   \describe{
 #'     \item{formula}{The input formula}
@@ -45,7 +56,8 @@ sanitize <- function(name) {
 #' @examples
 #' dismat <- dist(matrix(rnorm(100*100), 100, 100))
 #' rdes <- rsa_design(~ dismat, list(dismat=dismat))
-rsa_design <- function(formula, data, block_var=NULL, split_by=NULL, keep_intra_run=FALSE, nuisance = list()) {
+rsa_design <- function(formula, data, block_var=NULL, split_by=NULL, keep_intra_run=FALSE, nuisance = list(),
+                       pair_mask = NULL, condition_ids = NULL) {
   assert_that(purrr::is_formula(formula))
   if (!is.list(data) || is.null(names(data))) {
     stop("`data` must be a named list.", call. = FALSE)
@@ -83,6 +95,30 @@ rsa_design <- function(formula, data, block_var=NULL, split_by=NULL, keep_intra_
     as.vector(dist(block_var)) != 0
   }
   
+  n_items <- as.integer(nr[1L])
+  if (!is.null(condition_ids)) {
+    if (!is.atomic(condition_ids) || !is.null(dim(condition_ids)) ||
+        length(condition_ids) != n_items || anyNA(condition_ids) ||
+        any(!nzchar(as.character(condition_ids))) || anyDuplicated(as.character(condition_ids))) {
+      stop("`condition_ids` must contain one unique, nonmissing ID per design item.", call. = FALSE)
+    }
+    condition_ids <- as.character(condition_ids)
+    for (entry in c(data, nuisance)) {
+      ids <- if (inherits(entry, "dist")) attr(entry, "Labels") else
+        if (is.matrix(entry)) rownames(entry) else NULL
+      cols <- if (is.matrix(entry) && isSymmetric(unname(entry))) colnames(entry) else NULL
+      if ((!is.null(ids) && !identical(ids, condition_ids)) ||
+          (!is.null(cols) && !identical(cols, condition_ids))) {
+        stop("RDM/item labels must match `condition_ids` in order.", call. = FALSE)
+      }
+    }
+  }
+  if (!is.null(pair_mask)) {
+    pair_mask <- .rsa_validate_pair_mask(pair_mask, n_items, condition_ids)
+    include <- if (is.null(include)) pair_mask else include & pair_mask
+    if (!any(include)) stop("`pair_mask` leaves no eligible pairs.", call. = FALSE)
+  }
+
   # Create the RSA design as a list
   des <- list(
     formula=formula,
@@ -91,11 +127,16 @@ rsa_design <- function(formula, data, block_var=NULL, split_by=NULL, keep_intra_
     split_by=split_by,
     split_groups=split_groups,
     block_var=block_var,
-    include=include
+    include=include,
+    pair_mask=pair_mask,
+    condition_ids=condition_ids
   )
   
   # Add model matrix to the design list
   mmat <- rsa_model_mat(des)
+  if (!is.null(pair_mask) && any(!is.finite(unlist(mmat)))) {
+    stop("Included predictor and nuisance pairs must be finite; use `pair_mask` to exclude missing cells.", call. = FALSE)
+  }
   des$model_mat <- mmat
   model_names <- sanitize(labels(terms(formula)))
   nuisance_names <- sanitize(names(nuisance))
@@ -129,6 +170,30 @@ rsa_design <- function(formula, data, block_var=NULL, split_by=NULL, keep_intra_
   } else {
     stop(paste("illegal variable type", class(x)), call. = FALSE)
   }
+}
+
+#' @noRd
+.rsa_validate_pair_mask <- function(pair_mask, n_items, condition_ids = NULL) {
+  if (!is.logical(pair_mask) || anyNA(pair_mask)) {
+    stop("`pair_mask` must be logical without missing values.", call. = FALSE)
+  }
+  if (is.matrix(pair_mask)) {
+    if (!identical(dim(pair_mask), c(n_items, n_items)) ||
+        !isSymmetric(unname(pair_mask)) || any(diag(pair_mask))) {
+      stop("Matrix `pair_mask` must be square, symmetric, item-aligned, with a FALSE diagonal.", call. = FALSE)
+    }
+    if (!is.null(condition_ids)) {
+      for (ids in dimnames(pair_mask)) {
+        if (!is.null(ids) && !identical(ids, condition_ids)) {
+          stop("`pair_mask` labels must match `condition_ids` in order.", call. = FALSE)
+        }
+      }
+    }
+    pair_mask <- pair_mask[lower.tri(pair_mask)]
+  } else if (!is.null(dim(pair_mask)) || length(pair_mask) != choose(n_items, 2)) {
+    stop("Vector `pair_mask` must have choose(n_items, 2) entries in lower-triangle order.", call. = FALSE)
+  }
+  unname(pair_mask)
 }
 
 #' @noRd
@@ -263,6 +328,10 @@ check_collinearity <- function(model_mat) {
 #' heuristic screen, not a test; it flags designs that cannot separate their
 #' predictors, it does not certify those that can.
 #'
+#' With an explicit \code{pair_mask}, only items participating in retained pairs
+#' count toward effective support. The full item universe is still used for
+#' condition alignment and item permutations.
+#'
 #' For \code{\link{pair_rsa_design}} objects in between-domain mode the item
 #' count is \code{n_a + n_b}, since each item of either set enters every pair
 #' with the other set.
@@ -308,6 +377,10 @@ rsa_design_diagnostics <- function(design) {
   p       <- ncol(X)
   n_pairs <- nrow(X)
   n_items <- .rsa_design_n_items(design)
+  if (!is.null(design$pair_mask)) {
+    pairs <- which(lower.tri(matrix(FALSE, n_items, n_items)), arr.ind = TRUE)
+    n_items <- length(unique(as.vector(pairs[design$include, , drop = FALSE])))
+  }
 
   # Check variation even for a single predictor. A constant (or missing)
   # column cannot acquire support merely because no other columns exist.
@@ -496,7 +569,7 @@ run_lm <- function(dvec, obj) {
 #' @noRd
 run_cor <- function(dvec, obj) {
   # For 'pearson' or 'spearman' regtype, we just do correlation with each predictor
-  res <- sapply(obj$design$model_mat, function(x) cor(dvec, x, method=obj$distmethod))
+  res <- sapply(obj$design$model_mat, function(x) cor(dvec, x, method=if (identical(obj$distmethod, "crossvalidated_euclidean")) obj$regtype else obj$distmethod))
   names(res) <- names(obj$design$model_mat)
   res
 }
@@ -852,7 +925,9 @@ train_model.rsa_model <- function(obj, train_dat, y, indices, ...) {
   # 1) correlation-based distance, branched on pair geometry
   train_dat <- center_patterns(train_dat, method = obj$pattern_center %||% "none")
 
-  if (identical(pair_kind, "between")) {
+  if (identical(obj$distmethod, "crossvalidated_euclidean")) {
+    dvec <- .rsa_crossvalidated_response(obj, train_dat)
+  } else if (identical(pair_kind, "between")) {
     ia <- obj$design$row_idx_a
     ib <- obj$design$row_idx_b
     if (is.null(ia) || is.null(ib)) {
@@ -1054,10 +1129,14 @@ merge_results.rsa_model <- function(obj, result_set, indices, id, ...) {
 #' @export
 fit_roi.rsa_model <- function(model, roi_data, context, ...) {
   train_dat <- roi_data$train_data
+  fit_error <- NULL
 
   result <- tryCatch(
     train_model(model, train_dat, y = NULL, indices = roi_data$indices),
-    error = function(e) NULL
+    error = function(e) {
+      fit_error <<- conditionMessage(e)
+      NULL
+    }
   )
 
   if (is.null(result) || !is.numeric(result) || length(result) == 0) {
@@ -1066,7 +1145,8 @@ fit_roi.rsa_model <- function(model, roi_data, context, ...) {
       indices = roi_data$indices,
       id = context$id,
       error = TRUE,
-      error_message = sprintf("rsa_model: train_model failed for ROI %s", context$id)
+      error_message = paste0(sprintf("rsa_model: train_model failed for ROI %s", context$id),
+                             if (!is.null(fit_error)) paste0(": ", fit_error))
     ))
   }
 
@@ -1075,6 +1155,12 @@ fit_roi.rsa_model <- function(model, roi_data, context, ...) {
     indices = roi_data$indices,
     id = context$id
   )
+}
+
+#' @export
+#' @method y_train rsa_model
+y_train.rsa_model <- function(obj) {
+  obj$condition_labels
 }
 
 ################################################################################
@@ -1232,7 +1318,8 @@ print.rsa_design <- function(x, ...) {
 #' @param dataset An instance of an \code{mvpa_dataset}.
 #' @param design An instance of an \code{rsa_design} created by \code{rsa_design()}.
 #' @param distmethod A character string specifying the method used to compute distances between observations. 
-#'        One of: \code{"pearson"} or \code{"spearman"} (defaults to "spearman").
+#'        One of: \code{"pearson"}, \code{"spearman"} (default), or
+#'        \code{"crossvalidated_euclidean"} (see below).
 #' @param regtype A character string specifying the analysis method. 
 #'        One of: \code{"pearson"}, \code{"spearman"}, \code{"lm"}, or \code{"rfit"} (defaults to "pearson").
 #' @param check_collinearity Logical. When \code{regtype = "lm"}, stop if two
@@ -1271,6 +1358,39 @@ print.rsa_design <- function(x, ...) {
 #'   weights, available with \code{statistic = "beta"}. Coefficient names are
 #'   those in \code{design$model_mat}, plus \code{"(Intercept)"}. Outputs are
 #'   named \code{contrast_<name>}.
+#'
+#' @param condition_labels Observation-aligned vector of condition IDs, required
+#'   with \code{distmethod = "crossvalidated_euclidean"}. Repeated observations
+#'   of a condition are averaged within each partition. Its unique values must
+#'   equal \code{design$condition_ids}; the RDM order comes from the design.
+#' @param crossval Independent-partition specification, for example
+#'   \code{blocked_cross_validation(run_ids)}. Required only for crossvalidated
+#'   Euclidean RSA and stored as \code{model$crossval}. Partitions must be disjoint,
+#'   nonempty, exhaustive and at least two in number. Every condition must be
+#'   observed in every partition. Missing cells are rejected at construction;
+#'   nonfinite neural values fail the affected ROI rather than becoming zeros.
+#'
+#' @section Crossvalidated Euclidean distances:
+#' For each distinct condition pair, average the inner products of its difference
+#' patterns over all ordered pairs of independent partitions, then divide by the
+#' number of features. This estimates a squared Euclidean distance per feature,
+#'   in squared input units, and retains negative estimates. No whitening is
+#' performed: this is not a Mahalanobis distance. All declared ROI features,
+#' including constant columns, are retained in the normalization; nonfinite
+#' columns fail the ROI instead of being removed by the shared ROI filter. Independent run IDs must be
+#' supplied separately from the unique condition IDs used by the feature RDMs.
+#' The caller is responsible for physical independence of partitions.
+#'
+#' This mode supports ordinary \code{rsa_design}, \code{measure = "distance"},
+#' and the general searchlight dispatcher (\code{engine = "auto"} or
+#' \code{"legacy"}). Optimized engines, including \code{"rsa_fast"}, are
+#' explicitly rejected. Correlation fits use \code{regtype} to select Pearson
+#' or Spearman association; historical correlation-distance behavior is unchanged.
+#' It does not change \code{contrast_rsa_model}'s second-moment estimand.
+#' Item permutations relabel conditions jointly across all partitions and must
+#' preserve an explicit pair mask; specify suitable exchangeability blocks using
+#' \code{block_var} and \code{keep_intra_run = TRUE} when retaining within-block
+#' pairs. Pair masks alone do not establish exchangeability.
 #'
 #' @section Relational coefficients:
 #' Combine \code{pair_rsa_design(..., modulation = ...)} with
@@ -1349,6 +1469,21 @@ print.rsa_design <- function(x, ...) {
 #' fit_params <- train_model(rsa_mod_sp, data_mat, y = NULL, indices = NULL)
 #' # 'fit_params' = named vector of semi-partial correlations for each predictor
 #'
+#' # Condition-level feature RSA across three independent runs:
+#' ids <- paste0("item", 1:6)
+#' recording <- rep(1:2, each = 3)
+#' pairs <- outer(recording, recording, `==`)
+#' diag(pairs) <- FALSE
+#' cv_design <- rsa_design(~ feature, list(feature = dist(1:6)),
+#'                         condition_ids = ids, pair_mask = pairs)
+#' cv_data <- gen_sample_dataset(c(2, 2, 2), 18, blocks = 3)$dataset
+#' cv_model <- rsa_model(cv_data, cv_design,
+#'   distmethod = "crossvalidated_euclidean",
+#'   condition_labels = rep(ids, 3),
+#'   crossval = blocked_cross_validation(rep(1:3, each = 6)))
+#' # run_searchlight(cv_model, radius = 4, engine = "legacy")
+#' # Six recordings with ten unique conditions each would retain 270 pairs.
+#'
 #' @export
 rsa_model <- function(dataset,
                       design,
@@ -1363,12 +1498,14 @@ rsa_model <- function(dataset,
                       fingerprint_basis = c("pca", "qr"),
                       measure = c("distance", "similarity"),
                       statistic = NULL,
-                      contrasts = NULL) {
+                      contrasts = NULL,
+                      condition_labels = NULL,
+                      crossval = NULL) {
 
   assert_that(inherits(dataset, "mvpa_dataset"))
   assert_that(inherits(design, "rsa_design"))
 
-  distmethod <- match.arg(distmethod, c("pearson", "spearman"))
+  distmethod <- match.arg(distmethod, c("pearson", "spearman", "crossvalidated_euclidean"))
   regtype    <- match.arg(regtype, c("pearson", "spearman", "lm", "rfit"))
   pattern_center <- match.arg(pattern_center)
   fingerprint_method <- match.arg(fingerprint_method)
@@ -1406,6 +1543,19 @@ rsa_model <- function(dataset,
     if (is.null(dims)) length(dataset$train_data) else dims[length(dims)]
   }
 
+  condition_design <- NULL
+  if (identical(distmethod, "crossvalidated_euclidean")) {
+    if (inherits(design, "pair_rsa_design") || !identical(measure, "distance")) {
+      stop("Crossvalidated Euclidean RSA requires ordinary `rsa_design` and measure = 'distance'.", call. = FALSE)
+    }
+    condition_design <- .rsa_validate_partitions(design, condition_labels, crossval, nobs_dataset)
+    if (any(!is.finite(unlist(design$model_mat)))) {
+      stop("Crossvalidated RSA requires finite included predictor/nuisance pairs; supply an explicit `pair_mask`.", call. = FALSE)
+    }
+  } else if (!is.null(condition_labels) || !is.null(crossval)) {
+    stop("`condition_labels` and `crossval` require distmethod = 'crossvalidated_euclidean'.", call. = FALSE)
+  }
+
   if (inherits(design, "pair_rsa_design")) {
     pair_kind_chk <- design$pair_kind %||% "within"
     raw_len <- if (identical(pair_kind_chk, "between")) {
@@ -1438,7 +1588,12 @@ rsa_model <- function(dataset,
     }
     expected_len <- if (!is.null(design$include)) sum(design$include) else raw_len
   } else {
-    expected_len <- choose(nobs_dataset, 2)
+    n_design_items <- .rsa_design_entry_size(design$data[[1L]])
+    expected_items <- if (is.null(condition_design)) nobs_dataset else length(design$condition_ids)
+    if (n_design_items != expected_items) {
+      stop("Mismatch between dataset observations/conditions and RSA design items.", call. = FALSE)
+    }
+    expected_len <- choose(expected_items, 2)
     if (!is.null(design$include)) {
       expected_len <- sum(design$include)
     }
@@ -1465,7 +1620,7 @@ rsa_model <- function(dataset,
     fast_kernel <- .rsa_prepare_fast_kernel(
       design = design,
       regtype = regtype,
-      distmethod = distmethod,
+      distmethod = if (identical(distmethod, "crossvalidated_euclidean")) regtype else distmethod,
       semipartial = semipartial,
       nneg = nneg
     )
@@ -1486,6 +1641,10 @@ rsa_model <- function(dataset,
     dataset,
     design,
     distmethod = distmethod,
+    crossval = crossval,
+    condition_labels = condition_labels,
+    .condition_design = condition_design,
+    .preserve_roi_features = identical(distmethod, "crossvalidated_euclidean"),
     regtype    = regtype,
     measure    = measure,
     statistic  = statistic,
@@ -1504,6 +1663,57 @@ rsa_model <- function(dataset,
   obj
 }
 
+
+#' @noRd
+.rsa_validate_partitions <- function(design, condition_labels, crossval, nobs) {
+  ids <- design$condition_ids
+  if (is.null(ids) || length(ids) < 2L) {
+    stop("Crossvalidated RSA requires explicit `condition_ids` in RDM order in rsa_design().", call. = FALSE)
+  }
+  if (!is.atomic(condition_labels) || !is.null(dim(condition_labels)) ||
+      length(condition_labels) != nobs || anyNA(condition_labels) ||
+      !setequal(as.character(condition_labels), ids)) {
+    stop("`condition_labels` must align with dataset rows and contain exactly the design's condition IDs.", call. = FALSE)
+  }
+  if (!inherits(crossval, "cross_validation")) {
+    stop("Crossvalidated RSA requires an independent-partition `crossval` specification.", call. = FALSE)
+  }
+  nf <- get_nfolds(crossval)
+  if (length(nf) != 1L || !is.finite(nf) || nf < 2L || nf != as.integer(nf)) {
+    stop("Crossvalidated RSA requires at least two independent partitions.", call. = FALSE)
+  }
+  partitions <- lapply(seq_len(nf), function(i) partition_indices(crossval, i, n_samples = nobs))
+  valid <- vapply(partitions, function(i) is.numeric(i) && length(i) > 0L &&
+    all(is.finite(i)) && all(i == as.integer(i)) && all(i >= 1L & i <= nobs), logical(1))
+  all_rows <- unlist(partitions, use.names = FALSE)
+  if (!all(valid) || anyDuplicated(all_rows) || !setequal(all_rows, seq_len(nobs))) {
+    stop("Crossvalidated RSA partitions must be nonempty, disjoint and cover every observation exactly once.", call. = FALSE)
+  }
+  complete <- vapply(partitions, function(i) all(ids %in% as.character(condition_labels[i])), logical(1))
+  if (!all(complete)) {
+    stop("Missing condition/partition observations: every condition must occur in every partition; no zero imputation or pairwise deletion is performed.", call. = FALSE)
+  }
+  mvpa_design(data.frame(condition = factor(condition_labels, levels = ids)),
+              y_train = ~ condition,
+              block_var = if (inherits(crossval, "blocked_cross_validation")) crossval$block_var else NULL)
+}
+
+#' @noRd
+.rsa_crossvalidated_response <- function(obj, train_dat) {
+  if (!is.matrix(train_dat) || !is.numeric(train_dat) || ncol(train_dat) < 1L ||
+      nrow(train_dat) != length(obj$condition_labels) || any(!is.finite(train_dat))) {
+    stop("Crossvalidated RSA requires finite observation-by-feature data with all declared rows; missing values are not imputed.", call. = FALSE)
+  }
+  folds <- compute_crossvalidated_means_sl(
+    train_dat, obj$.condition_design, obj$crossval,
+    estimation_method = "crossnobis", return_folds = TRUE
+  )$fold_estimates
+  if (!is.null(obj$design$item_perm)) {
+    rows <- .rsa_apply_item_perm(seq_len(dim(folds)[1L]), obj$design$item_perm)
+    folds <- folds[rows, , , drop = FALSE]
+  }
+  compute_crossnobis_distances_sl(folds)
+}
 
 #' @keywords internal
 #' @noRd

@@ -595,7 +595,8 @@ internal_crossval <- function(mspec, roi, id, center_global_id = NA, x_all = NUL
 
 #' @keywords internal
 #' @noRd
-extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2) {
+extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2,
+                        filter_features = TRUE) {
   r <- as_roi(sample,data)
 
   # Check if as_roi returned an error object (e.g., insufficient voxels after mask filtering)
@@ -603,6 +604,10 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2) {
     futile.logger::flog.debug("Skipping ROI: as_roi returned error (%s)", as.character(r$train_roi))
     return(NULL)
   }
+
+  # Distance estimators may require every declared feature, including constants,
+  # to preserve their denominator and reject missing values at the model boundary.
+  if (!isTRUE(filter_features)) return(r)
 
   # Use silent=TRUE to prevent error messages from being displayed on the console
   # Pass center_global_id to preserve it during filtering (for searchlights)
@@ -724,7 +729,8 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2) {
           sample_list[[k]],
           dset,
           center_global_id = kept_rnums[[k]],
-          min_voxels = min_voxels_required
+          min_voxels = min_voxels_required,
+          filter_features = !isTRUE(mod_spec$.preserve_roi_features)
         )
       }
     } else {
@@ -732,7 +738,8 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2) {
         roi_list[[k]] <- extract_roi(
           sample_list[[k]],
           dset,
-          min_voxels = min_voxels_required
+          min_voxels = min_voxels_required,
+          filter_features = !isTRUE(mod_spec$.preserve_roi_features)
         )
       }
     }

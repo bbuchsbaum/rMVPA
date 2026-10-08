@@ -284,6 +284,16 @@ permute_labels.rsa_design <- function(design,
   design$item_perm <- .with_perm_seed(seed, function() {
     .permutation_index(n_items, design$block_var, method)
   })
+  if (!is.null(design$pair_mask)) {
+    mask <- matrix(FALSE, n_items, n_items)
+    mask[lower.tri(mask)] <- design$include
+    mask <- mask | t(mask)
+    perm <- design$item_perm
+    if (!identical(mask, mask[perm, perm, drop = FALSE])) {
+      stop("Item permutation does not preserve `pair_mask`; specify exchangeability blocks that preserve the declared pair set.",
+           call. = FALSE)
+    }
+  }
   design
 }
 
