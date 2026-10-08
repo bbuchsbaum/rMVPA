@@ -16,7 +16,6 @@ resource_files:
 - albers.css
 - albers.js
 - albers-header.html
-- fonts
 
 vignette: |
   %\VignetteIndexEntry{Representational Similarity Analysis (RSA) in rMVPA}
@@ -431,7 +430,7 @@ matching template, and retrieval-side attributes such as
 coefficient should mean greater neural correlation rather than greater
 dissimilarity. These measurements have different interpretations; changing
 between them is a scientific specification choice. The
-[ERA-RSA vignette](ERA_RSA_Cross_Decoding.html#model-item-correspondence-with-vividness-and-precision)
+[ERA-RSA vignette](https://bbuchsbaum.github.io/rMVPA/articles/ERA_RSA_Cross_Decoding.html#model-item-correspondence-with-vividness-and-precision)
 shows that complete workflow, retrieval-specific backgrounds, and coefficient
 contrasts.
 
@@ -452,16 +451,16 @@ When using RSA in rMVPA, carefully consider your experimental design when settin
 
 ## From within-ROI scores to ROI-to-ROI connectivity
 
-Once you have RSA scores per ROI, a natural follow-up is "where else does this geometry live?" `rsa_model()` accepts `return_fingerprint = TRUE`, which stores a small per-ROI projection of the neural pair vector onto your model RDM subspace. `model_space_connectivity()` then turns those fingerprints into ROI-by-ROI representational connectivity in one call. The same flag also feeds k-means anchor maps for searchlight runs without materialising an `n_centers × n_centers` matrix. See `vignette("Model_Space_Connectivity")` for the full workflow, including cross-domain pair designs (`pair_rsa_design(..., pairs = "between")`).
+Once you have RSA scores per ROI, a natural follow-up is "where else does this geometry live?" `rsa_model()` accepts `return_fingerprint = TRUE`, which stores a small per-ROI projection of the neural pair vector onto your model RDM subspace. `model_space_connectivity()` then turns those fingerprints into ROI-by-ROI representational connectivity in one call. The same flag also feeds k-means anchor maps for searchlight runs without materialising an `n_centers × n_centers` matrix. See [Model-Space Representational Connectivity](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.html) for the full workflow, including cross-domain pair designs (`pair_rsa_design(..., pairs = "between")`).
 
 ## Further reading
 
-- `vignette("Model_Space_Connectivity")` -- model-space fingerprints, ROI-to-ROI connectivity, pair_rsa_design, and searchlight anchor maps
-- `vignette("ERA_RSA_Cross_Decoding")` -- cross-phase correspondence, geometry preservation, and modulation by retrieval attributes
-- `vignette("Feature_RSA")` -- Feature-Based RSA: predicting neural patterns from a feature matrix
-- `vignette("Vector_RSA")` -- Vector-Based RSA: per-trial RSA scores with built-in across-block masking
-- `vignette("Contrast_RSA")` -- MS-ReVE: contrast-based decomposition of representational geometry
-- `vignette("Temporal_Confounds_in_RSA")` -- controlling for temporal proximity confounds
+- [Model-Space Representational Connectivity](https://bbuchsbaum.github.io/rMVPA/articles/Model_Space_Connectivity.html) -- model-space fingerprints, ROI-to-ROI connectivity, pair_rsa_design, and searchlight anchor maps
+- [ERA-RSA Cross-Decoding](https://bbuchsbaum.github.io/rMVPA/articles/ERA_RSA_Cross_Decoding.html) -- cross-phase correspondence, geometry preservation, and modulation by retrieval attributes
+- [Feature-Based RSA](https://bbuchsbaum.github.io/rMVPA/articles/Feature_RSA.html) -- Feature-Based RSA: predicting neural patterns from a feature matrix
+- [Vector-Based RSA](https://bbuchsbaum.github.io/rMVPA/articles/Vector_RSA.html) -- Vector-Based RSA: per-trial RSA scores with built-in across-block masking
+- [Contrast RSA with contrast_rsa_model](https://bbuchsbaum.github.io/rMVPA/articles/Contrast_RSA.html) -- MS-ReVE: contrast-based decomposition of representational geometry
+- [Temporal Confounds in RSA](https://bbuchsbaum.github.io/rMVPA/articles/Temporal_Confounds_in_RSA.html) -- controlling for temporal proximity confounds
 
 ## References
 

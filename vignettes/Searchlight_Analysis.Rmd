@@ -16,7 +16,6 @@ resource_files:
 - albers.css
 - albers.js
 - albers-header.html
-- fonts
 
 vignette: |
   %\VignetteIndexEntry{Searchlight Analysis}
@@ -170,7 +169,7 @@ Set `rank = "auto"` or a positive integer to enable reduced‑rank mapping via `
 
 - `vignette("Regional_Analysis")` -- the ROI-based counterpart to searchlight analysis
 - `vignette("CrossValidation")` -- cross-validation strategies for fMRI
-- `vignette("CustomAnalyses")` -- plug in your own analysis functions
+- [Running Custom Analyses with rMVPA](https://bbuchsbaum.github.io/rMVPA/articles/CustomAnalyses.html) -- plug in your own analysis functions
 
 <!-- ## External Cross-Validation Example -->
 

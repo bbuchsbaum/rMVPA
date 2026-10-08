@@ -16,7 +16,6 @@ resource_files:
 - albers.css
 - albers.js
 - albers-header.html
-- fonts
 
 vignette: |
   %\VignetteIndexEntry{Reproducing Haxby (2001) classification with rMVPA}
@@ -192,7 +191,7 @@ Faces and houses lead — exactly as in Figure 2 of the original paper.
 
 ## Comparing classifiers
 
-`mvpa_model()` reads its classifier from rMVPA's pre-registered registry, so swapping the family is one line. Below we run the same VT analysis under five classifiers covering different inductive biases:
+`mvpa_model()` reads its classifier from rMVPA's pre-registered registry, so swapping the family is one line. Below we run the same VT analysis under up to five classifiers (two need optional packages) covering different inductive biases:
 
 - **`corclass`** — correlation-to-prototype, the original Haxby (2001) method.
 - **`naive_bayes`** — independent-feature Gaussian; a simple baseline.
@@ -215,18 +214,21 @@ fit_one <- function(model_name, ...) {
   )
 }
 
+# rf and svmLinear need the optional randomForest and e1071 packages;
+# classifiers whose package is not installed are left out of the table.
+available <- function(pkg) is.null(pkg) || requireNamespace(pkg, quietly = TRUE)
 panel <- rbind(
   fit_one("corclass"),
   fit_one("naive_bayes"),
-  fit_one("rf",        tune_grid = data.frame(mtry = 50)),
-  fit_one("svmLinear"),
+  if (available("randomForest")) fit_one("rf", tune_grid = data.frame(mtry = 50)),
+  if (available("e1071")) fit_one("svmLinear"),
   fit_one("sda_notune")
 )
 panel <- panel[order(-panel$accuracy), ]
 panel
 ```
 
-```{r classifier-bars, echo = FALSE, fig.cap = "Cross-validated accuracy under five classifiers, all on the same VT patterns and the same leave-one-run-out CV. Dashed line = chance for an 8-way problem (12.5%).", out.width = "75%", fig.width = 6, fig.height = 3.6}
+```{r classifier-bars, echo = FALSE, fig.cap = "Cross-validated accuracy under the available classifiers, all on the same VT patterns and the same leave-one-run-out CV. Dashed line = chance for an 8-way problem (12.5%).", out.width = "75%", fig.width = 6, fig.height = 3.6}
 op <- par(mar = c(7, 4, 1.5, 0.5))
 bp <- barplot(panel$accuracy, names.arg = panel$classifier, las = 2,
               col = "#3a5b97", border = NA,
@@ -241,7 +243,7 @@ par(op)
 
 Why such a wide spread? The dataset shape (96 observations × 577 voxels × 8 classes) is exactly the regime where pooled shrinkage covariance estimation pays for itself: voxels are strongly correlated, the within-class covariance is rank-deficient, and unregularised methods either overfit (`naive_bayes` is forced into independence; `rf` averages weak high-variance trees) or treat the boundary geometrically without using the covariance structure (`svmLinear`). `corclass` tops out at ≈27 % because it's an 8-way correlation-to-prototype classifier; the canonical Haxby (2001) ≈90 % numbers came from a *binary, split-half-within-run* version of correlation classification that is structurally different from the 8-way leave-one-run-out reported here.
 
-The full `MVPAModels` registry includes 22 classifiers; see `ls(rMVPA:::MVPAModels)` for the complete list and `vignette("FeatureSelection")` for adding feature selection inside the CV loop.
+The full `MVPAModels` registry includes 22 classifiers; see `ls(rMVPA:::MVPAModels)` for the complete list and [Feature Selection in rMVPA](https://bbuchsbaum.github.io/rMVPA/articles/FeatureSelection.html) for adding feature selection inside the CV loop.
 
 ## Where the raw data lives
 
@@ -271,7 +273,7 @@ The package's `data-raw/haxby2001_subj1.R` script reproduces the bundled `patter
 ## Where to go next
 
 - For a searchlight version of this analysis, see `vignette("Searchlight_Analysis")`. The same `mspec` plus `run_searchlight()` produces a per-voxel decoding map.
-- For RSA-style geometry (rather than category labels), `vignette("Kriegeskorte_92_Images")` walks through the matched real-data RSA workflow.
+- For RSA-style geometry (rather than category labels), [Reproducing Kriegeskorte (2008) with rMVPA](https://bbuchsbaum.github.io/rMVPA/articles/Kriegeskorte_92_Images.html) walks through the matched real-data RSA workflow.
 - For rMVPA's classification ergonomics in general, see `vignette("Regional_Analysis")` and `vignette("CrossValidation")`.
 
 ## Citation
@@ -281,4 +283,4 @@ The package's `data-raw/haxby2001_subj1.R` script reproduces the bundled `patter
 > ventral temporal cortex.* **Science 293**: 2425–2430.
 > <https://doi.org/10.1126/science.1063736>
 
-Subject 1 data are redistributed by the [PyMVPA project](http://www.pymvpa.org/datadb/haxby2001.html) and on [OpenNeuro ds000105](https://openneuro.org/datasets/ds000105). Cite Haxby et al. (2001) and the data redistribution source you used.
+Subject 1 data are redistributed by the [PyMVPA project](https://www.pymvpa.org/datadb/haxby2001.html) and on [OpenNeuro ds000105](https://openneuro.org/datasets/ds000105). Cite Haxby et al. (2001) and the data redistribution source you used.

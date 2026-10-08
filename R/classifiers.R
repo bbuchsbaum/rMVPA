@@ -93,8 +93,23 @@ corsimFit <- function(x, y, method, robust) {
   if (identical("mean", estimator)) {
     list(conditionMeans=group_means(x, 1, y), levs=lev, method=method, robust=robust)
   } else {
-    list(conditionMeans = neuroim2::split_reduce(as.matrix(x), y, estimator), levs=lev, method=method, robust=robust)
+    list(conditionMeans = robust_group_centers(as.matrix(x), y, estimator), levs=lev, method=method, robust=robust)
   }
+}
+
+#' Per-class column centres with a robust estimator
+#'
+#' Same result as `neuroim2::split_reduce()`, which dispatches every class
+#' through `future.apply` and so pays future setup cost on each fit.
+#' @keywords internal
+#' @noRd
+robust_group_centers <- function(x, y, estimator) {
+  ind <- split(seq_along(y), y)
+  out <- do.call(rbind, lapply(ind, function(i) {
+    apply(x[i, , drop = FALSE], 2, estimator)
+  }))
+  row.names(out) <- levels(y)
+  out
 }
 
 #' @keywords internal
@@ -117,7 +132,7 @@ predict_corsimFit <- function(modelFit, newData) {
   } else {
     cres <- cor(t(X), t(M), method = modelFit$method)
   }
-  res <- max.col(cres)
+  res <- max.col(cres, ties.method = "first")
   factor(modelFit$levs[res], levels = modelFit$levs)
 }
 
@@ -223,11 +238,23 @@ MVPAModels$pca_lda <- list(
 
   class_id <- match(y, classes)
   centered <- x - means[class_id, , drop = FALSE]
-  sigma <- crossprod(centered) + diag(gamma, p)
-  chol_sigma <- chol(sigma)
-
   means_t <- t(means)
-  inv_sigma_means <- backsolve(chol_sigma, forwardsolve(t(chol_sigma), means_t))
+
+  inv_sigma_means <- if (p <= n) {
+    # Primal: Sigma = C'C + gamma I is p x p.
+    sigma <- crossprod(centered) + diag(gamma, p)
+    chol_sigma <- chol(sigma)
+    backsolve(chol_sigma, forwardsolve(t(chol_sigma), means_t))
+  } else {
+    # Dual, for p > n: by Woodbury,
+    # (gamma I + C'C)^-1 M = (M - C' (gamma I + C C')^-1 C M) / gamma,
+    # an n x n solve instead of a p x p one.
+    kern <- tcrossprod(centered)
+    diag(kern) <- diag(kern) + gamma
+    chol_k <- chol(kern)
+    cm <- centered %*% means_t
+    (means_t - crossprod(centered, backsolve(chol_k, backsolve(chol_k, cm, transpose = TRUE)))) / gamma
+  }
   lin_const <- -0.5 * colSums(means_t * inv_sigma_means) + log(pmax(priors, .Machine$double.eps))
 
   list(
@@ -256,7 +283,7 @@ MVPAModels$pca_lda <- list(
 #' @noRd
 .dual_lda_predict_core <- function(modelFit, newdata) {
   probs <- .dual_lda_prob_core(modelFit, newdata)
-  factor(modelFit$classes[max.col(probs)], levels = modelFit$classes)
+  factor(modelFit$classes[max.col(probs, ties.method = "first")], levels = modelFit$classes)
 }
 
 #' @keywords internal
@@ -333,23 +360,36 @@ MVPAModels$corsim <- MVPAModels$corclass
 #' @noRd
 MVPAModels$sda_notune <- list(
   type = "Classification",
-  library = "sda",
+  # Fitted natively (R/sda_native.R); the sda package is needed only for the
+  # rare fits that are delegated to it (estimated lambda of zero, n < 3).
+  library = NULL,
   label="sda_notune",
   loop = NULL,
   parameters=data.frame(parameters="parameter", class="character", label="parameter"),
   grid=function(x, y, len = NULL) data.frame(parameter="none"),
 
   fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-    m <- quiet_sda(Xtrain=as.matrix(x), L=y, verbose=FALSE, ...)
+    m <- if (length(list(...)) == 0L) .sda_native_fit(as.matrix(x), y) else NULL
+    if (is.null(m)) {
+      require_package("sda", "for this sda_notune fit (delegated to sda::sda)")
+      m <- quiet_sda(Xtrain=as.matrix(x), L=y, verbose=FALSE, ...)
+    }
     m$obsLevels <- lev
     m
   },
 
   predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    if (inherits(modelFit, "sda_native")) {
+      probs <- .sda_native_posterior(modelFit, newdata)
+      return(factor(colnames(probs)[max.col(probs, ties.method = "first")], levels = colnames(probs)))
+    }
     predict(modelFit, as.matrix(newdata), verbose=FALSE)$class
   },
 
   prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    if (inherits(modelFit, "sda_native")) {
+      return(.sda_native_posterior(modelFit, newdata))
+    }
     predict(modelFit, as.matrix(newdata), verbose=FALSE)$posterior
   }
 )
@@ -441,6 +481,16 @@ MVPAModels$sda_boot <- list(
 )
 
 
+# sparsediscrim requires predictor names; keep supplied feature identities and
+# give unnamed ROI matrices stable positional names at the adapter boundary.
+#' @keywords internal
+#' @noRd
+.thomaz_matrix <- function(x) {
+  x <- as.matrix(x)
+  if (is.null(colnames(x))) colnames(x) <- paste0("V", seq_len(ncol(x)))
+  x
+}
+
 # lda_thomaz_boot
 # Store lev similarly, ensure correct predictions and probs
 #' @keywords internal
@@ -455,7 +505,7 @@ MVPAModels$lda_thomaz_boot <- list(
   grid=function(x, y, len = NULL) data.frame(reps=10, frac=1),
 
   fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-    x <- as.matrix(x)
+    x <- .thomaz_matrix(x)
     mfits <- list()
     count <- 1
     failures <- 0
@@ -498,9 +548,10 @@ MVPAModels$lda_thomaz_boot <- list(
   },
 
   predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    newdata <- .thomaz_matrix(newdata)
     preds <- lapply(modelFit$fits, function(fit) {
       ind <- attr(fit, "keep.ind")
-      scores <- -t(predict(fit, newdata[,ind])$scores)
+      scores <- -as.matrix(predict(fit, newdata[, ind, drop = FALSE], type = "score"))
       mc <- scores[cbind(seq_len(nrow(scores)), max.col(scores, ties.method = "first"))]
       probs <- exp(scores - mc)
       zapsmall(probs/rowSums(probs))
@@ -512,10 +563,11 @@ MVPAModels$lda_thomaz_boot <- list(
   },
 
   prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
+    newdata <- .thomaz_matrix(newdata)
     preds <- lapply(modelFit$fits, function(fit) {
       ind <- attr(fit, "keep.ind")
-      scores <- -t(predict(fit, newdata[,ind])$scores)
-      mc <- scores[cbind(seq_len(nrow(scores)), max.col(scores))]
+      scores <- -as.matrix(predict(fit, newdata[, ind, drop = FALSE], type = "score"))
+      mc <- scores[cbind(seq_len(nrow(scores)), max.col(scores, ties.method = "first"))]
       probs <- exp(scores - mc)
       zapsmall(probs/rowSums(probs))
     })
@@ -723,18 +775,18 @@ MVPAModels$lda_thomaz <- list(
   grid=function(x, y, len = NULL) data.frame(parameter="none"),
 
   fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-    fit <- sparsediscrim::lda_thomaz(as.matrix(x), y, ...)
+    fit <- sparsediscrim::lda_thomaz(.thomaz_matrix(x), y, ...)
     fit$obsLevels <- lev
     fit
   },
 
   predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-    # Returns a list with element $class
-    predict(modelFit, as.matrix(newdata))$class
+    factor(predict(modelFit, .thomaz_matrix(newdata), type = "class"),
+           levels = modelFit$obsLevels)
   },
 
   prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-    p <- predict(modelFit, as.matrix(newdata), type="prob")
+    p <- as.matrix(predict(modelFit, .thomaz_matrix(newdata), type = "prob"))
     # p is posterior probabilities with columns corresponding to classes in modelFit$obsLevels
     if (!is.null(modelFit$obsLevels)) colnames(p) <- modelFit$obsLevels
     p
@@ -812,7 +864,8 @@ MVPAModels$naive_bayes <- list(
       mus[k, ] <- colMeans(samples)
 
       nk <- length(idx)
-      vars_k <- apply(samples, 2, var) * (nk - 1) / nk
+      # Preserve stats::var rounding: tiny probability ties affect rank metrics.
+      vars_k <- apply(samples, 2L, stats::var) * (nk - 1) / nk
       zero_var <- vars_k <= .Machine$double.eps
       if (any(zero_var)) {
         nz <- vars_k[vars_k > .Machine$double.eps]
@@ -843,17 +896,15 @@ MVPAModels$naive_bayes <- list(
   predict = function(modelFit, newdata, preProc = NULL, submodels = NULL) {
     newdata <- as.matrix(newdata)
     log_post <- calculate_log_posteriors(modelFit, newdata)
-    factor(modelFit$classes[max.col(log_post)], levels = modelFit$classes)
+    factor(modelFit$classes[max.col(log_post, ties.method = "first")], levels = modelFit$classes)
   },
 
   prob = function(modelFit, newdata, preProc = NULL, submodels = NULL) {
     newdata <- as.matrix(newdata)
     log_post <- calculate_log_posteriors(modelFit, newdata)
-    probs <- t(apply(log_post, 1, function(row) {
-      max_log <- max(row)
-      exp(row - max_log) / sum(exp(row - max_log))
-    }))
-    colnames(probs) <- modelFit$classes
+    shifted <- exp(log_post - matrixStats::rowMaxs(log_post))
+    probs <- shifted / rowSums(shifted)
+    dimnames(probs) <- list(NULL, modelFit$classes)
     probs
   }
 )
@@ -879,12 +930,12 @@ calculate_log_posteriors <- function(modelFit, newdata) {
   log_posts <- matrix(NA, nrow = nrow(newdata), ncol = n_class,
                        dimnames = list(NULL, classes))
 
+  # One vectorised dnorm() call per class over all features (dnorm recycles
+  # mean and sd elementwise), bit-identical to the former per-feature loop.
+  n_obs <- nrow(newdata)
   for (k in seq_along(classes)) {
-    mu <- mus[k, ]
-    var <- vars[k, ]
-    ll <- sapply(seq_along(mu), function(j) {
-      dnorm(newdata[, j], mean = mu[j], sd = sqrt(var[j]), log = TRUE)
-    })
+    ll <- stats::dnorm(newdata, mean = rep(mus[k, ], each = n_obs),
+                       sd = rep(sqrt(vars[k, ]), each = n_obs), log = TRUE)
     ll[!is.finite(ll)] <- -1e100
     log_posts[, k] <- rowSums(ll) + log_priors[k]
   }
@@ -1693,7 +1744,7 @@ MVPAModels$spacenet_tvl1 <- list(
     if (!is.null(modelFit$obsLevels)) {
       if (is.matrix(beta) && ncol(beta) > 1L) {
         eta <- sweep(X %*% beta, 2L, intercept, "+")
-        pred <- colnames(eta)[max.col(eta)]
+        pred <- colnames(eta)[max.col(eta, ties.method = "first")]
         factor(pred, levels = modelFit$obsLevels)
       } else {
         eta <- as.vector(X %*% as.numeric(beta) + as.numeric(intercept))

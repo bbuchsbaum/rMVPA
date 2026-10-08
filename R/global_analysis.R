@@ -367,19 +367,18 @@ run_global.mvpa_model <- function(model_spec, X = NULL, summary_fun = NULL,
 #'
 #' @return An S3 object of class \code{global_mvpa_result}.
 #' @examples
-#' \dontrun{
-#'   # Typically created by run_global(), not directly
-#'   result <- global_mvpa_result(
-#'     performance_table = tibble::tibble(Accuracy = 0.8),
-#'     result = NULL,
-#'     importance_map = NULL,
-#'     importance_vector = c(0.1, 0.2),
-#'     activation_patterns = NULL,
-#'     raw_weights = NULL,
-#'     fold_fits = NULL,
-#'     model_spec = list()
-#'   )
-#' }
+#' # Typically created by run_global(), shown here with toy values
+#' result <- global_mvpa_result(
+#'   performance_table = tibble::tibble(Accuracy = 0.8),
+#'   result = NULL,
+#'   importance_map = NULL,
+#'   importance_vector = c(0.1, 0.2),
+#'   activation_patterns = NULL,
+#'   raw_weights = NULL,
+#'   fold_fits = NULL,
+#'   model_spec = list()
+#' )
+#' print(result)
 #' @export
 global_mvpa_result <- function(performance_table, result,
                                 importance_map, importance_vector,

@@ -285,6 +285,7 @@ test_that("penalty selection is nested and no assessment row reaches the fit", {
 })
 
 test_that("a penalized model runs end to end in regional and searchlight modes", {
+  skip_on_cran()
   sim <- sim_pattern_data(n = 60, dims = c(6, 6, 3), K = 3, snr = 1, seed = 67)
   region <- neuroim2::NeuroVol(array(rep(1:3, length.out = 108), sim$dims),
                                neuroim2::space(sim$dataset$mask))

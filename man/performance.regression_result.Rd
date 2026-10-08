@@ -26,9 +26,10 @@ The function calculates the following performance metrics for the given regressi
 - Spearman correlation: a measure of the monotonic relationship between predicted and observed values.
 }
 \examples{
-\dontrun{
-  # See performance() generic for examples
-}
+res <- regression_result(observed = c(1.0, 2.1, 2.9, 4.2, 5.1),
+                         predicted = c(1.2, 1.9, 3.1, 3.8, 5.0),
+                         testind = 1:5)
+performance(res)
 }
 \seealso{
 \code{\link{regression_result}}

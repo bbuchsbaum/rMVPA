@@ -42,12 +42,10 @@ An object of class \code{mvpa_multibasis_image_dataset}.
 Alias for \code{mvpa_multibasis_dataset}
 }
 \examples{
-\dontrun{
-  # See mvpa_multibasis_dataset for examples
-  ds <- gen_sample_dataset(c(5,5,5), 20)
-  mb <- mvpa_multibasis_image_dataset(
-    list(ds$dataset$train_data, ds$dataset$train_data),
-    mask = ds$dataset$mask
-  )
-}
+# See mvpa_multibasis_dataset for details
+ds <- gen_sample_dataset(c(5,5,5), 20)
+mb <- mvpa_multibasis_image_dataset(
+  list(ds$dataset$train_data, ds$dataset$train_data),
+  mask = ds$dataset$mask
+)
 }

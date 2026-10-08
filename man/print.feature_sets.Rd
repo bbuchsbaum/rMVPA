@@ -18,7 +18,7 @@ Invisibly returns the input object \code{x} (called for side effects).
 Print method for feature_sets
 }
 \examples{
-\dontrun{
-  # print method called on feature_sets object
-}
+X <- matrix(rnorm(10 * 5), 10, 5)
+fs <- feature_sets(X, blocks(low = 2, high = 3))
+print(fs)
 }

@@ -15,7 +15,7 @@
 #' predicted_class(prob)
 #' @export
 predicted_class <- function(prob) {
-  maxid <- max.col(prob, ties.method="random")
+  maxid <- max.col(prob, ties.method = "first")
   pclass <- colnames(prob)[maxid]
 }
 
@@ -33,9 +33,10 @@ predicted_class <- function(prob) {
 #' - RMSE: root mean squared error, a measure of the differences between predicted and observed values.
 #' - Spearman correlation: a measure of the monotonic relationship between predicted and observed values.
 #' @examples
-#' \dontrun{
-#'   # See performance() generic for examples
-#' }
+#' res <- regression_result(observed = c(1.0, 2.1, 2.9, 4.2, 5.1),
+#'                          predicted = c(1.2, 1.9, 3.1, 3.8, 5.0),
+#'                          testind = 1:5)
+#' performance(res)
 #' @seealso \code{\link{regression_result}}
 #' @export
 #' @importFrom yardstick rsq_vec rmse_vec
@@ -207,7 +208,7 @@ merge_results.binary_classification_result <- function(obj, ...) {
   rlist <- list(obj, ...)
   probs <- Reduce("+", lapply(rlist, function(result) result$probs))/length(rlist)
   
-  mc <- max.col(probs)
+  mc <- max.col(probs, ties.method = "first")
   predicted <- levels(obj$observed)[mc]
   binary_classification_result(observed = obj$observed,
                                predicted = predicted,
@@ -270,7 +271,7 @@ merge_results.multiway_classification_result <- function(obj, ...) {
   #ds <- sapply(rlist, function(x) nrow(x$probs))
   
   probs <- Reduce("+", lapply(rlist, function(result) result$probs))/length(rlist)
-  mc <- max.col(probs)
+  mc <- max.col(probs, ties.method = "first")
   predicted <- levels(obj$observed)[mc]
   
   multiway_classification_result(observed = obj$observed,
@@ -369,10 +370,12 @@ multiclass_perf <- function(observed, predicted, probs, class_metrics=FALSE) {
   aucres <- sapply(seq_along(lvls), function(i) {
     lev <- lvls[i]
     pos <- observed == lev
-    pclass <- probs[,i]
-    pother <- rowMeans(probs[,-i, drop=FALSE])
-    # Original uses pclass - pother as the score
-    score <- pclass - pother
+    # One-vs-rest AUC ranks the class's own probability, as scikit-learn's
+    # roc_auc_score(multi_class = "ovr") does. The former score,
+    # p_k - mean(p_-k) = (K * p_k - 1) / (K - 1) for rows summing to one, gives
+    # the same AUC in exact arithmetic, but rounding the mean manufactured
+    # last-bit ties among observations with tiny p_k.
+    score <- probs[, i]
     binary_truth <- factor(ifelse(pos, "positive", "negative"),
                            levels = c("negative", "positive"))
 

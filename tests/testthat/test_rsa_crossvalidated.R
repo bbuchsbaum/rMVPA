@@ -162,6 +162,28 @@ test_that("native ordinary searchlights match direct sphere fits and reject rsa_
   expect_equal(as.numeric(neuroim2::values(out$results$feature)), rep(unname(direct), 2), tolerance=1e-12)
 })
 
+test_that("automatic crossvalidated searchlights retain features on the general path", {
+  f <- cv_rsa_fixture()
+  x <- cbind(f$x, 7)
+  m <- rsa_model(cv_rsa_dataset(x), f$model$design,
+                 distmethod = "crossvalidated_euclidean", condition_labels = f$labels,
+                 crossval = blocked_cross_validation(f$runs), regtype = "lm",
+                 statistic = "beta", check_collinearity = FALSE)
+  wanted <- coef(lm(cv_rsa_oracle(x, f$labels, f$runs, f$ids) ~
+                      as.vector(dist(c(0, 1, 3)))))[2]
+  out <- run_searchlight(m, radius = 10, backend = "default", preflight = "off")
+  expect_identical(attr(out, "searchlight_engine"), "legacy")
+  expect_equal(as.numeric(neuroim2::values(out$results$feature)),
+               rep(unname(wanted), 3), tolerance = 1e-12)
+  expect_null(rMVPA:::.permutation_engine(m, 10, get_center_ids(m$dataset),
+                                          "feature", list()))
+  for (engine in c("rsa_fast", "aggregate_fast", "sda_fast")) {
+    expect_error(explain_searchlight_engine(m, engine = engine), "not implemented")
+    expect_error(run_searchlight(m, radius = 10, engine = engine, preflight = "off"),
+                  "not implemented")
+  }
+})
+
 test_that("new pair masks also preserve correlation RSA and use explicit exchangeability blocks", {
   set.seed(126)
   n <- 8

@@ -25,8 +25,14 @@ fall back to averaging diagnostics stored in `fits[[i]]$diag_by_fold` when
 needed.
 }
 \examples{
-\dontrun{
-res <- run_regional(model, region_mask, return_fits = TRUE)
+# Normally `res` comes from run_regional() on a remap_rrr_model(); here a
+# minimal regional result carrying REMAP columns in its performance table:
+res <- structure(
+  list(performance_table = data.frame(
+    roinum = 1:2, adapter_rank = c(2, 3), lambda_mean = c(0.25, 0.5),
+    remap_improv = c(0.30, 0.45), delta_frob_mean = c(1.2, 1.8)
+  )),
+  class = c("regional_mvpa_result", "list")
+)
 summarize_remap_roi(res)
-}
 }

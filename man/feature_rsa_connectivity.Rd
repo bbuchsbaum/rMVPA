@@ -44,8 +44,14 @@ RDM vectors across ROIs. Sparsification, when requested, is applied only to
 the final ROI x ROI matrix and never to the per-ROI RDM vectors themselves.
 }
 \examples{
-\dontrun{
-vecs <- feature_rsa_rdm_vectors(res)
-conn <- feature_rsa_connectivity(vecs, method = "spearman", keep = 0.1)
-}
+# Usually `vecs` comes from feature_rsa_rdm_vectors(run_regional(...));
+# here a toy table of per-ROI lower-triangle RDM vectors is used.
+set.seed(1)
+vecs <- tibble::tibble(
+  roinum = 1:4,
+  rdm_vec = replicate(4, as.numeric(dist(matrix(rnorm(30), 10, 3))),
+                      simplify = FALSE)
+)
+conn <- feature_rsa_connectivity(vecs, method = "spearman", keep = 0.5)
+round(conn, 2)
 }

@@ -1,3 +1,12 @@
+# pls added the "nipalspls" algorithm in 2.9-0; test what the installed pls has.
+pls_algorithms_available <- function() {
+  algs <- c("kernelpls", "widekernelpls", "simpls", "oscorespls")
+  if (requireNamespace("pls", quietly = TRUE) && utils::packageVersion("pls") >= "2.9-0") {
+    algs <- c(algs, "nipalspls")
+  }
+  algs
+}
+
 library(testthat)
 library(rMVPA)
 
@@ -173,9 +182,7 @@ test_that("feature RSA matrix kernels respect supported pls algorithms", {
   old_options <- pls::pls.options()
   on.exit(do.call(pls::pls.options, old_options), add = TRUE)
 
-  for (algorithm in c(
-    "kernelpls", "widekernelpls", "simpls", "oscorespls", "nipalspls"
-  )) {
+  for (algorithm in pls_algorithms_available()) {
     pls::pls.options(plsralg = algorithm)
     reference <- suppressWarnings(pls::plsr(
       responses ~ features,
@@ -584,9 +591,7 @@ test_that("slim PVE calculation reproduces every supported pls algorithm", {
   old_options <- pls::pls.options()
   on.exit(do.call(pls::pls.options, old_options), add = TRUE)
 
-  for (algorithm in c(
-    "kernelpls", "widekernelpls", "simpls", "oscorespls", "nipalspls"
-  )) {
+  for (algorithm in pls_algorithms_available()) {
     pls::pls.options(plsralg = algorithm)
     reference <- suppressWarnings(pls::plsr(
       responses ~ features,

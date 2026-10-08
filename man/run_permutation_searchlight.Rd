@@ -106,36 +106,33 @@ The \code{perm_strategy} field in \code{perm_ctrl} determines how each
 permutation pass is executed.  The two strategies share the same
 downstream pipeline (null construction, p-value scoring, FDR
 correction) — they differ only in \emph{how} null metric values are
-produced.  Neither strategy contains any engine-specific branching.
+produced. Eligible exact engines reuse preparation across permutations
+for built-in blocked CV or explicit custom splits. Other CV specifications
+retain their per-permutation fold generation.
 
 \describe{
   \item{\strong{\code{"iterate"}} (default)}{
-    Calls \code{\link{mvpa_iterate}} on a \strong{subsampled} set of
-    centers.  This is the generic per-ROI iterator that works with
-    every model type and every dataset class.  The \code{subsample}
+    Evaluates a \strong{subsampled} set of centers using a prepared
+    engine when eligible, or \code{\link{mvpa_iterate}} otherwise.
+    The \code{subsample}
     parameter in \code{perm_ctrl} controls how many centers are
     evaluated per permutation.
 
     \strong{Null pool size}: \code{n_perm * n_subsampled_centers}.
 
     \strong{Best for}: slow classifiers, large brains, limited compute.
-    The subsampling gives a 5--20\eqn{\times} speedup over a full-brain
-    pass.
+    Subsampling reduces the number of centers scored per permutation.
   }
 
   \item{\strong{\code{"searchlight"}}}{
-    Calls \code{\link{run_searchlight}} on the \strong{full brain} for
-    each permutation.  Because the call goes through the standard
-    \code{run_searchlight} S3 dispatch, it automatically benefits from
-    any fast engine the model qualifies for (e.g.\ SWIFT, dual-LDA)
-    \emph{and} from any user-defined \code{run_searchlight.<class>}
-    method.  No engine-specific code exists here — it is purely the
-    standard \code{run_searchlight} call.
+    Evaluates the \strong{full brain} using a prepared engine when
+    eligible, or \code{\link{run_searchlight}} otherwise. The latter
+    retains standard engine dispatch and user-defined
+    \code{run_searchlight.<class>} methods.
 
     Since the full brain is computed anyway, \strong{all} centers
     contribute to the null distribution (the \code{subsample} parameter
-    is ignored and a note is logged).  This yields a richer null and
-    therefore better-calibrated p-values.
+    is ignored and a note is logged).
 
     \strong{Null pool size}: \code{n_perm * all_centers}.
 

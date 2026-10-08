@@ -1,15 +1,8 @@
 /* ---------- Albersdown: Bauhaus geometric system ---------- */
 
-/* Bundled, latin-subset, variable-weight web fonts (OFL; see fonts/LICENSE).
-   Referenced by relative path so html_vignette self-contained builds embed them
-   and the pkgdown site serves them locally — no third-party network requests. */
-@font-face { font-family: "Familjen Grotesk"; font-style: normal; font-weight: 400 700; font-display: swap; src: url("fonts/familjen-grotesk.woff2") format("woff2"); }
-@font-face { font-family: "Newsreader"; font-style: normal; font-weight: 400 600; font-display: swap; src: url("fonts/newsreader.woff2") format("woff2"); }
-@font-face { font-family: "Newsreader"; font-style: italic; font-weight: 400 500; font-display: swap; src: url("fonts/newsreader-italic.woff2") format("woff2"); }
-@font-face { font-family: "Space Grotesk"; font-style: normal; font-weight: 300 700; font-display: swap; src: url("fonts/space-grotesk.woff2") format("woff2"); }
-@font-face { font-family: "Hanken Grotesk"; font-style: normal; font-weight: 400 700; font-display: swap; src: url("fonts/hanken-grotesk.woff2") format("woff2"); }
-@font-face { font-family: "Spline Sans Mono"; font-style: normal; font-weight: 400 500; font-display: swap; src: url("fonts/spline-sans-mono.woff2") format("woff2"); }
-@font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 400 500; font-display: swap; src: url("fonts/jetbrains-mono.woff2") format("woff2"); }
+/* Installed vignettes use the system font fallbacks below; embedding the
+   albersdown web fonts added ~560 KB to every self-contained vignette. The
+   pkgdown site gets its fonts from the albersdown template. */
 
 :root {
   /* Default direction = Homage (warm). `.preset-interaction` overrides to cool. */

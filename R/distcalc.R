@@ -229,7 +229,17 @@ pcadist <- function(labels=NULL, ncomp=2, whiten=TRUE, threshfun=NULL,
   if (nrow(X) == 0L) {
     return(X)
   }
-  ranked <- t(apply(X, 1L, rank, ties.method = "average"))
+  if (ncol(X) <= 1L) {
+    # With one column apply() simplifies to a vector, so this returns a 1 x n
+    # matrix and the caller fails for that (degenerate, single-voxel) ROI.
+    # Kept as is so results do not change; a Spearman RDM over one voxel is
+    # undefined either way.
+    ranked <- t(apply(X, 1L, rank, ties.method = "average"))
+  } else {
+    # Average ranks are exact half-integers; rowRanks() is identical to
+    # t(apply(X, 1, rank, ties.method = "average")) without the per-row loop.
+    ranked <- matrixStats::rowRanks(X, ties.method = "average")
+  }
   dimnames(ranked) <- dimnames(X)
   ranked
 }
@@ -531,11 +541,10 @@ pairwise_dist.pcadist <- function(obj, X,...) {
 #' - Finally, loops over row pairs to compute \code{(x_i - x_j) * inv_cov * (x_i - x_j)^T}.
 #'
 #' @examples
-#' \dontrun{
-#'   X <- matrix(rnorm(100), 10, 10)
-#'   dist_obj <- robustmahadist()
-#'   dist_matrix <- pairwise_dist(dist_obj, X)
-#' }
+#' X <- matrix(rnorm(100), 10, 10)
+#' dist_obj <- robustmahadist()
+#' dist_matrix <- pairwise_dist(dist_obj, X)
+#' dim(dist_matrix)
 #'
 #' @export
 #' @noRd

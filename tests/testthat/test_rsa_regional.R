@@ -139,8 +139,7 @@ test_that("Print methods for rsa_model and rsa_design produce non-empty output",
   data_list <- list(Dmat = Dmat, block = rep(1:5, each = 10))
   rdes <- rsa_design(~ Dmat, data_list, block_var = "block")
   
-  dset <- list(train_data = matrix(rnorm(50 * 20), 50, 20), mask = 1:50)
-  class(dset) <- "mvpa_dataset"
+  dset <- gen_sample_dataset(c(4, 5, 1), 50, blocks = 5)$dataset
   mspec <- rsa_model(dset, rdes, regtype = "pearson")
   
   out_design <- capture.output(print(rdes))

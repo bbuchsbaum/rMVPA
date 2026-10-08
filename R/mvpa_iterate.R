@@ -1,25 +1,33 @@
 #' @noRd
 #' @keywords internal
 setup_mvpa_logger <- function() {
-  if (!requireNamespace("crayon", quietly = TRUE)) {
-    stop("Package 'crayon' is required for pretty logging. Please install it.")
-  }
-  
-  # Use the standard layout but with colored messages
+  # Use the standard layout. The threshold is left to the user (see
+  # set_log_level()); futile.logger already defaults to INFO. This used to reset
+  # the threshold to INFO on every run in interactive sessions, which undid
+  # set_log_level("DEBUG"). The comparison guarding it compared a level name
+  # with a number and was always FALSE.
   futile.logger::flog.layout(futile.logger::layout.simple)
-  
-  # Check if we're in a test environment or if user has set a custom threshold
-  # Don't override if already set to ERROR or higher (more restrictive)
-  current_threshold <- futile.logger::flog.threshold()
-  
-  # Only set to INFO if current threshold is less restrictive (DEBUG)
-  # or if running in interactive mode and not in tests
-  if (current_threshold <= futile.logger::DEBUG || 
-      (interactive() && Sys.getenv("TESTTHAT") == "")) {
-    # Set default threshold to INFO to hide DEBUG messages
-    # This prevents common/expected errors from being displayed
-    futile.logger::flog.threshold(futile.logger::INFO)
+  .rmvpa_refresh_log_state()
+  invisible(NULL)
+}
+
+#' Collect garbage only when explicitly requested
+#'
+#' The iterator used to call gc() several times per batch. A full collection
+#' walks the whole heap, so its cost grows with everything else the session
+#' holds (about 16 ms in a fresh session, far more with large results in
+#' memory), and R collects automatically when it needs memory. Set
+#' options(rMVPA.gc_each_batch = TRUE) to restore per-batch collection, e.g.
+#' to keep peak memory down in long runs. The older
+#' rMVPA.shard_gc_each_batch option is honoured too.
+#' @keywords internal
+#' @noRd
+.maybe_gc <- function() {
+  if (isTRUE(getOption("rMVPA.gc_each_batch", FALSE)) ||
+      isTRUE(getOption("rMVPA.shard_gc_each_batch", FALSE))) {
+    gc(FALSE)
   }
+  invisible(NULL)
 }
 
 #' @keywords internal
@@ -47,7 +55,7 @@ generate_crossval_samples <- function(mspec, roi) {
 #' @keywords internal
 #' @noRd
 .fold_cache_enabled <- function() {
-  TRUE
+  .fast_path_enabled("fold_cache")
 }
 
 #' @keywords internal
@@ -601,7 +609,7 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2,
 
   # Check if as_roi returned an error object (e.g., insufficient voxels after mask filtering)
   if (inherits(r$train_roi, "try-error")) {
-    futile.logger::flog.debug("Skipping ROI: as_roi returned error (%s)", as.character(r$train_roi))
+    .log_debug("Skipping ROI: as_roi returned error (%s)", as.character(r$train_roi))
     return(NULL)
   }
 
@@ -615,7 +623,7 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2,
   r <- try(filter_roi(r, preserve = center_global_id, min_voxels = min_voxels), silent=TRUE)
 
   if (inherits(r, "try-error")) {
-    futile.logger::flog.debug("Skipping ROI: filter_roi failed (%s)", as.character(r))
+    .log_debug("Skipping ROI: filter_roi failed (%s)", as.character(r))
     return(NULL)
   }
 
@@ -677,10 +685,13 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2,
 
   # Bound scheduler/list overhead even when the raw matrices are tiny. This
   # replaces the old rule that selected ten percent of all brain centers.
+  # Each batch is extracted serially and then waits for its slowest future,
+  # so batches must be large enough to keep workers busy: at 64 centres on
+  # 4 workers, multisession ran slower than sequential.
   task_cap <- if (isTRUE(use_shard_backend)) {
     max(1024L, as.integer(nworkers) * 128L)
   } else {
-    max(64L, as.integer(nworkers) * 8L)
+    max(256L, as.integer(nworkers) * 32L)
   }
   as.integer(min(length(vox_list), max_by_memory, task_cap))
 }
@@ -930,7 +941,7 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
   }
 
 
-  futile.logger::flog.debug("Starting mvpa_iterate with %d voxels", length(vox_list))
+  .log_debug("Starting mvpa_iterate with %d voxels", length(vox_list))
 
   tryCatch({
     assert_that(length(ids) == length(vox_list),
@@ -1037,7 +1048,7 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
         }
 
         # ---- build sample frame (serial) ----
-        futile.logger::flog.debug("Processing batch %d with %d voxels", i, length(vlist))
+        .log_debug("Processing batch %d with %d voxels", i, length(vlist))
         # Minimum features allowed (relaxed to 1 for searchlight to keep edge spheres)
         min_voxels_required <- if (analysis_type == "searchlight") 1L else 2L
         batch_prepared <- .prepare_batch_frame(
@@ -1060,10 +1071,10 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
         get_samples_elapsed <- batch_prepared$get_samples_seconds
         extract_elapsed <- batch_prepared$roi_extract_seconds
 
-        futile.logger::flog.debug("Batch %d: get_samples + filter(size>=%d) took %.3f sec",
+        .log_debug("Batch %d: get_samples + filter(size>=%d) took %.3f sec",
                                   i, min_voxels_required, get_samples_elapsed)
         
-        futile.logger::flog.debug("Sample frame has %d rows after filtering", n_sf_after_size_filter)
+        .log_debug("Sample frame has %d rows after filtering", n_sf_after_size_filter)
         n_sf <- 0L
         run_future_elapsed <- 0
         
@@ -1072,9 +1083,9 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
             # ---- shard path: skip serial ROI extraction ----
             # Workers will extract ROIs from shared memory in run_future.shard_model_spec.
             # Keep the 'sample' column (data_sample with $vox indices).
-            futile.logger::flog.debug("Batch %d: shard backend active, skipping serial ROI extraction", i)
+            .log_debug("Batch %d: shard backend active, skipping serial ROI extraction", i)
           } else {
-            futile.logger::flog.debug("Batch %d: ROI extraction (extract_roi) took %.3f sec",
+            .log_debug("Batch %d: ROI extraction (extract_roi) took %.3f sec",
                                       i, extract_elapsed)
           }
 
@@ -1101,11 +1112,11 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
             wrote_rdm_batches <- TRUE
           }
           run_future_elapsed <- proc.time()[3] - t_run_future
-          futile.logger::flog.debug("Batch %d: run_future (parallel section) took %.3f sec",
+          .log_debug("Batch %d: run_future (parallel section) took %.3f sec",
                                     i, run_future_elapsed)
           processed_rois <- processed_rois + n_sf
           
-          futile.logger::flog.debug("Batch %d produced %d results", i, nrow(results[[i]]))
+          .log_debug("Batch %d produced %d results", i, nrow(results[[i]]))
 
           # Free batch-local ROI data so it doesn't linger until the next
           # iteration reassigns sf.  run_future already freed its copy of
@@ -1113,10 +1124,7 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
           sf <- NULL
           batch_prepared <- NULL
           vlist <- NULL
-          if (!use_shard_backend ||
-              isTRUE(getOption("rMVPA.shard_gc_each_batch", FALSE))) {
-            gc(FALSE)
-          }
+          .maybe_gc()
         } else {
           skipped_rois <- skipped_rois + length(batch_positions)
           futile.logger::flog.warn("%s Batch %s: All ROIs filtered out (size < 2 voxels)", 
@@ -1186,7 +1194,7 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
   # Combine all results and free the per-batch list immediately
   final_results <- dplyr::bind_rows(results)
   rm(results)
-  gc()
+  .maybe_gc()
   if (profile_enabled) {
     timing$processed_rois <- processed_rois
     timing$skipped_rois <- skipped_rois
@@ -1257,39 +1265,32 @@ as_worker_spec <- function(obj) {
   obj
 }
 
-#' @param verbose Logical; print progress messages if \code{TRUE}.
-#' @param analysis_type The type of analysis (e.g., "searchlight").
-#' @details
-#' If the \pkg{progressr} package is installed, this method emits per-task
-#' progress updates from parallel workers. Progress handling is enabled for
-#' the scope of this call and uses the currently configured handlers.
-#' @rdname run_future-methods
-#' @export
-run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
-                               analysis_type = "searchlight", drop_probs = FALSE,
-                               fail_fast = FALSE, ...) {
-  gc()
-  future_seed <- !inherits(obj, "era_rsa_model")
-  # Ensure workers never receive the full dataset.
-  obj <- as_worker_spec(obj)
-  total_items <- nrow(frame)
+#' Items per future for searchlight batches
+#'
+#' Searchlight ROIs are cheap (milliseconds each). Aim for ~4 chunks per
+#' worker for load balancing, but no fewer than `min_chunk` items per future,
+#' since each future costs tens of milliseconds to launch and collect: with
+#' the default batch cap (64 centres on 4 workers) the old rule made 16
+#' futures of 4 ROIs each, and dispatch outweighed the work. Never fewer
+#' chunks than workers.
+#' @keywords internal
+#' @noRd
+.searchlight_chunk_size <- function(total_items, nworkers,
+                                    min_chunk = getOption("rMVPA.searchlight_min_chunk", 16L)) {
+  nworkers <- max(1L, as.integer(nworkers))
+  balanced <- ceiling(total_items / (nworkers * 4L))
+  per_worker <- ceiling(total_items / nworkers)
+  as.integer(max(1L, min(max(balanced, min_chunk), per_worker)))
+}
 
-  # --- chunk_size controls parallelism and per-worker memory ---
-  # Each chunk becomes one future; items within a chunk run serially
-  # on a single worker.  Progressr signals are only relayed when a
-  # chunk completes, so chunk_size also controls progress granularity.
-  nworkers <- future::nbrOfWorkers()
-  if (analysis_type == "regional") {
-    # Regional: few expensive ROIs (seconds-minutes each). Use chunk_size=1
-    # so each ROI is its own future, giving per-ROI progress updates and
-    # optimal load balancing for heterogeneous ROI sizes.
-    chunk_size <- 1L
-  } else {
-    # Searchlight: many cheap ROIs (milliseconds each). Target ~4 chunks
-    # per worker for good load balancing with low scheduling overhead.
-    chunk_size <- max(1L, ceiling(total_items / (nworkers * 4L)))
-  }
-
+#' Per-item worker for run_future.default
+#'
+#' A namespace-level factory, so the returned closure captures only its
+#' arguments. Defined inside run_future.default it would capture the whole
+#' batch frame, which future then serializes (and hashes) for every chunk.
+#' @keywords internal
+#' @noRd
+.run_future_item_fun <- function(obj, processor, analysis_type, drop_probs, fail_fast) {
   if (is.null(processor)) {
     do_fun <- function(obj, roi, rnum, center_global_id = NA) {
       process_roi(obj, roi, rnum, center_global_id = center_global_id)
@@ -1311,7 +1312,7 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
     }
   }
 
-  process_item <- function(.id, rnum, roi, size, progress_tick = NULL) {
+  function(.id, rnum, roi, size, progress_tick = NULL) {
     if (!is.null(progress_tick)) {
       on.exit(progress_tick(), add = TRUE)
     }
@@ -1319,7 +1320,7 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
     tryCatch({
       if (is.null(roi)) {
         # ROI failed validation (e.g. from extract_roi returning NULL due to <2 voxels after filter_roi)
-        futile.logger::flog.debug("ROI ID %s: Skipped (failed initial validation in extract_roi, e.g. <2 voxels).", rnum)
+        .log_debug("ROI ID %s: Skipped (failed initial validation in extract_roi, e.g. <2 voxels).", rnum)
         msg <- sprintf("ROI %s failed validation (e.g., <2 voxels after filtering or other extract_roi issue)", rnum)
         if (fail_fast) {
           rlang::abort(message = sprintf("ROI %s failed validation: <2 voxels or invalid after filtering.", rnum))
@@ -1373,7 +1374,7 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
         raw <- paste(utils::capture.output(rlang::trace_back()), collapse = "\n")
         if (nchar(raw) > 500L) paste0(substr(raw, 1L, 500L), "\n... [truncated]") else raw
       }, error = function(...) NA_character_)
-      futile.logger::flog.debug("ROI %d: Processing error (%s)", rnum, e$message)
+      .log_debug("ROI %d: Processing error (%s)", rnum, e$message)
       tibble::tibble(
         result = list(NULL),
         indices = list(NULL),
@@ -1387,6 +1388,51 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
       )
     })
   }
+}
+
+#' @keywords internal
+#' @noRd
+.run_future_map_fun <- function(process_item, progress_tick) {
+  function(.id, rnum, roi, size) {
+    process_item(.id, rnum, roi, size, progress_tick = progress_tick)
+  }
+}
+
+#' @param verbose Logical; print progress messages if \code{TRUE}.
+#' @param analysis_type The type of analysis (e.g., "searchlight").
+#' @details
+#' If the \pkg{progressr} package is installed, this method emits per-task
+#' progress updates from parallel workers. Progress handling is enabled for
+#' the scope of this call and uses the currently configured handlers.
+#' @rdname run_future-methods
+#' @export
+run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
+                               analysis_type = "searchlight", drop_probs = FALSE,
+                               fail_fast = FALSE, ...) {
+  .maybe_gc()
+  future_seed <- !inherits(obj, "era_rsa_model")
+  # Ensure workers never receive the full dataset.
+  obj <- as_worker_spec(obj)
+  total_items <- nrow(frame)
+
+  # --- chunk_size controls parallelism and per-worker memory ---
+  # Each chunk becomes one future; items within a chunk run serially
+  # on a single worker.  Progressr signals are only relayed when a
+  # chunk completes, so chunk_size also controls progress granularity.
+  nworkers <- future::nbrOfWorkers()
+  if (analysis_type == "regional") {
+    # Regional: few expensive ROIs (seconds-minutes each). Use chunk_size=1
+    # so each ROI is its own future, giving per-ROI progress updates and
+    # optimal load balancing for heterogeneous ROI sizes.
+    chunk_size <- 1L
+  } else {
+    chunk_size <- .searchlight_chunk_size(total_items, nworkers)
+  }
+
+  # Built outside this frame so the futures do not carry `frame` (the whole
+  # batch) in their closure; each chunk then ships only its own rows.
+  process_item <- .run_future_item_fun(obj, processor, analysis_type,
+                                       drop_probs, fail_fast)
 
   run_map <- function(progress_tick = NULL) {
     if (nworkers <= 1L) {
@@ -1403,9 +1449,8 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
       return(out)
     }
 
-    frame %>% furrr::future_pmap(function(.id, rnum, roi, size) {
-      process_item(.id, rnum, roi, size, progress_tick = progress_tick)
-    }, .options = furrr::furrr_options(seed = future_seed, conditions = "condition",
+    frame %>% furrr::future_pmap(.run_future_map_fun(process_item, progress_tick),
+                                 .options = furrr::furrr_options(seed = future_seed, conditions = "condition",
                                        chunk_size = chunk_size))
   }
 
@@ -1430,7 +1475,7 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
   # Free the frame (which holds all batch ROI data) and the closure
   # before GC so the memory is actually reclaimable.
   rm(frame, run_map)
-  gc()
+  .maybe_gc()
 
   dplyr::bind_rows(results)
 }

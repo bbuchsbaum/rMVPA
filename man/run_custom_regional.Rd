@@ -64,7 +64,6 @@ in parallel), catching errors from `custom_func`, and formatting the
 output into a convenient flat table.
 }
 \examples{
-\dontrun{
 # Generate sample dataset
 dset_info <- gen_sample_dataset(D = c(8,8,8), nobs = 50, nlevels = 2)
 dataset_obj <- dset_info$dataset
@@ -85,5 +84,4 @@ my_roi_stats <- function(roi_data, roi_info) {
 
 custom_results <- run_custom_regional(dataset_obj, region_mask_vol, my_roi_stats)
 print(custom_results)
-}
 }

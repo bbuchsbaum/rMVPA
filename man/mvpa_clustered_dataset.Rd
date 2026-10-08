@@ -31,8 +31,6 @@ as \code{ClusteredNeuroVec} objects from \pkg{neuroim2}. A "clustered searchligh
 iterates over all K parcels, pooling nearby parcels as features for each analysis.
 }
 \examples{
-\dontrun{
-  ds <- gen_clustered_sample_dataset(K=5, nobs=20)
-  print(ds$dataset)
-}
+ds <- gen_clustered_sample_dataset(D = c(5, 5, 5), nobs = 20, K = 5)
+print(ds$dataset)
 }

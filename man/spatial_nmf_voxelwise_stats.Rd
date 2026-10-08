@@ -40,7 +40,16 @@ Convenience function that converts stability summaries into voxelwise z- and
 p-value maps (based on bootstrap mean/SD).
 }
 \examples{
-\dontrun{
-  # stats <- spatial_nmf_voxelwise_stats(nmf_result, design_matrix)
-}
+set.seed(1)
+X <- matrix(runif(20 * 50), 20, 50)
+fit <- spatial_nmf(X, k = 2)$fit
+stab <- spatial_nmf_stability(X = X, fit = fit, n_boot = 5, seed = 1)
+
+# Attach bootstrap mean/SD component maps on a small 5 x 5 x 2 grid
+sp <- neuroim2::NeuroSpace(c(5, 5, 2))
+to_vol <- function(v) neuroim2::NeuroVol(array(v, c(5, 5, 2)), sp)
+stab$maps <- list(mean = lapply(1:2, function(i) to_vol(stab$mean[i, ])),
+                  sd   = lapply(1:2, function(i) to_vol(stab$sd[i, ])))
+stats <- spatial_nmf_voxelwise_stats(stability = stab)
+names(stats)
 }

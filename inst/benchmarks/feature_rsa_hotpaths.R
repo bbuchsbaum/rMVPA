@@ -964,6 +964,22 @@ frperf_ridge_accuracy_summary <- function(rows) {
   }))
 }
 
+# CPU model for the receipt (and the vignette caption); NA when unknown.
+frperf_hardware_chip <- function() {
+  chip <- tryCatch({
+    if (identical(Sys.info()[["sysname"]], "Darwin")) {
+      system2("sysctl", c("-n", "machdep.cpu.brand_string"), stdout = TRUE,
+              stderr = FALSE)[[1L]]
+    } else if (file.exists("/proc/cpuinfo")) {
+      sub("^model name[[:space:]]*:[[:space:]]*", "",
+          grep("^model name", readLines("/proc/cpuinfo"), value = TRUE)[[1L]])
+    } else {
+      NA_character_
+    }
+  }, error = function(e) NA_character_)
+  if (length(chip) != 1L || !nzchar(chip)) NA_character_ else chip
+}
+
 frperf_ridge_accuracy_receipt <- function(rows, source_root = ".") {
   summary <- frperf_ridge_accuracy_summary(rows)
   timing <- do.call(rbind, lapply(
@@ -1004,6 +1020,7 @@ frperf_ridge_accuracy_receipt <- function(rows, source_root = ".") {
   }
   receipt$r_version <- R.version.string
   receipt$platform <- R.version$platform
+  receipt$hardware_chip <- frperf_hardware_chip()
   receipt$omp_threads <- Sys.getenv("OMP_NUM_THREADS", unset = NA_character_)
   receipt$openblas_threads <- Sys.getenv(
     "OPENBLAS_NUM_THREADS", unset = NA_character_

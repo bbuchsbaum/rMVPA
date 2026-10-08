@@ -125,6 +125,9 @@ zeroVarianceColumns2 <- function(M) {
 #' @keywords internal
 #' @noRd
 na_cols <- function(M) {
+  if (is.matrix(M) && is.numeric(M)) {
+    return(matrixStats::colAnyNAs(M))
+  }
   apply(M, 2, function(x) any(is.na(x)))
 }
 
@@ -137,6 +140,20 @@ nonzeroVarianceColumns <- function(M) {
 #' @keywords internal
 #' @noRd
 nonzeroVarianceColumns2 <- function(M) {
+  if (is.matrix(M) && is.numeric(M)) {
+    # Exact, vectorised equivalent of sd(x, na.rm = TRUE) > 0: a column has
+    # nonzero variance iff its finite non-missing values are not all equal
+    # (it needs at least two non-missing values). Comparing min and max avoids
+    # summation round-off, which could give a constant column sd ~ 1e-17.
+    n_ok <- colSums(!is.na(M))
+    rng_ok <- suppressWarnings(matrixStats::colMaxs(M, na.rm = TRUE) >
+                                 matrixStats::colMins(M, na.rm = TRUE))
+    # sd() of a column holding Inf is NaN, which the reference treats as FALSE.
+    has_inf <- colSums(is.infinite(M)) > 0
+    ret <- n_ok >= 2L & rng_ok & !has_inf
+    ret[is.na(ret)] <- FALSE
+    return(ret)
+  }
   ret <- apply(M, 2, sd, na.rm=TRUE) > 0
   ret[is.na(ret)] <- FALSE
   ret
@@ -216,10 +233,10 @@ coalesce_join2 <- function(x, y,
 #' @return Invisibly returns the numeric log level.
 #'
 #' @examples
-#' \dontrun{
-#'   rMVPA::set_log_level("DEBUG")
-#'   rMVPA::set_log_level("WARN")
-#' }
+#' old <- futile.logger::flog.threshold()   # remember current level
+#' set_log_level("DEBUG")
+#' set_log_level("WARN")
+#' set_log_level(old)                         # restore
 #'
 #' @export
 set_log_level <- function(level = "INFO") {
@@ -247,7 +264,41 @@ set_log_level <- function(level = "INFO") {
   }
 
   futile.logger::flog.threshold(lvl_num)
+  futile.logger::flog.threshold(lvl_num, name = "rMVPA")
+  .rmvpa_refresh_log_state()
   invisible(lvl_num)
+}
+
+# Debug logging is checked once per run, not on every call. A futile.logger
+# call pays for logger-namespace resolution (via capture.output(str(...)))
+# before it compares thresholds, about 1 ms per call. Hot per-fold loops made
+# hundreds of thousands of such calls even with debug output off.
+# .log_debug() tests a cached flag first. Because `...` is lazy, the message
+# arguments are not evaluated at all when debug is off. The flag is refreshed
+# by set_log_level() and at the start of each mvpa_iterate() run.
+.rmvpa_log_state <- new.env(parent = emptyenv())
+
+#' @keywords internal
+#' @noRd
+.rmvpa_refresh_log_state <- function() {
+  levels <- c(TRACE = 9, DEBUG = 8, INFO = 6, WARN = 4, ERROR = 2, FATAL = 1)
+  threshold <- futile.logger::flog.threshold(name = "rMVPA")
+  level <- if (is.numeric(threshold)) threshold else unname(levels[toupper(threshold)])
+  .rmvpa_log_state$debug <- isTRUE(level >= levels[["DEBUG"]])
+  invisible(.rmvpa_log_state$debug)
+}
+
+#' @keywords internal
+#' @noRd
+.log_debug <- function(...) {
+  enabled <- .rmvpa_log_state$debug
+  if (is.null(enabled)) {
+    enabled <- .rmvpa_refresh_log_state()
+  }
+  if (isTRUE(enabled)) {
+    futile.logger::flog.debug(..., name = "rMVPA")
+  }
+  invisible(NULL)
 }
 
 
@@ -295,6 +346,58 @@ utils::globalVariables(c(
   "rnum",
   "scores_list"
 ))
+
+# Stable fast paths are always on for users: the rMVPA.* options that once
+# toggled them are deliberately ignored (see test_searchlight_profile_policy.R).
+# Each fast path still keeps its reference implementation, and parity tests and
+# perf guardrails must be able to run it. They do so through this package-private
+# switch, which is not an option and is not user-facing.
+.rmvpa_fast_path_names <- c(
+  "fold_cache",
+  "searchlight_geometry_cache",
+  "clustered_nn_fastpath",
+  "matrix_first_roi",
+  "fast_filter_roi",
+  "rsa_fast_kernel",
+  "naive_xdec_fast_kernel"
+)
+
+.rmvpa_reference_paths <- new.env(parent = emptyenv())
+
+#' @keywords internal
+#' @noRd
+.fast_path_enabled <- function(name) {
+  !isTRUE(.rmvpa_reference_paths[[name]])
+}
+
+#' Run code with selected fast paths replaced by their reference implementations
+#'
+#' Internal, for parity tests and benchmarks only.
+#'
+#' @keywords internal
+#' @noRd
+.with_reference_paths <- function(names, code) {
+  unknown <- setdiff(names, .rmvpa_fast_path_names)
+  if (length(unknown) > 0L) {
+    stop("Unknown fast path name(s): ", paste(unknown, collapse = ", "), call. = FALSE)
+  }
+  previous <- mget(names, envir = .rmvpa_reference_paths, ifnotfound = list(NULL))
+  on.exit({
+    for (nm in names) {
+      if (is.null(previous[[nm]])) {
+        if (exists(nm, envir = .rmvpa_reference_paths, inherits = FALSE)) {
+          rm(list = nm, envir = .rmvpa_reference_paths)
+        }
+      } else {
+        assign(nm, previous[[nm]], envir = .rmvpa_reference_paths)
+      }
+    }
+  }, add = TRUE)
+  for (nm in names) {
+    assign(nm, TRUE, envir = .rmvpa_reference_paths)
+  }
+  force(code)
+}
 
 #' Apply a scoped future plan with an exact worker contract
 #'
@@ -366,15 +469,10 @@ utils::globalVariables(c(
 #'         the formatted information to the console.
 #' @export
 #' @examples
-#' \dontrun{
-#' # Display system information in the console
-#' mvpa_sysinfo()
-#'
-#' # Capture the information in a variable
+#' # Display system information and capture it in a variable
 #' sys_info <- mvpa_sysinfo()
-#' print(sys_info$r_version)
-#' print(sys_info$dependencies$rsample)
-#' }
+#' sys_info$platform
+#' sys_info$dependencies$rsample
 mvpa_sysinfo <- function() {
   info <- list()
 
@@ -482,10 +580,9 @@ mvpa_sysinfo <- function() {
 #' @param ... Ignored.
 #' @return Invisibly returns the input object \code{x} (called for side effects).
 #' @examples
-#' \dontrun{
-#'   info <- mvpa_sysinfo()
-#'   print(info)
-#' }
+#' # mvpa_sysinfo() prints on creation; capture that output, then print explicitly
+#' invisible(utils::capture.output(info <- mvpa_sysinfo()))
+#' print(info)
 #' @export
 #' @keywords internal
 print.mvpa_sysinfo <- function(x, ...) {

@@ -5,13 +5,15 @@
 \title{Install rMVPA Command-Line Wrappers}
 \usage{
 install_cli(
-  dest_dir = "~/.local/bin",
+  dest_dir,
   overwrite = FALSE,
   commands = c("searchlight", "regional")
 )
 }
 \arguments{
-\item{dest_dir}{Destination directory for the wrappers.}
+\item{dest_dir}{Destination directory for the wrappers, for example
+\code{"~/.local/bin"}. Required: nothing is written to your home
+directory unless you choose it.}
 
 \item{overwrite}{Logical; overwrite existing wrapper files if \code{TRUE}.}
 

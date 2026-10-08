@@ -105,9 +105,9 @@ averageable.
 scalar metrics for every sphere it successfully processes.
 }
 \examples{
-\dontrun{
-# Generate sample dataset
-dset_info <- gen_sample_dataset(D = c(10, 10, 10), nobs = 30, nlevels = 2)
+\donttest{
+# Generate a small sample dataset
+dset_info <- gen_sample_dataset(D = c(6, 6, 6), nobs = 20, nlevels = 2)
 dataset_obj <- dset_info$dataset
 
 # Define a custom function: calculate mean and sd within the sphere
@@ -128,13 +128,13 @@ association <- function(sl_data, sl_info) {
 
 # Run the custom searchlight (standard method)
 custom_sl_results <- run_custom_searchlight(dataset_obj, my_sl_stats,
-                                            radius = 3, method = "standard")
+                                            radius = 2, method = "standard")
 print(custom_sl_results)
 
 # Run randomized searchlight
 custom_sl_rand <- run_custom_searchlight(dataset_obj, my_sl_stats,
-                                         radius = 3, method = "randomized",
-                                         niter = 50)
+                                         radius = 2, method = "randomized",
+                                         niter = 2)
 print(custom_sl_rand)
 }
 

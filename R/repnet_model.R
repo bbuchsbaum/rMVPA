@@ -17,10 +17,13 @@
 #' @return A model spec of class \code{"repnet_model"} compatible with
 #'   \code{run_regional()} and \code{run_searchlight()}.
 #' @examples
-#' \dontrun{
-#'   # Requires repnet_design with seed_rdm
-#'   # model <- repnet_model(dataset, design, repnet_des)
-#' }
+#' ds <- gen_sample_dataset(D = c(4, 4, 4), nobs = 16, blocks = 4, nlevels = 2)
+#' # Seed RDM over trials (e.g. from a seed region or a behavioural model)
+#' key_ids <- ds$design$train_design$.rownum
+#' seed_rdm <- as.matrix(dist(key_ids))
+#' rownames(seed_rdm) <- colnames(seed_rdm) <- as.character(key_ids)
+#' rn_des <- repnet_design(ds$design, key_var = ~ .rownum, seed_rdm = seed_rdm)
+#' model <- repnet_model(ds$dataset, ds$design, rn_des)
 #' @export
 repnet_model <- function(dataset,
                          design,
@@ -104,7 +107,7 @@ fit_roi.repnet_model <- function(model, roi_data, context, ...) {
   items_seed <- rownames(seed_mat)
   common_items <- intersect(items_roi, items_seed)
   K <- length(common_items)
-  futile.logger::flog.debug(
+  .log_debug(
     sprintf("repnet_model: items(roi)=%d, items(seed)=%d, common=%d",
             length(items_roi), length(items_seed), K)
   )

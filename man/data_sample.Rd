@@ -32,9 +32,7 @@ Construct a light-weight data sample descriptor for a set of features (e.g., vox
 associated with a dataset. Methods define how to interpret and convert this descriptor.
 }
 \examples{
-\dontrun{
-  ds <- gen_sample_dataset(c(5,5,5), 20)
-  vox <- sample(which(ds$dataset$mask > 0), 10)
-  samp <- data_sample(ds$dataset, vox)
-}
+ds <- gen_sample_dataset(c(5,5,5), 20)
+vox <- sample(which(ds$dataset$mask > 0), 10)
+samp <- data_sample(ds$dataset, vox)
 }

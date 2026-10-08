@@ -29,7 +29,10 @@ Build a design object for representational connectivity, specifying item keys,
 a seed RDM, and optional confound RDMs.
 }
 \examples{
-\dontrun{
-  des <- repnet_design(design, ~ ImageID, seed_rdm=my_rdm)
-}
+trials <- data.frame(ImageID = rep(letters[1:4], 3), run = rep(1:3, each = 4))
+design <- mvpa_design(trials, y_train = ~ ImageID, block_var = ~ run)
+my_rdm <- as.matrix(dist(matrix(rnorm(4 * 3), 4, 3)))
+rownames(my_rdm) <- colnames(my_rdm) <- letters[1:4]
+des <- repnet_design(design, ~ ImageID, seed_rdm = my_rdm)
+str(des, max.level = 1)
 }

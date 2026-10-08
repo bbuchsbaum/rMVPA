@@ -32,8 +32,8 @@ build_matrix_first_naive_spec <- function() {
 }
 
 run_searchlight_matrix_first <- function(mspec, radius, enabled) {
-  force(enabled)
-  run_searchlight(mspec, radius = radius, method = "standard", backend = "default")
+  run <- function() run_searchlight(mspec, radius = radius, method = "standard", backend = "default")
+  if (isTRUE(enabled)) run() else rMVPA:::.with_reference_paths("matrix_first_roi", run())
 }
 
 test_that("process_roi_default uses matrix-first input", {
@@ -74,6 +74,7 @@ test_that("process_roi_default uses matrix-first input", {
 })
 
 test_that("matrix-first ROI path preserves mvpa_model searchlight outputs", {
+  skip_on_cran()
   mspec <- build_matrix_first_mvpa_spec()
 
   set.seed(3301)

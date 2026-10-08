@@ -8,6 +8,8 @@ docs
 adocs/*
 !adocs/pattern-model-plan.md
 !adocs/pattern-model-benchmarks.md
+!adocs/cran-release-plan.md
+!adocs/receipts/
 covr/
 vendor/
 oldR/

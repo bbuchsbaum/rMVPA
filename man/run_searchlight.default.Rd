@@ -31,7 +31,11 @@ fall back to default).}
   \item{engine}{Searchlight engine: \code{"auto"} (default), \code{"legacy"}
     (the compatibility key for the general-purpose iterator),
     \code{"swift"}, \code{"dual_lda_fast"}, \code{"naive_xdec_fast"}, or
-    \code{"era_rsa_fast"}.}
+    \code{"era_rsa_fast"}. \code{"auto"} only selects engines that compute
+    the same estimator as the model specification. \code{"swift"} is
+    never selected automatically: it replaces the specified classifier
+    with SWIFT's z-scored nearest-class-mean estimator and must be
+    requested explicitly.}
   \item{combiner}{Combiner function or name for randomized/resampled methods
     (default \code{"average"}).}
   \item{drop_probs}{If \code{TRUE}, drop probability predictions (default \code{FALSE}).}
@@ -50,7 +54,11 @@ By default, if an object's class does not implement a specific
 \code{run_searchlight_base}.
 }
 \examples{
-\dontrun{
-  # See run_searchlight generic for examples
-}
+# An mvpa_model has no dedicated method, so dispatch uses this default
+ds <- gen_sample_dataset(D = c(3, 3, 3), nobs = 24, nlevels = 2, blocks = 3)
+cval <- blocked_cross_validation(ds$design$block_var)
+mspec <- mvpa_model(load_model("corclass"), dataset = ds$dataset,
+                    design = ds$design, crossval = cval)
+res <- run_searchlight(mspec, radius = 2, method = "standard")
+names(res$results)
 }

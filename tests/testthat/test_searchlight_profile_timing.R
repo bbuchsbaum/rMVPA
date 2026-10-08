@@ -18,7 +18,7 @@ test_that("standard searchlight profiling attaches timing metadata", {
   old_opt <- options(rMVPA.profile_searchlight = TRUE)
   on.exit(options(old_opt), add = TRUE)
 
-  res <- run_searchlight(mspec, radius = 2, method = "standard")
+  res <- run_searchlight(mspec, radius = 2, method = "standard", engine = "legacy")  # timing metadata is a property of the general iterator
 
   timing <- attr(res, "timing")
   expect_type(timing, "list")

@@ -16,10 +16,16 @@
 #'
 #' @return A model spec of class \code{"repmed_model"}.
 #' @examples
-#' \dontrun{
-#'   # Requires repmed_design with X_rdm and Y_rdm
-#'   # model <- repmed_model(dataset, design, repmed_des, key_var=~ImageID)
-#' }
+#' ds <- gen_sample_dataset(D = c(4, 4, 4), nobs = 12, blocks = 3, nlevels = 2)
+#' items <- as.character(sort(unique(ds$design$train_design$.rownum)))
+#' # Predictor (X) and outcome (Y) RDMs over items
+#' X <- as.matrix(dist(matrix(rnorm(length(items) * 2), ncol = 2)))
+#' Y <- as.matrix(dist(matrix(rnorm(length(items) * 2), ncol = 2)))
+#' rownames(X) <- colnames(X) <- rownames(Y) <- colnames(Y) <- items
+#' repmed_des <- repmed_design(items = items, X_rdm = X, Y_rdm = Y)
+#' model <- repmed_model(ds$dataset, ds$design, repmed_des, key_var = ~ .rownum)
+#' res <- run_regional(model, ds$dataset$mask)
+#' res$performance_table
 #' @export
 repmed_model <- function(dataset,
                          design,
@@ -104,7 +110,7 @@ fit_roi.repmed_model <- function(model, roi_data, context, ...) {
   items_Y <- rownames(model$Y_rdm)
   common_items <- Reduce(intersect, list(items, items_roi, items_X, items_Y))
   K <- length(common_items)
-  futile.logger::flog.debug(
+  .log_debug(
     sprintf("repmed_model: items(design)=%d, items(roi)=%d, items(X)=%d, items(Y)=%d, common=%d",
             length(items), length(items_roi), length(items_X), length(items_Y), K)
   )

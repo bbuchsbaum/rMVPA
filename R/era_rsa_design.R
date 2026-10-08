@@ -30,9 +30,19 @@
 #'     \item confound_rdms: named list of item-level RDMs (block/time/run)
 #'   }
 #' @examples
-#' \dontrun{
-#'   # See era_rsa_model for full ERA-RSA workflow with design construction
-#' }
+#' # Two-phase (encoding / retrieval) trial table for 6 items
+#' items <- letters[1:6]
+#' trials <- data.frame(
+#'   Phase = factor(rep(c("enc", "ret"), each = 6), levels = c("enc", "ret")),
+#'   Item  = rep(items, times = 2),
+#'   Run   = c(rep(1:2, each = 3), rep(3:4, each = 3)),
+#'   Time  = c(1:6, 11:16)
+#' )
+#' des <- mvpa_design(trials, y_train = ~ Phase, block_var = ~ Run)
+#' era_des <- era_rsa_design(des, key_var = ~ Item, phase_var = ~ Phase,
+#'                           block_var = ~ Run, time_var = ~ Time)
+#' names(era_des$confound_rdms)
+#' era_des$item_lag
 #' @export
 era_rsa_design <- function(design,
                            key_var,

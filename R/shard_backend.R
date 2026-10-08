@@ -56,10 +56,15 @@ NULL
 #' shared memory (\code{shm_open}).
 #'
 #' @examples
-#' \dontrun{
-#'   mspec <- mvpa_model(mdl, dataset, design, "classification", crossval = cval)
+#' if (requireNamespace("shard", quietly = TRUE)) {
+#'   ds <- gen_sample_dataset(c(4, 4, 4), 24, nlevels = 2, blocks = 3)
+#'   cval <- blocked_cross_validation(ds$design$block_var)
+#'   mspec <- mvpa_model(load_model("corclass"), ds$dataset, ds$design,
+#'                       "classification", crossval = cval)
 #'   mspec <- use_shard(mspec)
-#'   results <- run_searchlight(mspec, ...)
+#'   results <- run_searchlight(mspec, radius = 2, method = "randomized",
+#'                              niter = 1)
+#'   shard_cleanup(mspec$shard_data)
 #' }
 #'
 #' @export
@@ -137,7 +142,7 @@ configure_runtime_backend <- function(model_spec,
 
   # If shard isn't installed, default path
   if (!requireNamespace("shard", quietly = TRUE)) {
-    futile.logger::flog.debug(
+    .log_debug(
       "%s backend=auto: package 'shard' unavailable, using default backend", context
     )
     return(model_spec)
@@ -147,7 +152,7 @@ configure_runtime_backend <- function(model_spec,
   tryCatch(
     use_shard(model_spec),
     error = function(e) {
-      futile.logger::flog.debug(
+      .log_debug(
         "%s backend=auto: shard unavailable for this run (%s); using default backend",
         context, e$message
       )
@@ -560,7 +565,7 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
   if (analysis_type == "regional") {
     chunk_size <- 1L
   } else {
-    chunk_size <- max(1L, ceiling(total_items / (nworkers * 4L)))
+    chunk_size <- .searchlight_chunk_size(total_items, nworkers)
   }
 
   min_voxels <- if (analysis_type == "searchlight") 1L else 2L
@@ -801,7 +806,7 @@ shard_cleanup <- function(shard_data) {
     x <- shard_data[[nm]]
     if (!is.null(x)) {
       tryCatch(close(x), error = function(e) {
-        futile.logger::flog.debug(
+        .log_debug(
           "shard_cleanup: close() failed for '%s': %s", nm, e$message)
       })
     }

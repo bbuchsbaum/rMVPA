@@ -599,9 +599,12 @@ build_graph_laplacian <- function(A, normalized = FALSE) {
 #' X <- W %*% H
 #' result <- spatial_nmf(X, k = 2, max_iter = 20)
 #'
-#' \dontrun{
-#' result <- spatial_nmf(group_A_vols, group_B = group_B_vols, mask = mask, k = 5)
-#' }
+#' # Map input: two groups of small NeuroVol maps
+#' sp <- neuroim2::NeuroSpace(c(5, 5, 2))
+#' mask <- neuroim2::LogicalNeuroVol(array(TRUE, c(5, 5, 2)), sp)
+#' group_A_vols <- lapply(1:5, function(i) neuroim2::NeuroVol(array(runif(50), c(5, 5, 2)), sp))
+#' group_B_vols <- lapply(1:5, function(i) neuroim2::NeuroVol(array(runif(50), c(5, 5, 2)), sp))
+#' result <- spatial_nmf(group_A_vols, group_B = group_B_vols, mask = mask, k = 2)
 #' @export
 spatial_nmf <- function(x,
                         group_B = NULL,
@@ -1128,10 +1131,16 @@ print.spatial_nmf_result <- function(x, ...) {
 #'     \item voxelwise: list of voxelwise z/p maps (if requested).
 #'   }
 #' @examples
-#' \dontrun{
-#'   # Requires list of NeuroVol objects per group
-#'   # result <- spatial_nmf_maps(group_A_vols, group_B_vols, k=5)
+#' set.seed(1)
+#' sp <- neuroim2::NeuroSpace(c(5, 5, 2))
+#' mask <- neuroim2::LogicalNeuroVol(array(TRUE, c(5, 5, 2)), sp)
+#' make_maps <- function(n) {
+#'   lapply(seq_len(n), function(i) neuroim2::NeuroVol(array(runif(50), c(5, 5, 2)), sp))
 #' }
+#' group_A_vols <- make_maps(6)
+#' group_B_vols <- make_maps(6)
+#' result <- spatial_nmf_maps(group_A_vols, group_B_vols, mask = mask, k = 2)
+#' length(result$components)
 #' @export
 spatial_nmf_maps <- function(group_A,
                              group_B = NULL,
@@ -1382,16 +1391,16 @@ spatial_nmf_maps <- function(group_A,
 
 .auto_parallel <- function() {
   if (!requireNamespace("future.apply", quietly = TRUE)) {
-    futile.logger::flog.debug("auto_parallel: future.apply not available")
+    .log_debug("auto_parallel: future.apply not available")
     return(FALSE)
   }
   if (!requireNamespace("future", quietly = TRUE)) {
-    futile.logger::flog.debug("auto_parallel: future not available")
+    .log_debug("auto_parallel: future not available")
     return(FALSE)
   }
   nworkers <- tryCatch(future::nbrOfWorkers(), error = function(e) 1L)
   result <- is.numeric(nworkers) && length(nworkers) == 1L && nworkers > 1
-  futile.logger::flog.debug("auto_parallel: nbrOfWorkers=%s, using_parallel=%s",
+  .log_debug("auto_parallel: nbrOfWorkers=%s, using_parallel=%s",
                             as.character(nworkers), as.character(result))
   result
 }
@@ -1614,17 +1623,26 @@ spatial_nmf_maps <- function(group_A,
 #' can be used to interpret results in the original scale.
 #'
 #' @examples
-#' \dontrun{
+#' set.seed(1)
+#' sp <- neuroim2::NeuroSpace(c(5, 5, 2))
+#' mask <- neuroim2::LogicalNeuroVol(array(TRUE, c(5, 5, 2)), sp)
+#' # Chance-centered AUC maps (AUC - 0.5)
+#' auc_maps <- lapply(1:6, function(i) {
+#'   neuroim2::NeuroVol(array(rnorm(50, sd = 0.1), c(5, 5, 2)), sp)
+#' })
+#'
 #' # For AUC-0.5 maps (chance-centered)
 #' prepped <- nmf_preprocess_maps(auc_maps, method = "auc")
-#' result <- spatial_nmf_maps(prepped$maps, mask = mask, k = 5)
+#' result <- spatial_nmf_maps(prepped$maps, mask = mask, k = 2)
 #'
 #' # For raw AUC maps
-#' prepped <- nmf_preprocess_maps(auc_maps, method = "auc_raw")
+#' raw_auc_maps <- lapply(auc_maps, function(m) m + 0.5)
+#' prepped <- nmf_preprocess_maps(raw_auc_maps, method = "auc_raw")
 #'
 #' # For z-score maps with small positive floor
+#' zmaps <- lapply(1:6, function(i) neuroim2::NeuroVol(array(rnorm(50), c(5, 5, 2)), sp))
 #' prepped <- nmf_preprocess_maps(zmaps, method = "shift", min_val = 0.01)
-#' }
+#' prepped$offset
 #'
 #' @export
 nmf_preprocess_maps <- function(maps,

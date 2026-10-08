@@ -1,0 +1,10 @@
+# Competitor toolboxes for rMVPA's parity fixtures and benchmark harness.
+# Compile the lock with:
+#   uv pip compile tools/bench/competitors/requirements.in -o tools/bench/competitors/requirements.lock --python-version 3.12
+numpy
+scipy
+scikit-learn
+nilearn
+nibabel
+rsatoolbox
+threadpoolctl

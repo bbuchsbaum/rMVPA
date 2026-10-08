@@ -1,12 +1,18 @@
 testthat::skip_if_not_installed("neuroim2")
 
+with_filter_path <- function(fast_enabled, code) {
+  if (isTRUE(fast_enabled)) {
+    force(code)
+  } else {
+    rMVPA:::.with_reference_paths("fast_filter_roi", code)
+  }
+}
+
 run_filter_backend <- function(roi, fast_enabled, preserve = NULL, min_voxels = 2) {
-  old <- options(
-    rMVPA.searchlight_mode = if (isTRUE(fast_enabled)) "fast" else "legacy",
-    rMVPA.fast_filter_roi = NULL
+  with_filter_path(
+    fast_enabled,
+    try(rMVPA:::filter_roi(roi, preserve = preserve, min_voxels = min_voxels), silent = TRUE)
   )
-  on.exit(options(old), add = TRUE)
-  try(rMVPA:::filter_roi(roi, preserve = preserve, min_voxels = min_voxels), silent = TRUE)
 }
 
 expect_filtered_equivalent <- function(reference, candidate) {
@@ -131,15 +137,14 @@ build_fast_filter_naive_spec <- function() {
 }
 
 run_searchlight_fast_filter <- function(mspec, radius, fast_enabled) {
-  old <- options(
-    rMVPA.searchlight_mode = if (isTRUE(fast_enabled)) "fast" else "legacy",
-    rMVPA.fast_filter_roi = NULL
+  with_filter_path(
+    fast_enabled,
+    run_searchlight(mspec, radius = radius, method = "standard", backend = "default")
   )
-  on.exit(options(old), add = TRUE)
-  run_searchlight(mspec, radius = radius, method = "standard", backend = "default")
 }
 
 test_that("fast filter backend preserves searchlight outputs across model families", {
+  skip_on_cran()
   specs <- list(
     mvpa = build_fast_filter_mvpa_spec(),
     rsa = build_fast_filter_rsa_spec(),
@@ -183,20 +188,10 @@ test_that("fast filter backend is not slower on medium ROI matrices (guardrail)"
   fast_t <- numeric(nrep)
 
   for (i in seq_len(nrep)) {
-    old_slow <- options(
-      rMVPA.searchlight_mode = "legacy",
-      rMVPA.fast_filter_roi = NULL
-    )
-    on.exit(options(old_slow), add = TRUE)
-    slow_t[i] <- as.numeric(system.time(
+    slow_t[i] <- with_filter_path(FALSE, as.numeric(system.time(
       rMVPA:::filter_roi(roi, preserve = neuroim2::indices(roi$train_roi)[1], min_voxels = 2)
-    )["elapsed"])
+    )["elapsed"]))
 
-    old_fast <- options(
-      rMVPA.searchlight_mode = "fast",
-      rMVPA.fast_filter_roi = NULL
-    )
-    on.exit(options(old_fast), add = TRUE)
     fast_t[i] <- as.numeric(system.time(
       rMVPA:::filter_roi(roi, preserve = neuroim2::indices(roi$train_roi)[1], min_voxels = 2)
     )["elapsed"])

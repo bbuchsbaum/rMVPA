@@ -1033,9 +1033,17 @@ nresponses <- function(x) {
 #' @return Predictions whose structure depends on the specific method (e.g., a vector,
 #'   matrix, or data frame).
 #' @examples
-#' \dontrun{
-#'   preds <- predict_model(model_spec, fitted_model, new_data)
-#' }
+#' set.seed(1)
+#' n <- 24
+#' feats <- matrix(rnorm(n * 4), n, 4)    # stimulus features
+#' brain <- matrix(rnorm(n * 10), n, 10)  # ROI patterns (trials x voxels)
+#' dset <- gen_sample_dataset(c(3, 3, 3), n, blocks = 3)
+#' fdes <- feature_rsa_design(F = feats, labels = seq_len(n), max_comps = 3)
+#' mspec <- feature_rsa_model(dset$dataset, fdes, method = "pls",
+#'   crossval = blocked_cross_validation(dset$design$block_var))
+#' fit <- train_model(mspec, brain, feats, indices = seq_len(ncol(brain)))
+#' preds <- predict_model(mspec, fit, feats[1:5, ])
+#' dim(preds)
 #' @export
 predict_model <- function(object, fit, newdata, ...) {
   UseMethod("predict_model")
@@ -1048,7 +1056,7 @@ predict_model <- function(object, fit, newdata, ...) {
 #' @keywords internal
 #' @noRd
 .matrix_first_roi_enabled <- function() {
-  TRUE
+  .fast_path_enabled("matrix_first_roi")
 }
 
 #' Run Searchlight Analysis
@@ -1092,8 +1100,8 @@ predict_model <- function(object, fit, newdata, ...) {
 #' \donttest{
 #'   # Generate sample dataset with categorical response
 #'   dataset <- gen_sample_dataset(
-#'     D = c(8,8,8),           # 8x8x8 volume
-#'     nobs = 100,             # 100 observations
+#'     D = c(5,5,5),           # 5x5x5 volume
+#'     nobs = 60,              # 60 observations
 #'     response_type = "categorical",
 #'     data_mode = "image",
 #'     blocks = 3,             # 3 blocks for cross-validation
@@ -1118,14 +1126,14 @@ predict_model <- function(object, fit, newdata, ...) {
 #'   # Run searchlight analysis
 #'   results <- run_searchlight(
 #'     mspec,
-#'     radius = 8,            # 8mm radius
+#'     radius = 3,            # 3mm radius
 #'     method = "standard"    # Use standard searchlight
 #'   )
 #'   
 #'   # Run with custom batch size for memory management
 #'   # results <- run_searchlight(
 #'   #   mspec,
-#'   #   radius = 8,
+#'   #   radius = 3,
 #'   #   method = "standard",
 #'   #   batch_size = 500      # Process 500 searchlights per batch
 #'   # )
@@ -1320,11 +1328,9 @@ train_indices <- function(obj, fold_num, ...) {
 #' @return An object of class `data_sample` describing the sample; methods provide
 #'   conversions to ROI structures or data frames as needed.
 #' @examples
-#' \dontrun{
-#'   ds <- gen_sample_dataset(c(5,5,5), 20)
-#'   vox <- sample(which(ds$dataset$mask > 0), 10)
-#'   samp <- data_sample(ds$dataset, vox)
-#' }
+#' ds <- gen_sample_dataset(c(5,5,5), 20)
+#' vox <- sample(which(ds$dataset$mask > 0), 10)
+#' samp <- data_sample(ds$dataset, vox)
 #' @name data_sample
 NULL
 
@@ -1446,12 +1452,12 @@ get_feature_matrix <- function(dataset, ...) UseMethod("get_feature_matrix")
 #' @return A \code{region_importance_result} object.
 #' @examples
 #' \donttest{
-#'   ds <- gen_sample_dataset(c(5,5,5), 40, nlevels=2, blocks=3)
+#'   ds <- gen_sample_dataset(c(4,4,4), 30, nlevels=2, blocks=3)
 #'   cval <- blocked_cross_validation(ds$design$block_var)
 #'   mdl <- load_model("sda_notune")
 #'   mspec <- mvpa_model(mdl, ds$dataset, ds$design,
 #'     "classification", crossval=cval)
-#'   imp <- region_importance(mspec, n_regions=5, n_subsets=10)
+#'   imp <- region_importance(mspec, n_regions=4, n_subsets=5)
 #' }
 #' @export
 region_importance <- function(model_spec, ...) UseMethod("region_importance")

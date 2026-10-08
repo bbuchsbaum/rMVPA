@@ -23,9 +23,7 @@ Construct a design object for representational mapping, specifying item-wise
 seed feature vectors.
 }
 \examples{
-\dontrun{
-  items <- letters[1:10]
-  seed_features <- matrix(rnorm(10*5), 10, 5)
-  des <- repmap_design(items, seed_features)
-}
+items <- letters[1:10]
+seed_features <- matrix(rnorm(10*5), 10, 5)
+des <- repmap_design(items, seed_features)
 }

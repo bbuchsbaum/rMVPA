@@ -121,12 +121,17 @@ test_that("swift searchlight returns multiclass metrics and SWIFT_Info map when 
 
     set.seed(4002)
     built <- build_swift_mspec(D = c(4, 4, 4), nobs = 54, blocks = 6)
-    res <- run_searchlight(
-      built$mspec,
-      radius = 2,
-      method = "standard",
-      backend = "default"
+    expect_message(
+      res <- run_searchlight(
+        built$mspec,
+        radius = 2,
+        method = "standard",
+        backend = "default",
+        engine = "swift"
+      ),
+      regexp = "nearest-class-mean"
     )
+    expect_identical(attr(res, "searchlight_estimator"), "swift_nearest_mean")
 
     expect_s3_class(res, "searchlight_result")
     expect_true("Accuracy" %in% names(res$results))
@@ -145,12 +150,12 @@ test_that("swift searchlight returns multiclass metrics and SWIFT_Info map when 
   })
 })
 
-test_that("swift option disable request is ignored by deterministic runtime policy", {
+test_that("auto engine never substitutes SWIFT for the specified classifier", {
   skip_if_not_installed("neuroim2")
 
   with_swift_options({
     options(rMVPA.searchlight_mode = "fast")
-    options(rMVPA.swift_searchlight = FALSE)
+    options(rMVPA.swift_searchlight = TRUE)
 
     set.seed(4003)
     built <- build_swift_mspec(D = c(4, 4, 4), nobs = 54, blocks = 6)
@@ -162,8 +167,9 @@ test_that("swift option disable request is ignored by deterministic runtime poli
     )
 
     expect_s3_class(res, "searchlight_result")
-    expect_true("SWIFT_Info" %in% names(res$results))
-    expect_identical(attr(res, "searchlight_engine"), "swift")
+    expect_false("SWIFT_Info" %in% names(res$results))
+    # sda_notune's own exact engine, never SWIFT.
+    expect_identical(attr(res, "searchlight_engine"), "sda_fast")
   })
 })
 
@@ -199,14 +205,14 @@ test_that("swift engine runs randomized searchlight without fallback", {
 
     set.seed(4007)
     built <- build_swift_mspec(D = c(4, 4, 4), nobs = 54, blocks = 6)
-    res <- run_searchlight(
+    res <- suppressMessages(run_searchlight(
       built$mspec,
       radius = 2,
       method = "randomized",
       niter = 1,
       backend = "default",
       engine = "swift"
-    )
+    ))
 
     expect_s3_class(res, "searchlight_result")
     expect_identical(attr(res, "searchlight_engine"), "swift")
@@ -223,14 +229,14 @@ test_that("swift engine runs resampled searchlight without fallback", {
 
     set.seed(4008)
     built <- build_swift_mspec(D = c(4, 4, 4), nobs = 54, blocks = 6)
-    res <- run_searchlight(
+    res <- suppressMessages(run_searchlight(
       built$mspec,
       radius = 2,
       method = "resampled",
       niter = 12,
       backend = "default",
       engine = "swift"
-    )
+    ))
 
     expect_s3_class(res, "searchlight_result")
     expect_identical(attr(res, "searchlight_engine"), "swift")

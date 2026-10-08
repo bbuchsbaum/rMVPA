@@ -11,6 +11,12 @@ extract_weights.sda <- function(object, ...) {
 
 #' @rdname extract_weights
 #' @export
+extract_weights.sda_native <- function(object, ...) {
+  extract_weights.sda(object, ...)
+}
+
+#' @rdname extract_weights
+#' @export
 extract_weights.glmnet <- function(object, ...) {
   s <- object$opt_lambda
   if (is.null(s)) {
@@ -211,6 +217,12 @@ model_importance.sda <- function(object, X_train, summary_fun = NULL, ...) {
   }
   res <- do.call(haufe_importance, haufe_args)
   res$importance
+}
+
+#' @rdname model_importance
+#' @export
+model_importance.sda_native <- function(object, X_train, summary_fun = NULL, ...) {
+  model_importance.sda(object, X_train, summary_fun = summary_fun, ...)
 }
 
 #' @rdname model_importance
@@ -512,18 +524,17 @@ region_importance.mvpa_model <- function(model_spec, n_iter = 200,
 #'
 #' @return An S3 object of class \code{region_importance_result}.
 #' @examples
-#' \dontrun{
-#'   # Typically created by region_importance(), not directly
-#'   result <- region_importance_result(
-#'     importance = c(0.1, 0.2),
-#'     importance_map = NULL,
-#'     p_values = c(0.05, 0.01),
-#'     p_value_map = NULL,
-#'     stats_table = tibble::tibble(feature_id = 1:2),
-#'     iteration_log = tibble::tibble(iter = 1:10),
-#'     model_spec = list()
-#'   )
-#' }
+#' # Typically created by region_importance(), shown here with toy values
+#' result <- region_importance_result(
+#'   importance = c(0.1, 0.2),
+#'   importance_map = NULL,
+#'   p_values = c(0.05, 0.01),
+#'   p_value_map = NULL,
+#'   stats_table = tibble::tibble(feature_id = 1:2),
+#'   iteration_log = tibble::tibble(iter = 1:10, performance = runif(10)),
+#'   model_spec = list()
+#' )
+#' print(result)
 #' @export
 region_importance_result <- function(importance, importance_map,
                                       p_values, p_value_map,

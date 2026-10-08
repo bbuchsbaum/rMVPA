@@ -13,34 +13,30 @@
 #' @return Invisibly returns the registered model specification.
 #' @export
 #' @examples
-#' \dontrun{
-#' # Example of how a user might define an e1071 SVM spec
-#' my_svm_spec <- list(
-#'   type = "Classification", library = "e1071", label = "my_svm",
-#'   parameters = data.frame(parameter = "cost", class = "numeric", label = "Cost (C)"),
-#'   # grid should return a data.frame with columns matching 'parameter' names in 'parameters'
-#'   grid = function(x, y, len = NULL) { 
-#'      data.frame(cost = if (is.null(len) || len == 1) 1 else 10^seq(-2, 2, length.out = len))
-#'   },
-#'   # fit function receives: x, y, wts (weights), param (current params from grid), 
-#'   # lev (levels of y), last (unused), weights (unused), classProbs (unused by e1071::svm)
+#' # A minimal spec: a nearest-centroid classifier using only base R
+#' my_centroid_spec <- list(
+#'   type = "Classification", library = NULL, label = "my_centroid",
+#'   parameters = data.frame(parameter = "parameter", class = "character",
+#'                           label = "parameter"),
+#'   grid = function(x, y, len = NULL) data.frame(parameter = "none"),
 #'   fit = function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-#'      e1071::svm(x, y, cost = param$cost, probability = TRUE, ...) # Ensure probability=TRUE for prob
+#'     list(centroids = rowsum(as.matrix(x), y) / as.vector(table(y)),
+#'          levels = levels(y))
 #'   },
-#'   # predict function receives: modelFit (output of $fit), newdata
 #'   predict = function(modelFit, newdata, ...) {
-#'      predict(modelFit, newdata, ...)
+#'     p <- cor(t(as.matrix(newdata)), t(modelFit$centroids))
+#'     factor(modelFit$levels[max.col(p)], levels = modelFit$levels)
 #'   },
-#'   # prob function receives: modelFit, newdata
-#'   # Should return a matrix/df with columns named as in levels(y)
 #'   prob = function(modelFit, newdata, ...) {
-#'     pred_obj <- predict(modelFit, newdata, probability = TRUE)
-#'     attr(pred_obj, "probabilities") 
+#'     p <- exp(cor(t(as.matrix(newdata)), t(modelFit$centroids)))
+#'     p <- p / rowSums(p)
+#'     colnames(p) <- modelFit$levels
+#'     p
 #'   }
 #' )
-#' register_mvpa_model("my_svm", my_svm_spec)
-#' # Now load_model("my_svm") would work.
-#' }
+#' register_mvpa_model("my_centroid", my_centroid_spec)
+#' mod <- load_model("my_centroid")
+#' mod$label
 register_mvpa_model <- function(name, model_spec) {
   required_elements <- c("type", "library", "label", "parameters", "grid", "fit", "predict", "prob")
   if (!all(required_elements %in% names(model_spec))) {

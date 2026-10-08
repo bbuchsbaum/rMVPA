@@ -3037,7 +3037,7 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
   if (nrow(predictions) > 1) {
     pred_sds <- .feature_rsa_col_sds(predictions)
     if (all(pred_sds < 1e-12, na.rm = TRUE)) {
-      futile.logger::flog.debug(
+      .log_debug(
         "predict_model (%s): all %d voxel predictions are constant across %d trials (max sd=%.2e). Model has no predictive power for this ROI.",
         method, ncol(predictions), nrow(predictions),
         max(pred_sds, na.rm = TRUE))
@@ -3358,10 +3358,17 @@ predict_model.feature_rsa_model <- function(object, fit, newdata, ...) {
 #'       z-scores for each metric.}
 #'   }
 #' @examples
-#' \dontrun{
-#'   # Internal S3 method called after cross-validation
-#'   # perf <- evaluate_model(feature_rsa_model, newdata, observed)
-#' }
+#' # Normally called internally after cross-validation; shown on toy matrices.
+#' set.seed(2)
+#' sample_ds <- gen_sample_dataset(c(4, 4, 4), nobs = 12, blocks = 2)
+#' des <- feature_rsa_design(F = matrix(rnorm(12 * 4), 12, 4),
+#'                           labels = paste0("t", 1:12),
+#'                           block_var = sample_ds$design$block_var)
+#' mdl <- feature_rsa_model(sample_ds$dataset, des, method = "pca")
+#' observed <- matrix(rnorm(12 * 5), 12, 5)
+#' predicted <- observed + matrix(rnorm(12 * 5, sd = 0.5), 12, 5)
+#' perf <- evaluate_model.feature_rsa_model(mdl, predicted, observed)
+#' unlist(perf[c("pattern_correlation", "rdm_correlation", "r_squared")])
 #' @export
 evaluate_model.feature_rsa_model <- function(object,
                                              predicted,
@@ -3656,7 +3663,7 @@ train_model.feature_rsa_model <- function(obj, X, y, indices, ...) {
           k, obj$max_comps, nrow(sf$X_sc), ncol(sf$X_sc), f_rank))
       }
       if (f_rank < structural_k && obj$max_comps > f_rank) {
-        futile.logger::flog.debug(
+        .log_debug(
           paste0("train_model (%s): F has numerical rank %d of %d possible ",
                  "components; fitting %d instead of %d."),
           method_label, f_rank, structural_k, k,
@@ -4558,10 +4565,12 @@ run_searchlight.feature_rsa_model <- function(model_spec, radius,
 #' @param ... Additional args
 #' @return A list of summary statistics for the feature RSA model (printed as side effect).
 #' @examples
-#' \dontrun{
-#'   mdl <- feature_rsa_model(dataset, des)
-#'   summary(mdl)
-#' }
+#' sample_ds <- gen_sample_dataset(c(4, 4, 4), nobs = 12, blocks = 2)
+#' des <- feature_rsa_design(F = matrix(rnorm(12 * 4), 12, 4),
+#'                           labels = paste0("t", 1:12),
+#'                           block_var = sample_ds$design$block_var)
+#' mdl <- feature_rsa_model(sample_ds$dataset, des, method = "pca")
+#' summary(mdl)
 #' @export
 summary.feature_rsa_model <- function(object, ...) {
   print(object)
@@ -4643,10 +4652,12 @@ print.feature_rsa_design <- function(x, ...) {
 #' @param ... Additional arguments (ignored).
 #' @return Invisibly returns the input object \code{x} (called for side effects).
 #' @examples
-#' \dontrun{
-#'   mdl <- feature_rsa_model(dataset, des)
-#'   print(mdl)
-#' }
+#' sample_ds <- gen_sample_dataset(c(4, 4, 4), nobs = 12, blocks = 2)
+#' des <- feature_rsa_design(F = matrix(rnorm(12 * 4), 12, 4),
+#'                           labels = paste0("t", 1:12),
+#'                           block_var = sample_ds$design$block_var)
+#' mdl <- feature_rsa_model(sample_ds$dataset, des, method = "pca")
+#' print(mdl)
 #' @export
 print.feature_rsa_model <- function(x, ...) {
   # Create a border line for styling

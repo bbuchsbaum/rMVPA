@@ -23,10 +23,14 @@
 #' negative when the mapping underperforms the mean model; this can be useful as a diagnostic
 #' rather than an error.
 #' @examples
-#' \dontrun{
-#'   # Requires repmap_design with seed features
-#'   # model <- repmap_model(dataset, design, repmap_des, key_var=~ImageID)
-#' }
+#' ds <- gen_sample_dataset(D = c(4, 4, 4), nobs = 12, blocks = 3, nlevels = 2)
+#' items <- as.character(sort(unique(ds$design$train_design$.rownum)))
+#' seed_feats <- matrix(rnorm(length(items) * 4), nrow = length(items),
+#'                      dimnames = list(items, NULL))
+#' repmap_des <- repmap_design(items = items, seed_features = seed_feats)
+#' model <- repmap_model(ds$dataset, ds$design, repmap_des, key_var = ~ .rownum,
+#'                       rank = 2)
+#' class(model)
 #' @export
 repmap_model <- function(dataset,
                          design,
@@ -171,7 +175,7 @@ fit_roi.repmap_model <- function(model, roi_data, context, ...) {
   items_seed   <- rownames(model$seed_features)
   common_items <- Reduce(intersect, list(items, items_roi, items_seed))
   K <- length(common_items)
-  futile.logger::flog.debug(
+  .log_debug(
     sprintf("repmap_model: items(design)=%d, items(roi)=%d, items(seed)=%d, common=%d",
             length(items), length(items_roi), length(items_seed), K)
   )

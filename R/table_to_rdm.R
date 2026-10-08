@@ -51,10 +51,8 @@
 #' rdm_matrix <- table_to_rdm(sim_table, conditions, as_dist = FALSE)
 #' 
 #' # Use in RSA design
-#' \dontrun{
 #' rsa_des <- rsa_design(~ theoretical_rdm,
 #'                      data = list(theoretical_rdm = rdm))
-#' }
 #' 
 #' @export
 #' @importFrom stats as.dist

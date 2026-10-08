@@ -72,8 +72,8 @@ Without \pkg{progressr}, only coarse batch-level log messages are shown.
 \donttest{
   # Generate sample dataset with categorical response
   dataset <- gen_sample_dataset(
-    D = c(8,8,8),           # 8x8x8 volume
-    nobs = 100,             # 100 observations
+    D = c(5,5,5),           # 5x5x5 volume
+    nobs = 60,              # 60 observations
     response_type = "categorical",
     data_mode = "image",
     blocks = 3,             # 3 blocks for cross-validation
@@ -98,14 +98,14 @@ Without \pkg{progressr}, only coarse batch-level log messages are shown.
   # Run searchlight analysis
   results <- run_searchlight(
     mspec,
-    radius = 8,            # 8mm radius
+    radius = 3,            # 3mm radius
     method = "standard"    # Use standard searchlight
   )
   
   # Run with custom batch size for memory management
   # results <- run_searchlight(
   #   mspec,
-  #   radius = 8,
+  #   radius = 3,
   #   method = "standard",
   #   batch_size = 500      # Process 500 searchlights per batch
   # )

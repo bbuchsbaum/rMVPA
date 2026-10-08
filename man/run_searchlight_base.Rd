@@ -57,9 +57,12 @@ It does not assume any specific model type, but expects that \code{model_spec}
 is compatible with \code{do_standard(...)} or \code{do_randomized(...)} in your code.
 }
 \examples{
-\dontrun{
-  # Internal base function - users should call run_searchlight instead
-  # result <- run_searchlight_base(model_spec, radius=8, method="standard")
-}
+# Internal base function - users should normally call run_searchlight()
+ds <- gen_sample_dataset(D = c(3, 3, 3), nobs = 24, nlevels = 2, blocks = 3)
+cval <- blocked_cross_validation(ds$design$block_var)
+mspec <- mvpa_model(load_model("corclass"), dataset = ds$dataset,
+                    design = ds$design, crossval = cval)
+res <- run_searchlight_base(mspec, radius = 2, method = "standard")
+names(res$results)
 }
 \keyword{internal}
