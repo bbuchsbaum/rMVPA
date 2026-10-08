@@ -148,8 +148,10 @@ test_that("RSA permutations through rsa_fast equal the per-ROI path", {
   D1 <- dist(matrix(rnorm(20 * 4), 20)); D2 <- dist(matrix(rnorm(20 * 4), 20))
   rdes <- rsa_design(~ D1 + D2, list(D1 = D1, D2 = D2, block = ds$design$block_var),
                      block_var = "block")
-  for (rt in c("pearson", "lm")) for (st in c("iterate", "searchlight")) {
-    ms <- rsa_model(ds$dataset, rdes, distmethod = "pearson", regtype = rt, check_collinearity = FALSE)
+  for (measure in c("distance", "similarity"))
+    for (rt in c("pearson", "lm")) for (st in c("iterate", "searchlight")) {
+    ms <- rsa_model(ds$dataset, rdes, distmethod = "pearson", regtype = rt,
+                     measure = measure, check_collinearity = FALSE)
     pc <- permutation_control(n_perm = 3, seed = 5, perm_strategy = st, subsample = 0.5,
                               diagnose = FALSE, rsa_null = if (rt == "lm") "joint" else "individual")
     obs <- suppressWarnings(run_searchlight(ms, radius = 2, engine = "legacy", backend = "default"))
@@ -160,15 +162,15 @@ test_that("RSA permutations through rsa_fast equal the per-ROI path", {
     # rsa_fast reindexes each sphere's cached RDM per permutation; values
     # equal recomputation up to BLAS summation order.
     expect_equal(sort(unlist(fast$adj_null$bin_nulls)), sort(unlist(ref$adj_null$bin_nulls)),
-                 tolerance = 1e-12, info = paste(rt, st))
-    expect_equal(fast$p_values, ref$p_values, info = paste(rt, st))
+                 tolerance = 1e-12, info = paste(measure, rt, st))
+    expect_equal(fast$p_values, ref$p_values, info = paste(measure, rt, st))
     # Without the cache every permutation recomputes its RDMs: identical.
     old_opt <- options(rMVPA.rsa_perm_cache_bytes = 0)
     nocache <- suppressWarnings(run_permutation_searchlight(ms, observed = obs, radius = 2,
                                                             perm_ctrl = pc, metric = "D1"))
     options(old_opt)
     expect_identical(sort(unlist(nocache$adj_null$bin_nulls)), sort(unlist(ref$adj_null$bin_nulls)),
-                     info = paste(rt, st))
-    expect_identical(nocache$p_values, ref$p_values, info = paste(rt, st))
+                     info = paste(measure, rt, st))
+    expect_identical(nocache$p_values, ref$p_values, info = paste(measure, rt, st))
   }
 })

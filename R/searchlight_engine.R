@@ -177,6 +177,12 @@ explain_searchlight_engine <- function(model_spec,
 #' @keywords internal
 #' @noRd
 .resolve_searchlight_engine <- function(model_spec, method, engine = "auto") {
+  if (inherits(model_spec, "rsa_model") &&
+      identical(model_spec$distmethod, "crossvalidated_euclidean") &&
+      !engine %in% c("auto", "legacy")) {
+    stop("Crossvalidated Euclidean RSA supports engine = 'auto' or 'legacy' only; 'rsa_fast' and other optimized engines are not implemented for this model.",
+         call. = FALSE)
+  }
   if (inherits(model_spec, "era_rsa_model")) {
     return(.resolve_searchlight_engine.era_rsa_model(model_spec, method, engine))
   }

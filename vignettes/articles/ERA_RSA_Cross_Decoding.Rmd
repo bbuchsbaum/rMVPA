@@ -324,6 +324,226 @@ stopifnot(
 )
 ```
 
+### Model item correspondence with vividness and precision
+
+To ask how several variables jointly modulate a representational relationship,
+use the existing pair-design and RSA model APIs. This keeps the neural
+measurement fixed: the relationship template defines **what** is represented,
+and a regression formula defines **what changes its strength**.
+
+For item correspondence, the response is the encoding–retrieval neural
+correlation matrix and the template is an item-ID match indicator. The model is
+
+\[
+Y_{ij} = a_j + M_{ij}\left(\beta_0 + \beta_P P_j +
+\beta_V V_j + \beta_{PV}P_jV_j\right) + \varepsilon_{ij},
+\]
+
+where \(M_{ij}=1\) for matching item IDs and \(a_j\) is a separate background
+similarity for each retrieval observation. Precision and vividness describe
+the same retrieval trial; they do not create separate neural outcomes.
+
+First put both sets of neural observations in one dataset. Pair-design row
+indices address its training series, so an external test series must be
+concatenated explicitly:
+
+```{r relational-dataset, warning=TRUE}
+relational_dataset <- mvpa_dataset(
+  train_data = neuroim2::concat(
+    toy$dataset$train_data, toy$dataset$test_data
+  ),
+  mask = toy$dataset$mask
+)
+n_encoding <- nrow(toy$design$train_design)
+```
+
+Add a synthetic precision attribute and use retrieval trials with complete
+ratings. We retain all encoding observations and deliberately reverse the
+retrieval order. This produces a **24 × 22** relationship matrix, with
+correspondence determined by IDs rather than a diagonal. The two excluded
+retrieval trials change the analysis sample; the stored neural patterns are
+unchanged.
+
+```{r relational-features, warning=TRUE}
+set.seed(615)
+retrieval_ratings <- data.frame(
+  precision = rnorm(length(item_keys)),
+  vividness = toy$design$test_design$vividness
+)
+retrieval_rows <- rev(which(complete.cases(retrieval_ratings)))
+retrieval_features <- retrieval_ratings[retrieval_rows, , drop = FALSE]
+retrieval_features[] <- lapply(
+  retrieval_features, function(x) as.numeric(scale(x))
+)
+```
+
+Both attributes now use a one-standard-deviation scale over the retained
+retrieval observations. This makes a difference between their slopes a
+comparison on declared scales, rather than on arbitrary original units.
+Scale attributes before building the pair table. Pass only attribute columns
+as features: `item` and `row` are reserved metadata names.
+
+```{r relational-design, warning=TRUE}
+relational_design <- pair_rsa_design(
+  items_a = as.character(toy$design$train_design$item),
+  items_b = as.character(toy$design$test_design$item[retrieval_rows]),
+  pairs = "between",
+  row_idx_a = seq_len(n_encoding),
+  row_idx_b = n_encoding + retrieval_rows,
+  features_b = retrieval_features,
+  model = list(item = function(a, b) as.numeric(a == b)),
+  modulation = list(item = ~ b.precision * b.vividness),
+  nuisance = ~ factor(b.row)
+)
+relational_design$model_predictors
+```
+
+The four model columns are `item`, `item.b.precision`, `item.b.vividness`,
+and `item.b.precision.b.vividness`. The `item` coefficient is the matching
+advantage at precision and vividness zero; the next two are its conditional
+slopes, and the last is their interaction. `b.row` identifies the retrieval
+observation's position in the pair design, independently of its item ID or
+dataset row index. Its factor supplies the retrieval-specific backgrounds.
+The model engine supplies the overall intercept.
+
+Do not add standalone `b.precision` or `b.vividness` to that background
+formula: unrestricted retrieval intercepts already absorb those predictors.
+Their products with item correspondence remain identifiable. The coefficient
+compiler rejects aliased designs. Missing feature values remove affected
+pairs during fitting; a background column without support on the remaining
+pairs can also make a design unidentifiable. Here, the explicit complete-case
+selection avoids creating intercepts for excluded retrieval trials.
+
+```{r relational-fit, warning=TRUE}
+relational_model <- rsa_model(
+  dataset = relational_dataset,
+  design = relational_design,
+  distmethod = "pearson",
+  measure = "similarity",  # Pearson correlation, not 1 - correlation
+  regtype = "lm",
+  statistic = "beta",
+  contrasts = list(
+    precision_minus_vividness = c(
+      item.b.precision = 1, item.b.vividness = -1
+    )
+  )
+)
+relational_result <- run_regional(
+  relational_model, region_mask, verbose = FALSE
+)
+relational_metrics <- relational_result$performance_table[
+  , c("roinum", relational_design$model_predictors,
+      "contrast_precision_minus_vividness")
+]
+knitr::kable(
+  relational_metrics, digits = 4,
+  col.names = c("ROI", "Item", "Precision", "Vividness", "P × V",
+                "Precision − vividness")
+)
+```
+
+Positive slopes mean that item-specific neural correlation increases with
+the corresponding attribute, conditional on the other attribute and their
+interaction. The contrast compares the two slopes at the other attribute's
+zero value. Nuisance coefficients are fitted internally and omitted from the
+default result table. The same specification can be passed to
+`run_searchlight()` to produce coefficient and contrast maps.
+
+The attributes here are illustrative and precision was not used to generate
+the neural patterns. The table demonstrates the estimands; it supplies no
+evidence for a precision or vividness effect in experimental data.
+
+#### Recovering the familiar matching-minus-nonmatching analysis
+
+With just an intercept and the item template (`modulation = list(item = ~ 1)`
+and no nuisance terms), the coefficient is exactly mean matching similarity
+minus mean nonmatching similarity over eligible pairs. With the
+retrieval-specific backgrounds above, every retained retrieval has one match
+and 23 nonmatches. Equally weighted pairwise least squares therefore gives
+the same coefficients as the trial-level regression
+
+\[
+d_j = \beta_0 + \beta_P P_j + \beta_V V_j + \beta_{PV}P_jV_j + e_j,
+\qquad
+d_j = Y_{\mathrm{match},j} - \overline{Y}_{\mathrm{nonmatch},j}.
+\]
+
+The vignette checks this identity numerically in each ROI, using item IDs to
+find the match after retrieval reordering.
+
+```{r check-relational-era-reduction, include=FALSE}
+match_template <- outer(
+  relational_design$items_a, relational_design$items_b, "=="
+)
+stopifnot(
+  identical(dim(match_template), c(24L, 22L)),
+  all(colSums(match_template) == 1L),
+  all(is.finite(as.matrix(
+    relational_result$performance_table[, relational_design$model_predictors]
+  )))
+)
+for (r in seq_len(nrow(relational_result$performance_table))) {
+  region_id <- relational_result$performance_table$roinum[r]
+  voxels <- which(as.vector(region_mask) == region_id)
+  E <- as.matrix(neuroim2::series_roi(toy$dataset$train_data, voxels))
+  R <- as.matrix(neuroim2::series_roi(toy$dataset$test_data, voxels))
+  Y <- cor(t(E), t(R[retrieval_rows, , drop = FALSE]))
+  specificity <- colSums(Y * match_template) -
+    colSums(Y * !match_template) / colSums(!match_template)
+  reference <- coef(lm(
+    specificity ~ precision * vividness, data = retrieval_features
+  ))
+  fitted <- unlist(relational_result$performance_table[
+    r, relational_design$model_predictors
+  ], use.names = FALSE)
+  stopifnot(isTRUE(all.equal(fitted, unname(reference), tolerance = 1e-10)))
+  stopifnot(isTRUE(all.equal(
+    relational_result$performance_table$contrast_precision_minus_vividness[r],
+    unname(reference["precision"] - reference["vividness"]),
+    tolerance = 1e-10
+  )))
+}
+```
+
+Item IDs can repeat, and the two observation sets can differ in size. Actual
+repeated presentations or retrieval attempts retain their own neural rows and
+attributes; the design does not average them. When eligible matching and
+nonmatching counts vary across retrieval observations, the reduced regression
+uses weights \(m_jr_j/(m_j+r_j)\), where \(m_j\) and \(r_j\) are those counts.
+The equal-weight identity above depends on its stated comparison structure.
+Additional relationship templates or structured background terms generally
+require the full joint model.
+
+#### Extending the specification and keeping its limits clear
+
+A measured retrieval-level hippocampal score can enter `features_b` as
+`hippocampal_ers`; its moderation formula could be
+`~ b.precision * b.vividness + b.hippocampal_ers * (b.precision + b.vividness)`.
+A feature or task factor can likewise enter the formula. A semantic or feature
+relationship belongs in another named `model` template, optionally with its
+own modulation formula. These are changes to the design, using the same fit
+and ROI/searchlight execution.
+
+This cross-phase model estimates **direct item correspondence**. Preserved
+encoding and retrieval geometry uses a different observable: relationships
+within each phase. An orthogonal rotation can preserve geometry while
+changing direct correspondence. `era_rsa_model()` retains its geometry and
+top-1 identification summaries; top-1 accuracy is a nonlinear readout, not a
+relational regression coefficient. The present fixed-template interface does
+not automatically construct an ROI-specific encoding-geometry predictor.
+
+Treat these coefficients as participant-level estimates. Pairwise cells share
+neural observations, so their count does not provide an independent sample
+size for conventional t or F inference. The coefficient path does not provide
+calibrated standard errors, a population model, or conditional permutation
+tests for individual slopes. Multi-predictor RSA permutation support is for
+an explicitly specified joint no-association null. Population inference must
+respect participant sampling and, when the claim generalizes over stimuli,
+stimulus sampling. Nuisance adjustment does not remove first-level measurement
+bias. Estimated hippocampal scores or neural geometry predictors also need
+independent measurement partitions or an appropriate measurement model for
+claims that go beyond conditional associations.
+
 ## 4. When do you need ERA partitioning?
 
 The ERA-RSA summary above gives you direct item matching and a raw geometry
@@ -755,6 +975,10 @@ stopifnot(
 - `era_partition_model()` separates direct item transfer, variance uniquely
   explained by same-item similarity, and variance explained by preserved
   second-order geometry.
+- `pair_rsa_design(..., modulation = ...)` with
+  `rsa_model(..., measure = "similarity", regtype = "lm", statistic = "beta")`
+  models how item correspondence varies jointly with retrieval attributes,
+  using explicit backgrounds and coefficient contrasts.
 - It integrates naturally with:
   - `run_regional()` for ROI-based analyses, and
   - `run_searchlight()` for whole-brain mapping.

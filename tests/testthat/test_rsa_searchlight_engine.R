@@ -32,6 +32,23 @@ test_that("rsa_fast is identical to the general path across distance and regress
                                  check_collinearity = FALSE))
 })
 
+test_that("rsa_fast preserves similarity measurements and coefficient contrasts", {
+  fx <- rsa_engine_fixture(1408)
+  for (dm in c("pearson", "spearman")) for (rt in c("pearson", "lm")) {
+    expect_rsa_identical(rsa_model(fx$ds$dataset, fx$rdes, distmethod = dm,
+                                   regtype = rt, measure = "similarity",
+                                   check_collinearity = FALSE))
+  }
+  for (measure in c("distance", "similarity")) {
+    ms <- rsa_model(fx$ds$dataset, fx$rdes, regtype = "lm", statistic = "beta",
+                     measure = measure, contrasts = list(difference = c(D1 = 1, D2 = -1)))
+    expect_rsa_identical(ms)
+    explicit <- run_searchlight(ms, radius = 2, engine = "rsa_fast", backend = "default")
+    expect_identical(attr(explicit, "searchlight_engine"), "rsa_fast")
+    expect_named(explicit$results, names(output_schema(ms)), ignore.order = TRUE)
+  }
+})
+
 test_that("rsa_fast declines missing values and fingerprints", {
   fx <- rsa_engine_fixture(1402)
   arr <- neuroim2::as.array(fx$ds$dataset$train_data)

@@ -17,6 +17,7 @@
 #' @noRd
 .is_rsa_fast_path <- function(model_spec, method) {
   inherits(model_spec, "rsa_model") &&
+    model_spec$distmethod %in% c("pearson", "spearman") &&
     identical(method, "standard") &&
     inherits(model_spec$dataset, "mvpa_image_dataset") &&
     !inherits(model_spec$dataset, "mvpa_multibasis_image_dataset") &&
@@ -72,6 +73,8 @@
 #' @noRd
 .rsa_lean_plan <- function(spec, n_rows) {
   design <- spec$design
+  # These readouts are handled by train_model(), not the distance-only kernel.
+  if (identical(spec$measure, "similarity") || identical(spec$statistic, "beta")) return(NULL)
   if (!identical(design$pair_kind %||% "within", "within")) return(NULL)
   if (!identical(spec$pattern_center %||% "none", "none")) return(NULL)
   if (!(spec$distmethod %in% c("pearson", "spearman"))) return(NULL)
@@ -307,11 +310,12 @@ run_searchlight_rsa_fast <- function(model_spec, radius, verbose = FALSE, ...) {
                                               verbose = FALSE,
                                               ...) {
   requested <- .match_searchlight_engine(engine)
+  resolved <- .resolve_searchlight_engine(model_spec, method, requested)
   backend <- match.arg(backend)
-  if (identical(requested, "legacy") || !(requested %in% c("auto", "rsa_fast"))) {
+  if (identical(resolved, "legacy") && !identical(requested, "rsa_fast")) {
     return(list(handled = FALSE, result = NULL, engine = "legacy"))
   }
-  eligible <- .is_rsa_fast_path(model_spec, method) &&
+  eligible <- identical(resolved, "rsa_fast") &&
     backend %in% c("default", "auto") && !isTRUE(fail_fast)
   if (!isTRUE(eligible)) {
     if (identical(requested, "rsa_fast")) {

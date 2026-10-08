@@ -32,7 +32,15 @@
 #' @param nuisance Optional named list of nuisance pair predictors using the
 #'   same accepted forms as \code{model}. Included in the RSA design matrix
 #'   but excluded from model-space fingerprints returned by
-#'   \code{rsa_model(..., return_fingerprint = TRUE)}.
+#'   \code{rsa_model(..., return_fingerprint = TRUE)}. Alternatively, a
+#'   right-hand-side formula evaluated on pair metadata, e.g.
+#'   \code{~ factor(b.row)} for retrieval-observation intercepts. Its intercept
+#'   is supplied by the regression engine, rather than duplicated here.
+#' @param modulation Optional named list of right-hand-side formulas, keyed
+#'   by names in \code{model}. Each formula's design columns multiply that
+#'   relationship template. For example, \code{list(item = ~ b.precision *
+#'   b.vividness)} expands \code{item} into an intercept and three modulated
+#'   columns. Templates omitted from this list are unchanged.
 #' @param pairs Either \code{"within"} (default) or \code{"between"}.
 #' @param features_a Optional data frame or matrix of item features for
 #'   \code{items_a}. Function-valued model/nuisance entries can use these
@@ -69,6 +77,17 @@
 #'
 #' @seealso \code{\link{rsa_design}}, \code{\link{rsa_model}},
 #'   \code{\link{model_space_connectivity}}
+#' @details Formula metadata exposes \code{a.row}/\code{b.row} (observation
+#'   positions), \code{a.item}/\code{b.item} (item IDs), and feature columns
+#'   prefixed with \code{a.}/\code{b.}. Repeated item IDs retain separate
+#'   observations. Within-domain formulas must be invariant to swapping the
+#'   two sides; declare a symmetric rule such as
+#'   \code{~ I((a.vividness + b.vividness) / 2)}. Formula evaluation retains
+#'   missing rows; coefficient fitting uses complete eligible pairs.
+#'   Formula transformations operate on pair metadata before masking. To
+#'   standardize a trial attribute over observations rather than pairs,
+#'   standardize it in \code{features_a}/\code{features_b} first. Background
+#'   columns must remain identifiable on the complete eligible pairs.
 #'
 #' @export
 #' @examples
@@ -79,6 +98,20 @@
 #' rownames(R1) <- colnames(R1) <- rownames(R2) <- colnames(R2) <- items
 #' des <- pair_rsa_design(items, model = list(rdm1 = R1, rdm2 = R2))
 #' lengths(des$model_mat)
+#'
+#' # Item correspondence modulated by retrieval attributes.
+#' # Neural observations occupy encoding rows 1:8 and retrieval rows 9:16.
+#' retrieval <- data.frame(precision = rnorm(8), vividness = rnorm(8))
+#' relational <- pair_rsa_design(
+#'   items_a = 1:8, items_b = 1:8, pairs = "between",
+#'   row_idx_a = 1:8, row_idx_b = 9:16, features_b = retrieval,
+#'   model = list(item = function(a, b) as.numeric(a == b)),
+#'   modulation = list(item = ~ b.precision * b.vividness),
+#'   nuisance = ~ factor(b.row)
+#' )
+#' relational$model_predictors
+#' # Pass to rsa_model(dataset, relational, distmethod = "pearson",
+#' #   measure = "similarity", regtype = "lm", statistic = "beta").
 pair_rsa_design <- function(items_a,
                             items_b = NULL,
                             model = list(),
@@ -90,7 +123,8 @@ pair_rsa_design <- function(items_a,
                             block_var_b = NULL,
                             keep_intra_run = FALSE,
                             row_idx_a = NULL,
-                            row_idx_b = NULL) {
+                            row_idx_b = NULL,
+                            modulation = NULL) {
   pairs <- match.arg(pairs)
 
   if (length(items_a) < 2L) {
@@ -150,21 +184,28 @@ pair_rsa_design <- function(items_a,
     }
   }
 
+  nuisance_formula <- if (inherits(nuisance, "formula")) nuisance else NULL
   if ((!is.list(model) && !is.null(model)) ||
-      (!is.list(nuisance) && !is.null(nuisance))) {
+      (is.null(nuisance_formula) && !is.list(nuisance) && !is.null(nuisance))) {
     stop("`model` and `nuisance` must be (possibly empty) named lists.",
          call. = FALSE)
   }
   model <- if (is.null(model)) list() else as.list(model)
-  nuisance <- if (is.null(nuisance)) list() else as.list(nuisance)
-  if (length(model) == 0L && length(nuisance) == 0L) {
+  nuisance <- if (is.null(nuisance) || !is.null(nuisance_formula)) list() else as.list(nuisance)
+  if (!is.null(modulation) &&
+      (!is.list(modulation) || (length(modulation) && (is.null(names(modulation)) ||
+       anyNA(names(modulation)) || any(!nzchar(names(modulation))) ||
+       anyDuplicated(names(modulation)) || any(!names(modulation) %in% names(model)))))) {
+    stop("`modulation` must be a named list keyed by unique names in `model`.", call. = FALSE)
+  }
+  if (length(model) == 0L && length(nuisance) == 0L && is.null(nuisance_formula)) {
     stop("Provide at least one entry in `model` or `nuisance`.", call. = FALSE)
   }
 
-  if (length(model) > 0L && (is.null(names(model)) || any(!nzchar(names(model))))) {
+  if (length(model) > 0L && (is.null(names(model)) || anyNA(names(model)) || any(!nzchar(names(model))))) {
     stop("`model` entries must be named.", call. = FALSE)
   }
-  if (length(nuisance) > 0L && (is.null(names(nuisance)) || any(!nzchar(names(nuisance))))) {
+  if (length(nuisance) > 0L && (is.null(names(nuisance)) || anyNA(names(nuisance)) || any(!nzchar(names(nuisance))))) {
     stop("`nuisance` entries must be named.", call. = FALSE)
   }
 
@@ -179,6 +220,47 @@ pair_rsa_design <- function(items_a,
     nuisance, items_a, items_b, pairs, expected_n, label = "nuisance",
     features_a = features_a, features_b = features_b
   )
+
+  formula_terms <- list()
+  if (length(modulation) || !is.null(nuisance_formula)) {
+    metadata <- .pair_design_metadata(pair_index, features_a, features_b)
+    swapped <- if (identical(pairs, "within")) {
+      reverse_index <- pair_index
+      reverse_index$i <- pair_index$j
+      reverse_index$j <- pair_index$i
+      reverse_index$item_a <- pair_index$item_b
+      reverse_index$item_b <- pair_index$item_a
+      .pair_design_metadata(reverse_index, features_a, features_b)
+    } else NULL
+    expanded <- list()
+    for (nm in names(vec_model)) {
+      if (!nm %in% names(modulation)) {
+        expanded <- c(expanded, stats::setNames(list(vec_model[[nm]]), nm))
+        next
+      }
+      basis <- .pair_design_formula(modulation[[nm]], metadata, swapped,
+                                    paste0("modulation for '", nm, "'"))
+      columns <- ifelse(colnames(basis) == "(Intercept)", nm,
+                        paste(nm, colnames(basis), sep = "."))
+      columns <- make.names(sanitize(columns), unique = FALSE)
+      expanded <- c(expanded, stats::setNames(lapply(seq_len(ncol(basis)), function(j) {
+        as.numeric(vec_model[[nm]] * basis[, j])
+      }), columns))
+      formula_terms[[nm]] <- list(formula = modulation[[nm]], columns = columns,
+                                  assign = attr(basis, "assign"),
+                                  contrasts = attr(basis, "contrasts"))
+    }
+    vec_model <- expanded
+    if (!is.null(nuisance_formula)) {
+      basis <- .pair_design_formula(nuisance_formula, metadata, swapped, "nuisance")
+      assignment <- attr(basis, "assign")
+      basis <- basis[, assignment != 0L, drop = FALSE]
+      columns <- make.names(sanitize(paste0("background.", colnames(basis))))
+      vec_nuis <- stats::setNames(lapply(seq_len(ncol(basis)), function(j) as.numeric(basis[, j])), columns)
+      nuisance_terms <- list(formula = nuisance_formula, columns = columns,
+                             assign = assignment[assignment != 0L])
+    }
+  }
 
   if (!is.null(block_var_a)) {
     if (length(block_var_a) != n_a) {
@@ -202,6 +284,9 @@ pair_rsa_design <- function(items_a,
   }
 
   model_mat_raw <- c(vec_model, vec_nuis)
+  if (!length(model_mat_raw)) {
+    stop("Provide at least one non-intercept model or nuisance predictor.", call. = FALSE)
+  }
   model_names <- sanitize(names(vec_model))
   nuisance_names <- sanitize(names(vec_nuis))
 
@@ -214,6 +299,9 @@ pair_rsa_design <- function(items_a,
   if (anyDuplicated(names(model_mat))) {
     stop("Sanitized model/nuisance predictor names must be unique.",
          call. = FALSE)
+  }
+  if (length(modulation) || !is.null(nuisance_formula)) {
+    .rsa_coefficient_query(model_mat, model_names, validate_only = TRUE)
   }
 
   if (length(model_mat) > 0L) {
@@ -247,10 +335,67 @@ pair_rsa_design <- function(items_a,
     n_b          = n_b,
     pair_index   = pair_index,
     row_idx_a    = row_idx_a,
-    row_idx_b    = row_idx_b
+    row_idx_b    = row_idx_b,
+    templates    = model,
+    modulation   = modulation,
+    nuisance_formula = nuisance_formula,
+    formula_terms = formula_terms,
+    nuisance_terms = if (!is.null(nuisance_formula)) nuisance_terms else NULL
   )
   class(des) <- c("pair_rsa_design", "rsa_design", "list")
   des
+}
+
+# Pair metadata is built only for formula specifications. Item identity and
+# observation identity are deliberately separate, even when item IDs repeat.
+.pair_design_metadata <- function(index, features_a, features_b) {
+  out <- data.frame(a.row = index$i, b.row = index$j,
+                    a.item = index$item_a, b.item = index$item_b)
+  for (side in c("a", "b")) {
+    features <- if (side == "a") features_a else features_b
+    if (is.null(features)) next
+    nms <- colnames(features)
+    if (is.null(nms) || anyNA(nms) || any(!nzchar(nms)) || anyDuplicated(nms) ||
+        any(nms %in% c("row", "item"))) {
+      stop("Formula feature columns must have unique names other than 'row' and 'item'.",
+           call. = FALSE)
+    }
+    rows <- if (side == "a") index$i else index$j
+    values <- as.data.frame(features[rows, , drop = FALSE])
+    names(values) <- paste0(side, ".", nms)
+    out <- cbind(out, values)
+  }
+  out
+}
+
+.pair_design_formula <- function(formula, metadata, swapped = NULL, label) {
+  if (!inherits(formula, "formula") || length(formula) != 2L) {
+    stop(label, " must be a right-hand-side formula.", call. = FALSE)
+  }
+  missing <- setdiff(all.vars(formula), names(metadata))
+  if (length(missing)) {
+    stop(label, " references unknown pair metadata: ", paste(missing, collapse = ", "),
+         ". Use a. or b. prefixes for feature columns.", call. = FALSE)
+  }
+  evaluate <- function(data) {
+    frame <- stats::model.frame(formula, data, na.action = stats::na.pass)
+    matrix <- stats::model.matrix(formula, frame)
+    if (nrow(matrix) != nrow(data)) {
+      stop(label, " lost pair rows during formula evaluation.", call. = FALSE)
+    }
+    matrix
+  }
+  basis <- evaluate(metadata)
+  if (!is.null(swapped)) {
+    reverse <- evaluate(swapped)
+    if (!identical(colnames(basis), colnames(reverse)) ||
+        !isTRUE(all.equal(unname(basis), unname(reverse), check.attributes = FALSE,
+                          tolerance = 1e-12))) {
+      stop(label, " must be symmetric under exchanging a and b for within-domain pairs.",
+           call. = FALSE)
+    }
+  }
+  basis
 }
 
 

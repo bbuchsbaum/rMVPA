@@ -36,6 +36,10 @@ heuristic screen, not a test; it flags designs that cannot separate their
 predictors, it does not certify those that can.
 }
 \details{
+With an explicit \code{pair_mask}, only items participating in retained pairs
+count toward effective support. The full item universe is still used for
+condition alignment and item permutations.
+
 For \code{\link{pair_rsa_design}} objects in between-domain mode the item
 count is \code{n_a + n_b}, since each item of either set enters every pair
 with the other set.

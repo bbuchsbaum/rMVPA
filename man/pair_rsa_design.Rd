@@ -16,7 +16,8 @@ pair_rsa_design(
   block_var_b = NULL,
   keep_intra_run = FALSE,
   row_idx_a = NULL,
-  row_idx_b = NULL
+  row_idx_b = NULL,
+  modulation = NULL
 )
 }
 \arguments{
@@ -40,7 +41,10 @@ arguments are row-aligned pair tables.}
 \item{nuisance}{Optional named list of nuisance pair predictors using the
 same accepted forms as \code{model}. Included in the RSA design matrix
 but excluded from model-space fingerprints returned by
-\code{rsa_model(..., return_fingerprint = TRUE)}.}
+\code{rsa_model(..., return_fingerprint = TRUE)}. Alternatively, a
+right-hand-side formula evaluated on pair metadata, e.g.
+\code{~ factor(b.row)} for retrieval-observation intercepts. Its intercept
+is supplied by the regression engine, rather than duplicated here.}
 
 \item{pairs}{Either \code{"within"} (default) or \code{"between"}.}
 
@@ -69,6 +73,12 @@ neural sub-blocks.}
 
 \item{row_idx_b}{Integer vector of dataset row indices for \code{items_b}.
 Required for \code{pairs = "between"}.}
+
+\item{modulation}{Optional named list of right-hand-side formulas, keyed
+by names in \code{model}. Each formula's design columns multiply that
+relationship template. For example, \code{list(item = ~ b.precision *
+b.vividness)} expands \code{item} into an intercept and three modulated
+columns. Templates omitted from this list are unchanged.}
 }
 \value{
 A list with class \code{c("pair_rsa_design", "rsa_design", "list")}
@@ -100,6 +110,18 @@ with the existing \code{train_model.rsa_model} path; between-domain
 designs are dispatched on the \code{pair_kind} field, which causes
 \code{train_model.rsa_model} to compute a rectangular neural-pair
 dissimilarity block instead of the lower triangle.
+
+Formula metadata exposes \code{a.row}/\code{b.row} (observation
+  positions), \code{a.item}/\code{b.item} (item IDs), and feature columns
+  prefixed with \code{a.}/\code{b.}. Repeated item IDs retain separate
+  observations. Within-domain formulas must be invariant to swapping the
+  two sides; declare a symmetric rule such as
+  \code{~ I((a.vividness + b.vividness) / 2)}. Formula evaluation retains
+  missing rows; coefficient fitting uses complete eligible pairs.
+  Formula transformations operate on pair metadata before masking. To
+  standardize a trial attribute over observations rather than pairs,
+  standardize it in \code{features_a}/\code{features_b} first. Background
+  columns must remain identifiable on the complete eligible pairs.
 }
 \examples{
 set.seed(1)
@@ -109,6 +131,20 @@ R2 <- as.matrix(dist(matrix(rnorm(8 * 4), 8, 4)))
 rownames(R1) <- colnames(R1) <- rownames(R2) <- colnames(R2) <- items
 des <- pair_rsa_design(items, model = list(rdm1 = R1, rdm2 = R2))
 lengths(des$model_mat)
+
+# Item correspondence modulated by retrieval attributes.
+# Neural observations occupy encoding rows 1:8 and retrieval rows 9:16.
+retrieval <- data.frame(precision = rnorm(8), vividness = rnorm(8))
+relational <- pair_rsa_design(
+  items_a = 1:8, items_b = 1:8, pairs = "between",
+  row_idx_a = 1:8, row_idx_b = 9:16, features_b = retrieval,
+  model = list(item = function(a, b) as.numeric(a == b)),
+  modulation = list(item = ~ b.precision * b.vividness),
+  nuisance = ~ factor(b.row)
+)
+relational$model_predictors
+# Pass to rsa_model(dataset, relational, distmethod = "pearson",
+#   measure = "similarity", regtype = "lm", statistic = "beta").
 }
 \seealso{
 \code{\link{rsa_design}}, \code{\link{rsa_model}},
