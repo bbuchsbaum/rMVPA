@@ -562,7 +562,7 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
   if (analysis_type == "regional") {
     chunk_size <- 1L
   } else {
-    chunk_size <- max(1L, ceiling(total_items / (nworkers * 4L)))
+    chunk_size <- .searchlight_chunk_size(total_items, nworkers)
   }
 
   min_voxels <- if (analysis_type == "searchlight") 1L else 2L

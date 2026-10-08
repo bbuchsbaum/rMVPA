@@ -39,42 +39,243 @@
   # filter_roi(): keep voxels whose range across observations is non-zero.
   span <- matrixStats::colMaxs(x_all) - matrixStats::colMins(x_all)
   keep_voxel <- is.finite(span) & span > 0
-  ids <- vapply(sl, function(w) as.integer(w@parent_index), 1L)
-  sel <- if (is.null(centers)) seq_along(sl) else which(ids %in% centers)
+  # The searchlight list builds each sphere on access; build them once.
+  rois <- as.list(sl)
+  ids <- vapply(rois, function(w) as.integer(w@parent_index), 1L)
+  sel <- if (is.null(centers)) seq_along(rois) else which(ids %in% centers)
+  # Grid index -> mask column, built once (a per-sphere match() against the
+  # mask indices rehashes them for every centre). Out-of-mask voxels map to 0.
+  dims <- dim(sp)[1:3]
+  col_of <- integer(prod(dims))
+  col_of[mask_indices] <- seq_along(mask_indices)
   cols <- lapply(sel, function(i) {
-    cc <- match(as.integer(neuroim2::grid_to_index(sp, sl[[i]]@coords)), mask_indices)
-    cc <- cc[!is.na(cc)]
+    co <- rois[[i]]@coords
+    cc <- col_of[co[, 1] + (co[, 2] - 1L) * dims[1] + (co[, 3] - 1L) * (dims[1] * dims[2])]
+    cc <- cc[cc > 0L]
     cc[keep_voxel[cc] | mask_indices[cc] == ids[i]]
   })
-  list(ds = ds, x_all = x_all, mask_indices = mask_indices, centers = ids[sel], cols = cols)
+  list(ds = ds, x_all = x_all, mask_indices = mask_indices, centers = ids[sel], cols = cols,
+       cache = new.env(parent = emptyenv()))
 }
 
-#' Run train_model.rsa_model() on every prepared sphere
+#' Direct RDM plan for the common rsa_model variants
 #'
-#' `spec` carries the design, so permuted designs (item_perm) are honoured.
-#' Returns a centre x output matrix (row names are centre ids; NA rows for
-#' spheres that fail), as the per-ROI path would produce.
+#' train_model.rsa_model() spends most of a small sphere's time on argument
+#' handling, copies and sweep(). For within-set designs without pattern
+#' centring, a correlation distance and the cached correlation or plain-lm
+#' kernel, the same arithmetic can be done directly: the row order
+#' (row_idx_a, then item_perm), the lower-triangle positions (after
+#' `include`) and the regression function are resolved once per call.
+#' Returns NULL when the spec needs the general path, or when train_model
+#' would stop (it then still does, per sphere).
 #' @keywords internal
 #' @noRd
-.rsa_engine_score <- function(prep, spec) {
-  outputs <- lapply(seq_along(prep$cols), function(i) {
-    cols <- prep$cols[[i]]
-    if (length(cols) < 1L) return(NULL)
-    res <- tryCatch(
+.rsa_lean_plan <- function(spec, n_rows) {
+  design <- spec$design
+  if (!identical(design$pair_kind %||% "within", "within")) return(NULL)
+  if (!identical(spec$pattern_center %||% "none", "none")) return(NULL)
+  if (!(spec$distmethod %in% c("pearson", "spearman"))) return(NULL)
+  kernel <- spec$.fast_kernel
+  regfun <- switch(spec$regtype,
+    pearson = ,
+    spearman = if (!is.null(kernel$cor)) run_cor_fast,
+    lm = if (!is.null(kernel$lm) && length(spec$nneg) == 0L && !isTRUE(spec$semipartial)) run_lm_fast,
+    NULL
+  )
+  if (is.null(regfun)) return(NULL)
+  base_rows <- design$row_idx_a %||% seq_len(n_rows)
+  if (length(base_rows) < 2L || min(base_rows) < 1L || max(base_rows) > n_rows) return(NULL)
+  perm <- design$item_perm
+  if (!is.null(perm)) {
+    perm <- tryCatch(.rsa_apply_item_perm(seq_along(base_rows), perm), error = function(e) NULL)
+    if (is.null(perm)) return(NULL)
+  }
+  K <- length(base_rows)
+  pairs <- .rdm_pair_indices(K)
+  list(
+    base_rows = base_rows,
+    perm = perm,
+    K = K,
+    pairs = pairs,
+    lin = (pairs$j - 1L) * K + pairs$i,
+    include = design$include,
+    spearman = identical(spec$distmethod, "spearman"),
+    regfun = regfun
+  )
+}
+
+#' One sphere's correlation-distance RDM (lower triangle, all pairs)
+#'
+#' Same operations as .rdm_vector_correlation(), so identical values. NULL
+#' for spheres the general path must handle: a single voxel (the Spearman
+#' path fails there) or a constant pattern (it warns there).
+#' @keywords internal
+#' @noRd
+.rsa_lean_rdm <- function(X, lin, spearman) {
+  if (ncol(X) <= 1L) return(NULL)
+  if (spearman) X <- matrixStats::rowRanks(X, ties.method = "average")
+  X <- X - rowMeans(X)
+  norms <- sqrt(rowSums(X^2))
+  if (any(norms == 0)) return(NULL)
+  X <- X / norms
+  1 - tcrossprod(X)[lin]
+}
+
+#' Each permuted pair's position in the unpermuted lower triangle
+#'
+#' Permuted row a is unpermuted row perm[a], so pair (i, j) reads base pair
+#' (perm[i], perm[j]); the correlation matrix is exactly symmetric.
+#' @keywords internal
+#' @noRd
+.rsa_perm_pair_pos <- function(plan) {
+  a <- plan$perm[plan$pairs$i]
+  b <- plan$perm[plan$pairs$j]
+  hi <- pmax(a, b)
+  lo <- pmin(a, b)
+  ((lo - 1L) * (2L * plan$K - lo)) %/% 2L + (hi - lo)
+}
+
+#' Unpermuted RDMs for every sphere, cached on the prep for permutations
+#'
+#' A column of NA marks a sphere the general path handles. Built only when it
+#' fits the `rMVPA.rsa_perm_cache_bytes` budget (default 512 MiB); NULL
+#' otherwise.
+#' @keywords internal
+#' @noRd
+.rsa_perm_rdm_cache <- function(prep, plan, distmethod) {
+  key <- list(rows = plan$base_rows, distmethod = distmethod)
+  if (identical(prep$cache$rdm_key, key)) return(prep$cache$rdm)
+  if (!.rsa_perm_cache_fits(length(plan$lin), length(prep$cols))) return(NULL)
+  n_pairs <- length(plan$lin)
+  x <- prep$x_all[plan$base_rows, , drop = FALSE]
+  rdm <- matrix(NA_real_, n_pairs, length(prep$cols))
+  for (s in seq_along(prep$cols)) {
+    cols <- prep$cols[[s]]
+    if (length(cols) < 1L) next
+    d <- .rsa_lean_rdm(x[, cols, drop = FALSE], plan$lin, plan$spearman)
+    if (!is.null(d)) rdm[, s] <- d
+  }
+  prep$cache$rdm_key <- key
+  prep$cache$rdm <- rdm
+  rdm
+}
+
+#' @keywords internal
+#' @noRd
+.rsa_perm_cache_fits <- function(n_pairs, n_spheres) {
+  budget <- getOption("rMVPA.rsa_perm_cache_bytes", 512 * 1024^2)
+  is.numeric(budget) && length(budget) == 1L && !is.na(budget) &&
+    as.double(n_pairs) * n_spheres * 8 <= budget
+}
+
+#' Score every prepared sphere; a list of named numeric vectors (or NULL)
+#' @keywords internal
+#' @noRd
+.rsa_engine_outputs <- function(prep, spec, use_cache = TRUE) {
+  general <- function(cols) {
+    tryCatch(
       train_model(spec, prep$x_all[, cols, drop = FALSE], y = NULL,
                   indices = prep$mask_indices[cols]),
       error = function(e) NULL
     )
+  }
+  plan <- if (.rsa_fast_kernel_enabled()) .rsa_lean_plan(spec, nrow(prep$x_all))
+  rdm <- NULL
+  if (!is.null(plan) && !is.null(plan$perm) && isTRUE(use_cache)) {
+    rdm <- .rsa_perm_rdm_cache(prep, plan, spec$distmethod)
+  }
+  if (!is.null(rdm)) {
+    pos <- .rsa_perm_pair_pos(plan)
+    if (!is.null(plan$include)) pos <- pos[plan$include]
+  } else if (!is.null(plan)) {
+    rows <- plan$base_rows
+    if (!is.null(plan$perm)) rows <- rows[plan$perm]
+    x <- if (identical(rows, seq_len(nrow(prep$x_all)))) prep$x_all else prep$x_all[rows, , drop = FALSE]
+    lin <- plan$lin
+  }
+  lapply(seq_along(prep$cols), function(i) {
+    cols <- prep$cols[[i]]
+    if (length(cols) < 1L) return(NULL)
+    res <- NULL
+    if (!is.null(rdm)) {
+      if (!is.na(rdm[1L, i])) res <- tryCatch(plan$regfun(rdm[pos, i], spec), error = function(e) NULL)
+      else res <- general(cols)
+    } else if (!is.null(plan)) {
+      d <- .rsa_lean_rdm(x[, cols, drop = FALSE], lin, plan$spearman)
+      if (is.null(d)) {
+        res <- general(cols)
+      } else {
+        if (!is.null(plan$include)) d <- d[plan$include]
+        res <- tryCatch(plan$regfun(d, spec), error = function(e) NULL)
+      }
+    } else {
+      res <- general(cols)
+    }
     if (!is.numeric(res) || length(res) == 0L) return(NULL)
     attributes(res)[["fingerprint"]] <- NULL
     res
   })
+}
+
+#' Split a prep into spatially contiguous chunks carrying only their columns
+#' @keywords internal
+#' @noRd
+.rsa_engine_chunks <- function(prep, chunk_size) {
+  idx <- split(seq_along(prep$cols), ceiling(seq_along(prep$cols) / chunk_size))
+  lapply(idx, function(g) {
+    used <- sort(unique(unlist(prep$cols[g], use.names = FALSE)))
+    local_col <- integer(ncol(prep$x_all))
+    local_col[used] <- seq_along(used)
+    list(x_all = prep$x_all[, used, drop = FALSE],
+         mask_indices = prep$mask_indices[used],
+         cols = lapply(prep$cols[g], function(cc) local_col[cc]))
+  })
+}
+
+#' Run the RSA kernel on every prepared sphere
+#'
+#' `spec` carries the design, so permuted designs (item_perm) are honoured.
+#' Returns a centre x output matrix (row names are centre ids; NA rows for
+#' spheres that fail), as the per-ROI path would produce; attribute `scored`
+#' indexes the rows that returned a result. With several
+#' future workers (and no permutation RDM cache to reuse), contiguous chunks
+#' of spheres run in parallel, each shipping only its own data columns and a
+#' dataset-free spec; set `options(rMVPA.rsa_fast_parallel = FALSE)` to
+#' disable.
+#' @keywords internal
+#' @noRd
+.rsa_engine_score <- function(prep, spec) {
+  n <- length(prep$cols)
+  nworkers <- future::nbrOfWorkers()
+  # Permutations reuse the cached RDMs serially when they fit; reindexing is
+  # cheaper than shipping them to workers.
+  if (!is.null(spec$design$item_perm)) {
+    K <- length(spec$design$row_idx_a %||% seq_len(nrow(prep$x_all)))
+    cached <- .rsa_perm_cache_fits(K * (K - 1) / 2, n)
+  } else {
+    cached <- FALSE
+  }
+  parallel <- isTRUE(getOption("rMVPA.rsa_fast_parallel", TRUE)) &&
+    nworkers > 1L && n >= 256L && !cached
+  if (parallel) {
+    chunks <- .rsa_engine_chunks(prep, .searchlight_chunk_size(n, nworkers, min_chunk = 64L))
+    outputs <- unlist(
+      future.apply::future_lapply(chunks, .rsa_engine_outputs, spec = as_worker_spec(spec),
+                                  use_cache = FALSE, future.seed = FALSE),
+      recursive = FALSE, use.names = FALSE
+    )
+  } else {
+    outputs <- .rsa_engine_outputs(prep, spec)
+  }
   good <- which(!vapply(outputs, is.null, logical(1)))
   if (length(good) == 0L) return(NULL)
   metric_names <- names(outputs[[good[1]]])
   perf <- matrix(NA_real_, length(outputs), length(metric_names),
                  dimnames = list(as.character(prep$centers), metric_names))
   for (g in good) perf[g, ] <- outputs[[g]][metric_names]
+  # Spheres that returned a result, even an all-NA one (e.g. a constant
+  # pattern row); the general path writes those centres as NA, not 0.
+  attr(perf, "scored") <- good
   perf
 }
 
@@ -86,7 +287,7 @@ run_searchlight_rsa_fast <- function(model_spec, radius, verbose = FALSE, ...) {
   if (length(prep$centers) == 0L) return(empty_searchlight_result(ds))
   perf <- .rsa_engine_score(prep, model_spec)
   if (is.null(perf)) return(empty_searchlight_result(ds))
-  good <- rowSums(!is.na(perf)) > 0L
+  good <- attr(perf, "scored")
   out <- wrap_out(perf[good, , drop = FALSE], ds, ids = prep$centers[good])
   attr(out, "bad_results") <- tibble::tibble()
   out

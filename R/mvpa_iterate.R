@@ -680,10 +680,13 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2) {
 
   # Bound scheduler/list overhead even when the raw matrices are tiny. This
   # replaces the old rule that selected ten percent of all brain centers.
+  # Each batch is extracted serially and then waits for its slowest future,
+  # so batches must be large enough to keep workers busy: at 64 centres on
+  # 4 workers, multisession ran slower than sequential.
   task_cap <- if (isTRUE(use_shard_backend)) {
     max(1024L, as.integer(nworkers) * 128L)
   } else {
-    max(64L, as.integer(nworkers) * 8L)
+    max(256L, as.integer(nworkers) * 32L)
   }
   as.integer(min(length(vox_list), max_by_memory, task_cap))
 }
@@ -1255,39 +1258,32 @@ as_worker_spec <- function(obj) {
   obj
 }
 
-#' @param verbose Logical; print progress messages if \code{TRUE}.
-#' @param analysis_type The type of analysis (e.g., "searchlight").
-#' @details
-#' If the \pkg{progressr} package is installed, this method emits per-task
-#' progress updates from parallel workers. Progress handling is enabled for
-#' the scope of this call and uses the currently configured handlers.
-#' @rdname run_future-methods
-#' @export
-run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
-                               analysis_type = "searchlight", drop_probs = FALSE,
-                               fail_fast = FALSE, ...) {
-  .maybe_gc()
-  future_seed <- !inherits(obj, "era_rsa_model")
-  # Ensure workers never receive the full dataset.
-  obj <- as_worker_spec(obj)
-  total_items <- nrow(frame)
+#' Items per future for searchlight batches
+#'
+#' Searchlight ROIs are cheap (milliseconds each). Aim for ~4 chunks per
+#' worker for load balancing, but no fewer than `min_chunk` items per future,
+#' since each future costs tens of milliseconds to launch and collect: with
+#' the default batch cap (64 centres on 4 workers) the old rule made 16
+#' futures of 4 ROIs each, and dispatch outweighed the work. Never fewer
+#' chunks than workers.
+#' @keywords internal
+#' @noRd
+.searchlight_chunk_size <- function(total_items, nworkers,
+                                    min_chunk = getOption("rMVPA.searchlight_min_chunk", 16L)) {
+  nworkers <- max(1L, as.integer(nworkers))
+  balanced <- ceiling(total_items / (nworkers * 4L))
+  per_worker <- ceiling(total_items / nworkers)
+  as.integer(max(1L, min(max(balanced, min_chunk), per_worker)))
+}
 
-  # --- chunk_size controls parallelism and per-worker memory ---
-  # Each chunk becomes one future; items within a chunk run serially
-  # on a single worker.  Progressr signals are only relayed when a
-  # chunk completes, so chunk_size also controls progress granularity.
-  nworkers <- future::nbrOfWorkers()
-  if (analysis_type == "regional") {
-    # Regional: few expensive ROIs (seconds-minutes each). Use chunk_size=1
-    # so each ROI is its own future, giving per-ROI progress updates and
-    # optimal load balancing for heterogeneous ROI sizes.
-    chunk_size <- 1L
-  } else {
-    # Searchlight: many cheap ROIs (milliseconds each). Target ~4 chunks
-    # per worker for good load balancing with low scheduling overhead.
-    chunk_size <- max(1L, ceiling(total_items / (nworkers * 4L)))
-  }
-
+#' Per-item worker for run_future.default
+#'
+#' A namespace-level factory, so the returned closure captures only its
+#' arguments. Defined inside run_future.default it would capture the whole
+#' batch frame, which future then serializes (and hashes) for every chunk.
+#' @keywords internal
+#' @noRd
+.run_future_item_fun <- function(obj, processor, analysis_type, drop_probs, fail_fast) {
   if (is.null(processor)) {
     do_fun <- function(obj, roi, rnum, center_global_id = NA) {
       process_roi(obj, roi, rnum, center_global_id = center_global_id)
@@ -1309,7 +1305,7 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
     }
   }
 
-  process_item <- function(.id, rnum, roi, size, progress_tick = NULL) {
+  function(.id, rnum, roi, size, progress_tick = NULL) {
     if (!is.null(progress_tick)) {
       on.exit(progress_tick(), add = TRUE)
     }
@@ -1385,6 +1381,51 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
       )
     })
   }
+}
+
+#' @keywords internal
+#' @noRd
+.run_future_map_fun <- function(process_item, progress_tick) {
+  function(.id, rnum, roi, size) {
+    process_item(.id, rnum, roi, size, progress_tick = progress_tick)
+  }
+}
+
+#' @param verbose Logical; print progress messages if \code{TRUE}.
+#' @param analysis_type The type of analysis (e.g., "searchlight").
+#' @details
+#' If the \pkg{progressr} package is installed, this method emits per-task
+#' progress updates from parallel workers. Progress handling is enabled for
+#' the scope of this call and uses the currently configured handlers.
+#' @rdname run_future-methods
+#' @export
+run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
+                               analysis_type = "searchlight", drop_probs = FALSE,
+                               fail_fast = FALSE, ...) {
+  .maybe_gc()
+  future_seed <- !inherits(obj, "era_rsa_model")
+  # Ensure workers never receive the full dataset.
+  obj <- as_worker_spec(obj)
+  total_items <- nrow(frame)
+
+  # --- chunk_size controls parallelism and per-worker memory ---
+  # Each chunk becomes one future; items within a chunk run serially
+  # on a single worker.  Progressr signals are only relayed when a
+  # chunk completes, so chunk_size also controls progress granularity.
+  nworkers <- future::nbrOfWorkers()
+  if (analysis_type == "regional") {
+    # Regional: few expensive ROIs (seconds-minutes each). Use chunk_size=1
+    # so each ROI is its own future, giving per-ROI progress updates and
+    # optimal load balancing for heterogeneous ROI sizes.
+    chunk_size <- 1L
+  } else {
+    chunk_size <- .searchlight_chunk_size(total_items, nworkers)
+  }
+
+  # Built outside this frame so the futures do not carry `frame` (the whole
+  # batch) in their closure; each chunk then ships only its own rows.
+  process_item <- .run_future_item_fun(obj, processor, analysis_type,
+                                       drop_probs, fail_fast)
 
   run_map <- function(progress_tick = NULL) {
     if (nworkers <= 1L) {
@@ -1401,9 +1442,8 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
       return(out)
     }
 
-    frame %>% furrr::future_pmap(function(.id, rnum, roi, size) {
-      process_item(.id, rnum, roi, size, progress_tick = progress_tick)
-    }, .options = furrr::furrr_options(seed = future_seed, conditions = "condition",
+    frame %>% furrr::future_pmap(.run_future_map_fun(process_item, progress_tick),
+                                 .options = furrr::furrr_options(seed = future_seed, conditions = "condition",
                                        chunk_size = chunk_size))
   }
 

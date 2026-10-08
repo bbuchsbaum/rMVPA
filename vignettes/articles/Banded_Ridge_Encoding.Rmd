@@ -435,15 +435,6 @@ preprocessing, candidate sets, and response scoring.
 | [multiridge](https://cran.r-project.org/package=multiridge) | You want its multi-penalty CV or marginal-likelihood workflows for high-dimensional data blocks | Its optimization, preprocessing, and response model are not assumed to be numerically identical to this nested voxelwise estimand |
 | [himalaya](https://gallantlab.org/himalaya/) | You want Python, CPU/GPU backends, or multiple-kernel/group-ridge solvers at very large target counts | It is an external parity target, not an rMVPA dependency; align folds, centering, alpha/theta parameterization, and precision before comparing |
 
-The bundled fixed-shape performance receipt likewise characterizes, rather
-than proves superiority. On the recorded Apple M3 Max / R 4.5.1 run, the
-`n = 60, p = 512, V = 12` public workflow took median 0.226 seconds with the
-direct backend and 0.099 seconds with each optimized backend over five runs.
-The solver planner estimated 2.15 MB, 0.33 MB, and 0.17 MB of intermediate
-storage respectively. Wall times are tracked as snapshots; CI enforces
-structural shape, batching, allocation, cache, and numerical-parity contracts
-instead of brittle timing cutoffs.
-
 ```{r performance-receipt, include = FALSE}
 performance <- utils::read.csv(resolve_inst_file(
   "extdata", "banded_ridge_performance_results.csv"
@@ -455,7 +446,40 @@ stopifnot(
   all(performance$estimated_solver_intermediate_peak_bytes > 0),
   max(performance$max_abs_prediction_error_vs_direct) < 1e-10
 )
+# The prose reads its numbers, machine and source from the receipt.
+wide <- performance[performance$shape == "wide", ]
+wide <- wide[match(c("direct", "svd_primal", "dual_kernel"), wide$solver), ]
+optimized <- unique(round(wide$elapsed_median_seconds[-1L], 3))
+perf_meta <- list(
+  machine = paste(unique(performance$hardware_chip)[[1L]],
+                  sub("^R version ([^ ]+).*", "R \\1", unique(performance$r_version)[[1L]]),
+                  sep = " / "),
+  commit = substr(unique(performance$git_head)[[1L]], 1L, 7L),
+  shape = sprintf("n = %d, p = %d, V = %d", wide$n[[1L]], wide$p[[1L]], wide$v[[1L]]),
+  direct = round(wide$elapsed_median_seconds[[1L]], 3),
+  optimized = if (length(optimized) == 1L) {
+    sprintf("%s seconds with each optimized backend", optimized)
+  } else {
+    sprintf("%s seconds with the optimized backends",
+            paste(optimized, collapse = " and "))
+  },
+  runs = unique(wide$iterations)[[1L]],
+  mb = local({
+    mb <- sprintf("%.2f MB", wide$estimated_solver_intermediate_peak_bytes / 1e6)
+    paste0(paste(mb[-length(mb)], collapse = ", "), ", and ", mb[[length(mb)]])
+  })
+)
 ```
+
+The bundled fixed-shape performance receipt likewise characterizes, rather
+than proves superiority. On the recorded `r perf_meta$machine` run (commit
+`r perf_meta$commit`), the `r perf_meta$shape` public workflow took
+median `r perf_meta$direct` seconds with the direct backend and
+`r perf_meta$optimized` over `r perf_meta$runs` runs. The solver planner
+estimated `r perf_meta$mb` of intermediate storage respectively. Wall times
+are tracked as snapshots; CI enforces structural shape, batching, allocation,
+cache, and numerical-parity contracts instead of brittle timing cutoffs.
+
 
 ## Where should you go next?
 

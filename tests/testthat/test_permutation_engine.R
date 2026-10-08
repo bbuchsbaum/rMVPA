@@ -157,8 +157,18 @@ test_that("RSA permutations through rsa_fast equal the per-ROI path", {
                                                          perm_ctrl = pc, metric = "D1"))
     ref <- suppressWarnings(run_permutation_searchlight(ms, observed = obs, radius = 2,
                                                         perm_ctrl = pc, metric = "D1", engine = "legacy"))
-    expect_identical(sort(unlist(fast$adj_null$bin_nulls)), sort(unlist(ref$adj_null$bin_nulls)),
+    # rsa_fast reindexes each sphere's cached RDM per permutation; values
+    # equal recomputation up to BLAS summation order.
+    expect_equal(sort(unlist(fast$adj_null$bin_nulls)), sort(unlist(ref$adj_null$bin_nulls)),
+                 tolerance = 1e-12, info = paste(rt, st))
+    expect_equal(fast$p_values, ref$p_values, info = paste(rt, st))
+    # Without the cache every permutation recomputes its RDMs: identical.
+    old_opt <- options(rMVPA.rsa_perm_cache_bytes = 0)
+    nocache <- suppressWarnings(run_permutation_searchlight(ms, observed = obs, radius = 2,
+                                                            perm_ctrl = pc, metric = "D1"))
+    options(old_opt)
+    expect_identical(sort(unlist(nocache$adj_null$bin_nulls)), sort(unlist(ref$adj_null$bin_nulls)),
                      info = paste(rt, st))
-    expect_identical(fast$p_values, ref$p_values, info = paste(rt, st))
+    expect_identical(nocache$p_values, ref$p_values, info = paste(rt, st))
   }
 })
