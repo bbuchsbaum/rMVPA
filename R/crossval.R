@@ -47,32 +47,47 @@ crossv_k <- function(data, y, k = 5, id = ".id") {
   if (!is.numeric(k) || length(k) != 1) {
     stop("`k` must be a single integer.", call. = FALSE)
   }
-  
+
   if (k < 2) {
     stop("`k` must be at least 2 for cross-validation.", call. = FALSE)
   }
-  
+
   n <- nrow(data)
   folds <- sample(rep(1:k, length.out = n))
   check_len(y, folds) # Ensure y and the generated folds are compatible in length
-  
-  idx <- seq_len(n)
-  fold_idx <- split(idx, folds)
-  
+
+  fold_idx <- split(seq_len(n), folds)
+  crossv_from_folds(data, y, fold_idx, id)
+}
+
+#' Build a resampled CV tibble from explicit test-index sets
+#'
+#' Each element of `fold_idx` is the test-row index vector for one fold; the
+#' training rows are the complement. Shared by the fold constructors so that
+#' the same fold definition always yields the same tibble layout.
+#' @param data A data frame (rows are observations).
+#' @param y Response vector or matrix with one row per observation.
+#' @param fold_idx List of integer vectors, one test-row set per fold.
+#' @param id Name of the fold identifier column.
+#' @return A tibble with ytrain, ytest, train, test and the id column.
+#' @noRd
+#' @keywords internal
+crossv_from_folds <- function(data, y, fold_idx, id = ".id") {
+  idx <- seq_len(nrow(data))
+
   fold <- function(test) {
     tidx <- setdiff(idx, test)
     list(
       ytrain = subset_y(y, tidx),
       ytest = subset_y(y, test),
-      train = modelr::resample(data, setdiff(idx, test)),
+      train = modelr::resample(data, tidx),
       test = modelr::resample(data, test)
     )
   }
-  
-  
+
   cols <- purrr::transpose(purrr::map(fold_idx, fold))
-  cols[[id]] <- gen_id(k)
-  
+  cols[[id]] <- gen_id(length(fold_idx))
+
   tibble::as_tibble(cols, .name_repair = "unique")
 }
 
@@ -304,33 +319,23 @@ crossv_seq_block <- function(data, y, nfolds, block_var, nreps=4, block_ind = NU
     block_ind <- seq(1, length(sort(unique(block_var))))
   }
   
+  # For each repetition, every block's own rows (in row order) are cut into
+  # `nfolds` contiguous segments whose fold labels are randomly permuted. Labels
+  # are written back by row position so that foldseq[[i]][r] is the fold label
+  # of row r, regardless of whether blocks are contiguous in row order.
   foldseq <- replicate(nreps, {
-    unlist(lapply(block_idx, function(id_vec) {
-      as.integer(as.character(cut(id_vec, nfolds, labels=sample(1:nfolds))))
-    }))
-    
+    fs <- integer(length(block_var))
+    for (id_vec in block_idx) {
+      fs[id_vec] <- as.integer(as.character(cut(id_vec, nfolds, labels=sample(1:nfolds))))
+    }
+    fs
   }, simplify=FALSE)
-  
+
   fold_idx <- unlist(lapply(1:nreps, function(i) {
     lapply(1:nfolds, function(j) which(foldseq[[i]] == j))
   }), recursive=FALSE)
-  
-  
-  fold <- function(test) {
-    tidx <- setdiff(idx, test)
-    list(
-      ytrain = subset_y(y, tidx),
-      ytest = subset_y(y, test),
-      train = modelr::resample(data, tidx),
-      test = modelr::resample(data, test)
-    )
-  }
-  
-  cols <- purrr::transpose(purrr::map(fold_idx, fold))
-  cols[[id]] <- gen_id(length(fold_idx))
-  
-  tibble::as_tibble(cols, .name_repair = "unique")
 
+  crossv_from_folds(data, y, fold_idx, id)
 }
 
 
@@ -603,8 +608,12 @@ crossval_samples.sequential_blocked_cross_validation <- function(obj, data, y,..
 
 #' @export
 #' @rdname crossval_samples
-crossval_samples.kfold_cross_validation <- function(obj, data,y,...) {
-  crossv_k(data, y, obj$nfolds)
+crossval_samples.kfold_cross_validation <- function(obj, data, y, ...) {
+  # Folds are fixed at construction time and stored in block_var (fold labels 1..nfolds),
+  # so this must not redraw them. Matches train_indices/partition_indices.
+  check_len(y, obj$block_var)
+  fold_idx <- split(seq_len(nrow(data)), factor(obj$block_var, levels = seq_len(obj$nfolds)))
+  crossv_from_folds(data, y, unname(fold_idx))
 }
 
 #' @export
