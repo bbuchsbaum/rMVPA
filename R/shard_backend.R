@@ -560,6 +560,17 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
 
   total_items <- nrow(frame)
 
+  # Per-item RNG streams, shared by the sequential loop and furrr (see
+  # run_future.default). era_rsa_model keeps its previous behaviour (no
+  # per-item streams).
+  item_seeds <- if (future_seed && total_items > 0L) {
+    .rmvpa_item_seeds(total_items)
+  } else {
+    NULL
+  }
+  item_seed_option <- if (is.null(item_seeds)) FALSE else item_seeds
+  rng_after_seeds <- .rmvpa_save_rng()
+
   # Chunk-size heuristic (same as run_future.default)
   nworkers <- future::nbrOfWorkers()
   if (analysis_type == "regional") {
@@ -736,10 +747,15 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
 
   # ---- parallel map: workers extract ROIs from shared memory -------------
   run_map <- function(progress_tick = NULL) {
+    if (!is.null(item_seeds)) {
+      on.exit(.rmvpa_restore_rng(rng_after_seeds), add = TRUE)
+    }
+
     if (nworkers <= 1L) {
       worker_fun <- make_worker_fun(progress_tick = progress_tick, remote = FALSE)
       out <- vector("list", total_items)
       for (i in seq_len(total_items)) {
+        if (!is.null(item_seeds)) .rmvpa_restore_rng(item_seeds[[i]])
         out[[i]] <- worker_fun(
           .id = frame$.id[[i]],
           rnum = frame$rnum[[i]],
@@ -755,7 +771,7 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
       frame,
       worker_fun,
       .options = furrr::furrr_options(
-        seed = future_seed,
+        seed = item_seed_option,
         conditions = "condition",
         chunk_size = chunk_size,
         globals = FALSE

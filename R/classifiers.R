@@ -174,12 +174,18 @@ MVPAModels$pca_lda <- list(
   parameters=data.frame(parameters="ncomp", class="numeric", labels="ncomp"),
   grid=function(x, y, len = 5) data.frame(ncomp=1:len),
 
+  # LDA is fitted on the training scores X V (= U D), and new data are
+  # projected with the same training centre, scale and loadings V. Both
+  # sides therefore live in one coordinate system.
   fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
     scmat <- scale(as.matrix(x))
-    pres <- svd::propack.svd(scmat, neig=param$ncomp)
-    lda.fit <- lda(pres$u[, 1:param$ncomp, drop=FALSE], y)
-    attr(lda.fit, "ncomp") <- param$ncomp
-    attr(lda.fit, "pcfit") <- pres
+    ncomp <- param$ncomp
+    sv <- svd(scmat, nu = 0, nv = ncomp)
+    loadings <- sv$v[, seq_len(ncomp), drop = FALSE]
+    scores <- scmat %*% loadings
+    lda.fit <- MASS::lda(scores, y)
+    attr(lda.fit, "ncomp") <- ncomp
+    attr(lda.fit, "pcfit") <- list(v = loadings)
     attr(lda.fit, "center") <- attr(scmat, "scaled:center")
     attr(lda.fit, "scale") <- attr(scmat, "scaled:scale")
     attr(lda.fit, "obsLevels") <- lev
@@ -187,19 +193,23 @@ MVPAModels$pca_lda <- list(
   },
 
   predict=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-    compind <- seq_len(attr(modelFit, "ncomp"))
-    pcfit <- attr(modelFit, "pcfit")
-    pcx <- scale(newdata, attr(modelFit, "center"), attr(modelFit, "scale")) %*% pcfit$v
-    predict(modelFit, pcx[, compind, drop=FALSE])$class
+    pcx <- .pca_lda_project(modelFit, newdata)
+    predict(modelFit, pcx)$class
   },
 
   prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-    compind <- seq_len(attr(modelFit, "ncomp"))
-    pcfit <- attr(modelFit, "pcfit")
-    pcx <- scale(newdata, attr(modelFit, "center"), attr(modelFit, "scale")) %*% pcfit$v
-    predict(modelFit, pcx[, compind, drop=FALSE])$posterior
+    pcx <- .pca_lda_project(modelFit, newdata)
+    predict(modelFit, pcx)$posterior
   }
 )
+
+#' Project new data for pca_lda using the training centre, scale and loadings.
+#' @keywords internal
+#' @noRd
+.pca_lda_project <- function(modelFit, newdata) {
+  scale(as.matrix(newdata), attr(modelFit, "center"), attr(modelFit, "scale")) %*%
+    attr(modelFit, "pcfit")$v
+}
 
 #' @keywords internal
 #' @noRd
@@ -738,6 +748,9 @@ MVPAModels$mgsda <- list(
   grid=function(x, y, len = NULL) data.frame(lambda=seq(.001, .99, length.out=len)),
 
   fit=function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+    if (!requireNamespace("MGSDA", quietly = TRUE)) {
+      stop("The 'MGSDA' package is required for the mgsda model. Install it to use this model.")
+    }
     ycodes <- as.integer(y)
     V <- MGSDA::dLDA(as.matrix(x), ycodes, lambda=param$lambda, ...)
     modelFit <- list(
@@ -755,12 +768,26 @@ MVPAModels$mgsda <- list(
     modelFit$obsLevels[preds]
   },
 
+  # MGSDA::classifyV returns hard class codes only, so the probabilities are
+  # one-hot: 1 for the predicted class, 0 otherwise. Columns follow the
+  # training levels, so argmax(prob) matches predict().
   prob=function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-    # Not implemented in original code. If probabilities are not supported, return NULL or implement if possible.
-    # Here we return NULL to avoid errors.
-    NULL
+    preds <- MGSDA::classifyV(modelFit$xtrain, modelFit$ycodes,
+                              as.matrix(newdata), modelFit$V)
+    .mgsda_onehot_probs(preds, modelFit$obsLevels)
   }
 )
+
+#' One-hot class-probability matrix from hard mgsda class codes.
+#' @keywords internal
+#' @noRd
+.mgsda_onehot_probs <- function(preds, levs) {
+  preds <- as.integer(preds)
+  probs <- matrix(0, nrow = length(preds), ncol = length(levs),
+                  dimnames = list(NULL, levs))
+  probs[cbind(seq_along(preds), preds)] <- 1
+  probs
+}
 
 # lda_thomaz
 # Store lev
