@@ -894,37 +894,48 @@ test_that("shard workers do not inherit large caller globals", {
   expect_gt(length(huge_caller_object), 0L)
 })
 
-test_that("shard backend uses carrier::crate when carrier is installed", {
+test_that("shard workers run user processors with their own environment", {
+  # Workers must resolve rMVPA internals, stats functions and variables the
+  # processor captured. carrier::crate() re-bound processor closures onto a
+  # base-only environment, so such processors failed on workers.
   skip_on_cran()
   skip_on_covr()
   skip_if_not_installed("future")
-  skip_if_not_installed("carrier")
-
-  withr::local_options(list(rMVPA.test.used_carrier_crate = FALSE))
-  trace("crate",
-        where = asNamespace("carrier"),
-        tracer = quote(options(rMVPA.test.used_carrier_crate = TRUE)),
-        print = FALSE)
-  on.exit(untrace("crate", where = asNamespace("carrier")), add = TRUE)
 
   ds <- gen_sample_dataset(c(5, 5, 5), 20, blocks = 2, nlevels = 2)
   cval <- blocked_cross_validation(ds$design$block_var)
-  mdl <- load_model("sda_notune")
-  mspec <- mvpa_model(mdl, ds$dataset, ds$design,
-                      "classification", crossval = cval)
-  mspec <- use_shard(mspec)
+  mspec <- use_shard(mvpa_model(load_model("sda_notune"), ds$dataset, ds$design,
+                                "classification", crossval = cval))
+  mask_idx <- which(ds$dataset$mask > 0)
+  vox_iter <- lapply(1:4, function(i) as.integer(mask_idx[i:(i + 2)]))
 
-  sl <- get_searchlight(ds$dataset, radius = 3)
-  vox_iter <- lapply(sl, function(x) x)
-  vox_iter <- vox_iter[1:min(2, length(vox_iter))]
+  make_processor <- function(offset) {
+    function(obj, roi, rnum, center_global_id = NA) {
+      tibble::tibble(
+        result = list(NULL), indices = list(NULL),
+        performance = list(c(value = offset + stats::median(c(rnum, rnum)) + 0 * runif(1))),
+        id = rnum, error = FALSE, error_message = "~",
+        warning = FALSE, warning_message = "~"
+      )
+    }
+  }
 
   old_plan <- future::plan(future::multisession, workers = 2)
   on.exit(future::plan(old_plan), add = TRUE)
-
-  expect_no_error(
-    muffle_worker_version_warnings(
-      mvpa_iterate(mspec, vox_iter, ids = seq_along(vox_iter))
-    )
+  res <- muffle_worker_version_warnings(
+    mvpa_iterate(mspec, vox_iter, ids = 11:14, processor = make_processor(100),
+                 analysis_type = "searchlight", verbose = FALSE)
   )
-  expect_true(isTRUE(getOption("rMVPA.test.used_carrier_crate")))
+  expect_false(any(res$error))
+  expect_equal(unname(vapply(res$performance, `[[`, numeric(1), "value"))[order(res$id)],
+               100 + 11:14)
+})
+
+test_that("the shard worker body is defined at namespace level", {
+  ds <- gen_sample_dataset(c(5, 5, 5), 20, blocks = 2, nlevels = 2)
+  cval <- blocked_cross_validation(ds$design$block_var)
+  mspec <- use_shard(mvpa_model(load_model("sda_notune"), ds$dataset, ds$design,
+                                "classification", crossval = cval))
+  fn <- rMVPA:::.shard_worker_impl
+  expect_identical(environment(fn), asNamespace("rMVPA"))
 })

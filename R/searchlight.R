@@ -1280,6 +1280,41 @@ run_searchlight_base <- function(model_spec,
   res
 }
 
+#' Validate searchlight arguments common to every engine
+#'
+#' Run before engine dispatch so that the fast engines reject the same inputs
+#' as the general-purpose iterator, with the same messages.
+#' @keywords internal
+#' @noRd
+.validate_searchlight_args <- function(radius, method, niter, combiner) {
+  if (length(radius) == 1L) {
+    if (radius < 1 || radius > 100) {
+      stop(paste("radius", radius, "outside allowable range (1-100)"))
+    }
+  } else {
+    if (any(radius < 1) || any(radius > 100)) {
+      stop("All radii must be within allowable range (1-100)")
+    }
+  }
+
+  if (method %in% c("randomized", "resampled")) {
+    assert_that(niter >= 1, msg = "Number of iterations for randomized searchlight must be >= 1")
+  }
+
+  if (!is.function(combiner)) {
+    if (method == "standard") {
+      if (!(combiner %in% c("average", "standard"))) {
+        stop(paste0("Unknown string combiner '", combiner, "' for method 'standard'."))
+      }
+    } else if (method %in% c("randomized", "resampled")) {
+      if (!(combiner %in% c("pool", "average"))) {
+        stop(paste0("Unknown string combiner '", combiner, "' for method 'randomized'."))
+      }
+    }
+  }
+  invisible(TRUE)
+}
+
 #' @keywords internal
 #' @noRd
 .resolve_searchlight_backend <- function(backend = c("default", "shard", "auto"),
@@ -1350,6 +1385,11 @@ run_searchlight.default <- function(model_spec, radius = 8, method = c("standard
   fail_fast <- dots$fail_fast %||% FALSE
   k <- dots$k
   verbose <- dots$verbose %||% FALSE
+
+  # Argument checks run before dispatch so that every engine, fast or general,
+  # rejects the same inputs with the same message.
+  .validate_searchlight_args(radius = radius, method = method, niter = niter,
+                             combiner = combiner)
 
   # Remove control args consumed here so they are not forwarded twice via do.call().
   dots$engine <- NULL

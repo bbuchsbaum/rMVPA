@@ -200,6 +200,40 @@ fit_model.mvpa_model <- function(obj, roi_x, y, wts, param,
   fit
 }
 
+#' Align a model's class-probability output to the full set of levels
+#'
+#' Some classifiers only report the classes present in their training fold
+#' (e.g. \code{naive_bayes} uses \code{factor(y)}), so the returned matrix may
+#' have fewer columns than \code{lv}. Columns are matched by name; classes the
+#' model did not report receive probability 0. Unnamed output is accepted only
+#' when it has exactly \code{length(lv)} columns, in which case positional
+#' order is used.
+#' @param probs Matrix (or data frame) of class probabilities from a model.
+#' @param lv Character vector of the full class levels.
+#' @return A numeric matrix with one row per observation and one column per
+#'   element of \code{lv}, with \code{colnames} equal to \code{lv}.
+#' @noRd
+#' @keywords internal
+.align_class_probs <- function(probs, lv) {
+  probs <- as.matrix(probs)
+  pn <- colnames(probs)
+  full <- matrix(0, nrow = nrow(probs), ncol = length(lv),
+                 dimnames = list(rownames(probs), lv))
+  named_ok <- !is.null(pn) && all(nzchar(pn)) && !anyDuplicated(pn) && all(pn %in% lv)
+  if (named_ok) {
+    full[, pn] <- probs[, pn, drop = FALSE]
+  } else if (ncol(probs) == length(lv)) {
+    # Unnamed (or differently labelled) output with the full class count:
+    # the historical positional contract.
+    full[] <- probs
+  } else {
+    stop(sprintf("model returned %d probability columns (%s) for %d classes (%s)",
+                 ncol(probs), paste(pn, collapse = ", "),
+                 length(lv), paste(lv, collapse = ", ")))
+  }
+  full
+}
+
 #' Predict class labels and probabilities for new data using a fitted model
 #'
 #' @param object A fitted model object of class \code{class_model_fit}.
@@ -233,9 +267,10 @@ predict.class_model_fit <- function(object, newdata, sub_indices=NULL,...) {
       stop("Model probability calculation returned NULL or empty result")
     }
     
-    colnames(probs) <- levels(object$y)
+    lv <- levels(object$y)
+    probs <- .align_class_probs(probs, lv)
     cpred <- max.col(probs, ties.method = "first")
-    cpred <- levels(object$y)[cpred]
+    cpred <- lv[cpred]
     ret <- list(class=cpred, probs=probs)
     class(ret) <- c("classification_prediction", "prediction", "list")
     ret

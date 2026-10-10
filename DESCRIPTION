@@ -45,6 +45,7 @@ Imports:
     tidyselect,
     rsample,
     optparse,
+    parallel,
     yardstick
 Collate:
     'allgeneric.R'
@@ -152,7 +153,6 @@ Collate:
 RoxygenNote: 7.3.3
 Suggests:
     albersdown (>= 2.1.0),
-    carrier,
     corpcor,
     covr,
     doParallel,
@@ -174,7 +174,7 @@ Suggests:
     iterators,
     jsonlite,
     knitr,
-    parallel,
+    MGSDA,
     parallelly,
     pkgload,
     ragg,

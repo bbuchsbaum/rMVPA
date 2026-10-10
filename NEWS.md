@@ -1,5 +1,43 @@
 # rMVPA (development version)
 
+* `rsa_model()` now uses `regtype` for the comparison of the neural RDM with
+  each model RDM, as documented. Previously the comparison used `distmethod`,
+  so `regtype = "pearson"` and `regtype = "spearman"` gave the same result
+  whenever `distmethod` was the same. **This changes default results:** the
+  default is `distmethod = "spearman"` with `regtype = "pearson"`, and that
+  combination now computes a Pearson comparison (previously Spearman). Results
+  change wherever the neural and model RDMs are not linearly related, so
+  re-run RSA analyses that used the defaults. To keep the old Spearman
+  comparison, set `regtype = "spearman"`. `distmethod` still controls the
+  neural RDM only. The fast kernel and the reference path agree, and the
+  golden RSA fixture `rsa_spearman_pearson` was regenerated for this change.
+* `rsa_design(block_var = )` accepts a character or factor block variable.
+  Previously a character block variable made the `include` mask and the model
+  matrix `NA`, and a factor in `data` was rejected. Blocks are now compared by
+  label. Numeric block variables give the same mask as before.
+* Per-ROI results no longer depend on the future plan. Stochastic processors
+  and models used the global RNG stream when running sequentially, but
+  per-element L'Ecuyer streams under `future::multisession()` and other
+  parallel plans, so the same seed gave different results. Each item now
+  takes its own RNG stream from one draw of the caller's RNG, in both the
+  default and shard backends, so sequential runs match parallel runs and
+  results are independent of chunk size. This changes sequential results for
+  stochastic models once, so they match the parallel results; deterministic
+  models are unaffected. Global RNG state after a run is the same under every
+  plan.
+* `pca_lda` models now work. The LDA was fitted on unit-norm scores but
+  applied to `X V` (scaled by the singular values) at prediction time, so
+  posteriors were on the wrong scale. The LDA also failed with
+  "could not find function lda" and depended on the undeclared `svd`
+  package. The model now fits LDA on the training scores `X V` with
+  `MASS::lda()`, uses base `svd()`, and projects test data with the training
+  centre, scale and loadings.
+* `mgsda` models now produce class probabilities. `prob()` returned `NULL`,
+  so every fold failed. It now returns a one-hot n x classes matrix (columns
+  named by the class levels) from `MGSDA::classifyV()`, since MGSDA gives
+  hard class codes only. `MGSDA` is declared in Suggests and checked when the
+  model is fitted.
+
 * Parallel searchlights under the default (non-shard) backend no longer run
   slower than sequential ones. Three causes, all in `run_future()` dispatch:
   - the per-ROI worker closure captured the whole batch frame, so every

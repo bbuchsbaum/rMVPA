@@ -537,13 +537,110 @@ shard_extract_roi_clustered <- function(vox, shard_data,
 
 # ---- S3 method: run_future.shard_model_spec ------------------------------
 
+#' Process one shard task (one ROI) on a worker
+#'
+#' Namespace-level so that a worker resolves rMVPA's own functions and the
+#' processor runs in its own environment. See run_future.shard_model_spec.
+#' @keywords internal
+#' @noRd
+.shard_worker_impl <- function(.id, rnum, sample, size,
+                               progress_tick, analysis_type, min_voxels,
+                               shard_data, fail_fast, drop_probs, obj,
+                               processor) {
+  if (!is.null(progress_tick)) {
+    on.exit(progress_tick(), add = TRUE)
+  }
+
+  tryCatch({
+    vox <- sample$vox
+    center_global_id <- if (analysis_type == "searchlight") rnum else NA
+
+    # ROI extraction from shared memory (zero-copy ALTREP handles)
+    roi <- shard_extract_roi(vox, shard_data,
+                              center_global_id = center_global_id,
+                              min_voxels = min_voxels,
+                              filter_features = !isTRUE(obj$.preserve_roi_features))
+
+    if (is.null(roi)) {
+      msg <- sprintf("ROI %s failed validation (shard extract)", rnum)
+      if (fail_fast) rlang::abort(msg)
+      return(roi_result_to_tibble(roi_result(
+        metrics = NULL, indices = integer(), id = rnum,
+        error = TRUE, error_message = msg,
+        warning = TRUE, warning_message = msg
+      )))
+    }
+
+    center_id <- if (analysis_type == "searchlight") rnum else NA
+    if (is.null(processor)) {
+      result <- process_roi(obj, roi, rnum, center_global_id = center_id)
+    } else {
+      fmls <- tryCatch(names(formals(processor)),
+                        error = function(...) character(0))
+      supports_center <- "center_global_id" %in% fmls || "..." %in% fmls
+      if (supports_center) {
+        result <- processor(obj, roi, rnum, center_global_id = center_id)
+      } else {
+        result <- processor(obj, roi, rnum)
+      }
+    }
+
+    if (!obj$return_predictions && !isTRUE(obj$return_fits)) {
+      result$result <- list(NULL)
+    }
+
+    if (drop_probs) {
+      res_list <- result$result
+      prob_vals <- vector("list", length(res_list))
+      for (j in seq_along(res_list)) {
+        res_j <- res_list[[j]]
+        if (is.null(res_j) || is.null(res_j$probs)) {
+          prob_vals[[j]] <- NULL
+          next
+        }
+        prob_vals[[j]] <- tryCatch(prob_observed(res_j), error = function(e) NULL)
+        res_j$probs <- NULL
+        res_list[[j]] <- res_j
+      }
+      result$prob_observed <- prob_vals
+      result$result <- res_list
+    }
+
+    result
+  }, error = function(e) {
+    if (fail_fast) {
+      rlang::abort(
+        message = sprintf("ROI %s processing error: %s", rnum, e$message),
+        parent = e
+      )
+    }
+    tb <- tryCatch({
+      raw <- paste(utils::capture.output(rlang::trace_back()), collapse = "\n")
+      if (nchar(raw) > 500L) {
+        paste0(substr(raw, 1L, 500L), "\n... [truncated]")
+      } else {
+        raw
+      }
+    }, error = function(...) NA_character_)
+    futile.logger::flog.warn("ROI %d: Processing error (%s)", rnum, e$message)
+    err_msg <- paste0("Error processing ROI: ", e$message,
+                      if (!is.na(tb)) paste0("\ntrace:\n", tb) else "")
+    roi_result_to_tibble(roi_result(
+      metrics = NULL, indices = integer(), id = rnum,
+      error = TRUE, error_message = err_msg,
+      warning = TRUE, warning_message = paste("Error processing ROI:", e$message)
+    ))
+  })
+}
+
 #' @rdname run_future-methods
 #' @export
 run_future.shard_model_spec <- function(obj, frame, processor = NULL,
                                          verbose = FALSE,
                                          analysis_type = "searchlight",
                                          drop_probs = FALSE,
-                                         fail_fast = FALSE, ...) {
+                                         fail_fast = FALSE,
+                                         item_seeds = NULL, ...) {
   if (isTRUE(getOption("rMVPA.shard_gc_each_batch", FALSE))) {
     gc()
   }
@@ -560,6 +657,13 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
 
   total_items <- nrow(frame)
 
+  # Per-item RNG streams, shared by the sequential loop and furrr (see
+  # run_future.default). era_rsa_model keeps its previous behaviour (no
+  # per-item streams).
+  item_seeds <- .run_future_item_seeds(item_seeds, future_seed, total_items)
+  item_seed_option <- if (is.null(item_seeds)) FALSE else item_seeds
+  rng_after_seeds <- .rmvpa_save_rng()
+
   # Chunk-size heuristic (same as run_future.default)
   nworkers <- future::nbrOfWorkers()
   if (analysis_type == "regional") {
@@ -570,154 +674,14 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
 
   min_voxels <- if (analysis_type == "searchlight") 1L else 2L
 
-  # Build a worker function with a minimal captured environment so futures
-  # do not accidentally inherit large objects from the calling frame.
+  # The worker body lives at namespace level (.shard_worker_impl), so it sees
+  # rMVPA's functions; the closure handed to furrr carries only its arguments,
+  # in a small environment parented on the namespace. Neither captures the
+  # batch `frame`, and the user's processor keeps its own environment (it is
+  # not re-bound, as carrier::crate() would do, which broke processors that use
+  # stats functions or captured variables).
   make_worker_fun <- function(progress_tick = NULL, remote = FALSE) {
-    worker_impl <- function(.id, rnum, sample, size,
-                            progress_tick, analysis_type, min_voxels,
-                            shard_data, fail_fast, drop_probs, obj,
-                            processor, shard_extract_roi, process_roi,
-                            prob_observed) {
-      if (!is.null(progress_tick)) {
-        on.exit(progress_tick(), add = TRUE)
-      }
-
-      tryCatch({
-        vox <- sample$vox
-        center_global_id <- if (analysis_type == "searchlight") rnum else NA
-
-        # ROI extraction from shared memory (zero-copy ALTREP handles)
-        roi <- shard_extract_roi(vox, shard_data,
-                                  center_global_id = center_global_id,
-                                  min_voxels = min_voxels,
-                                  filter_features = !isTRUE(obj$.preserve_roi_features))
-
-        if (is.null(roi)) {
-          msg <- sprintf("ROI %s failed validation (shard extract)", rnum)
-          if (fail_fast) rlang::abort(msg)
-          return(roi_result_to_tibble(roi_result(
-            metrics = NULL, indices = integer(), id = rnum,
-            error = TRUE, error_message = msg,
-            warning = TRUE, warning_message = msg
-          )))
-        }
-
-        center_id <- if (analysis_type == "searchlight") rnum else NA
-        if (is.null(processor)) {
-          result <- process_roi(obj, roi, rnum, center_global_id = center_id)
-        } else {
-          fmls <- tryCatch(names(formals(processor)),
-                            error = function(...) character(0))
-          supports_center <- "center_global_id" %in% fmls || "..." %in% fmls
-          if (supports_center) {
-            result <- processor(obj, roi, rnum, center_global_id = center_id)
-          } else {
-            result <- processor(obj, roi, rnum)
-          }
-        }
-
-        if (!obj$return_predictions && !isTRUE(obj$return_fits)) {
-          result$result <- list(NULL)
-        }
-
-        if (drop_probs) {
-          res_list <- result$result
-          prob_vals <- vector("list", length(res_list))
-          for (j in seq_along(res_list)) {
-            res_j <- res_list[[j]]
-            if (is.null(res_j) || is.null(res_j$probs)) {
-              prob_vals[[j]] <- NULL
-              next
-            }
-            prob_vals[[j]] <- tryCatch(prob_observed(res_j), error = function(e) NULL)
-            res_j$probs <- NULL
-            res_list[[j]] <- res_j
-          }
-          result$prob_observed <- prob_vals
-          result$result <- res_list
-        }
-
-        result
-      }, error = function(e) {
-        if (fail_fast) {
-          rlang::abort(
-            message = sprintf("ROI %s processing error: %s", rnum, e$message),
-            parent = e
-          )
-        }
-        tb <- tryCatch({
-          raw <- paste(utils::capture.output(rlang::trace_back()), collapse = "\n")
-          if (nchar(raw) > 500L) {
-            paste0(substr(raw, 1L, 500L), "\n... [truncated]")
-          } else {
-            raw
-          }
-        }, error = function(...) NA_character_)
-        futile.logger::flog.warn("ROI %d: Processing error (%s)", rnum, e$message)
-        err_msg <- paste0("Error processing ROI: ", e$message,
-                          if (!is.na(tb)) paste0("\ntrace:\n", tb) else "")
-        roi_result_to_tibble(roi_result(
-          metrics = NULL, indices = integer(), id = rnum,
-          error = TRUE, error_message = err_msg,
-          warning = TRUE, warning_message = paste("Error processing ROI:", e$message)
-        ))
-      })
-    }
-
-    if (isTRUE(remote) && requireNamespace("carrier", quietly = TRUE)) {
-      return(carrier::crate(
-        function(.id, rnum, sample, size) {
-          worker_impl(
-            .id, rnum, sample, size,
-            # progress_tick intentionally NULL: carrier::crate() serializes
-            # the function for remote workers, and progress_tick is a closure
-            # over local state (progression_index) that cannot be serialized.
-            progress_tick = NULL,
-            analysis_type = analysis_type,
-            min_voxels = min_voxels,
-            shard_data = shard_data,
-            fail_fast = fail_fast,
-            drop_probs = drop_probs,
-            obj = obj,
-            processor = processor,
-            shard_extract_roi = shard_extract_roi,
-            process_roi = process_roi,
-            prob_observed = prob_observed
-          )
-        },
-        worker_impl = worker_impl,
-        analysis_type = analysis_type,
-        min_voxels = min_voxels,
-        shard_data = shard_data,
-        fail_fast = fail_fast,
-        drop_probs = drop_probs,
-        obj = obj,
-        processor = processor,
-        shard_extract_roi = shard_extract_roi,
-        process_roi = process_roi,
-        prob_observed = prob_observed
-      ))
-    }
-
-    worker_body <- function(.id, rnum, sample, size) {
-      worker_impl(
-        .id, rnum, sample, size,
-        progress_tick = progress_tick,
-        analysis_type = analysis_type,
-        min_voxels = min_voxels,
-        shard_data = shard_data,
-        fail_fast = fail_fast,
-        drop_probs = drop_probs,
-        obj = obj,
-        processor = processor,
-        shard_extract_roi = shard_extract_roi,
-        process_roi = process_roi,
-        prob_observed = prob_observed
-      )
-    }
-
-    env <- new.env(parent = baseenv())
-    env$worker_impl <- worker_impl
+    env <- new.env(parent = asNamespace("rMVPA"))
     env$progress_tick <- progress_tick
     env$analysis_type <- analysis_type
     env$min_voxels <- min_voxels
@@ -726,20 +690,34 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
     env$drop_probs <- drop_probs
     env$obj <- obj
     env$processor <- processor
-    env$shard_extract_roi <- shard_extract_roi
-    env$process_roi <- process_roi
-    env$prob_observed <- prob_observed
+    worker_body <- function(.id, rnum, sample, size) {
+      .shard_worker_impl(
+        .id, rnum, sample, size,
+        progress_tick = progress_tick,
+        analysis_type = analysis_type,
+        min_voxels = min_voxels,
+        shard_data = shard_data,
+        fail_fast = fail_fast,
+        drop_probs = drop_probs,
+        obj = obj,
+        processor = processor
+      )
+    }
     environment(worker_body) <- env
-
     worker_body
   }
 
   # ---- parallel map: workers extract ROIs from shared memory -------------
   run_map <- function(progress_tick = NULL) {
+    if (!is.null(item_seeds)) {
+      on.exit(.rmvpa_restore_rng(rng_after_seeds), add = TRUE)
+    }
+
     if (nworkers <= 1L) {
       worker_fun <- make_worker_fun(progress_tick = progress_tick, remote = FALSE)
       out <- vector("list", total_items)
       for (i in seq_len(total_items)) {
+        if (!is.null(item_seeds)) .rmvpa_restore_rng(item_seeds[[i]])
         out[[i]] <- worker_fun(
           .id = frame$.id[[i]],
           rnum = frame$rnum[[i]],
@@ -755,7 +733,7 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
       frame,
       worker_fun,
       .options = furrr::furrr_options(
-        seed = future_seed,
+        seed = item_seed_option,
         conditions = "condition",
         chunk_size = chunk_size,
         globals = FALSE

@@ -61,12 +61,18 @@ require_package <- function(pkg, reason = NULL) {
 #' col_means <- group_means(data, margin = 2, group = groups)
 #' @export
 group_means <- function(X, margin, group) {
+  # Group sizes must be computed for the groups rowsum() actually returns.
+  # table(group) keeps unused factor levels, which would shift the divisors
+  # onto the wrong rows (and divide by zero) whenever a level is absent.
+  group_sizes <- function(labels) {
+    as.numeric(table(factor(as.character(group), levels = labels)))
+  }
   if (margin == 1) {
     xsum <- rowsum(X, group)
-    sweep(xsum, 1, table(group), "/") 
+    sweep(xsum, 1, group_sizes(rownames(xsum)), "/")
   } else if (margin == 2) {
     xsum <- rowsum(t(X), group)
-    t(sweep(xsum, 1, table(group), "/"))
+    t(sweep(xsum, 1, group_sizes(rownames(xsum)), "/"))
   } else {
     stop("'margin' must be 1 or 2")
   }

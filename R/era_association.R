@@ -182,21 +182,123 @@
   )
 }
 
+#' Canonical item-key order shared by all ERA models
+#'
+#' Single ordering rule for item keys. Keys are ordered by the levels of the
+#' key variable when it is a factor (levels are kept in their order even if
+#' some are absent from one phase). Otherwise they are ordered numerically when
+#' every value is numeric-like, and by C-locale sort for other character keys.
+#' Per-item metadata given without names is taken to be in this order.
+#'
+#' @param ... Key vectors from the encoding and/or retrieval phases.
+#' @return Character vector of distinct, non-missing keys in canonical order.
+#' @keywords internal
+#' @noRd
+.era_key_levels <- function(...) {
+  xs <- Filter(Negate(is.null), list(...))
+  vals <- unique(as.character(unlist(lapply(xs, as.character), use.names = FALSE)))
+  vals <- vals[!is.na(vals) & nzchar(vals)]
+  fac_lv <- unique(unlist(
+    lapply(xs, function(x) if (is.factor(x)) levels(x) else character()),
+    use.names = FALSE
+  ))
+  fac_lv <- fac_lv[fac_lv %in% vals]
+  rest <- setdiff(vals, fac_lv)
+  num <- suppressWarnings(as.numeric(rest))
+  rest <- if (length(rest) && !anyNA(num)) {
+    rest[order(num, rest)]
+  } else {
+    sort(rest, method = "radix")
+  }
+  c(fac_lv, rest)
+}
+
+#' @keywords internal
+#' @noRd
+.era_order_keys <- function(keys, key_levels) {
+  c(key_levels[key_levels %in% keys], sort(setdiff(keys, key_levels), method = "radix"))
+}
+
+#' Align a per-item vector to the item keys
+#'
+#' Named vectors are matched by name. Unnamed vectors must have one value per
+#' item level (\code{key_levels}) and are taken in that order. Anything else is
+#' an error rather than a silent positional guess.
+#'
+#' @keywords internal
+#' @noRd
+.era_align_item_vector <- function(x, keys, key_levels, label = "item metadata") {
+  if (is.null(x)) {
+    return(NULL)
+  }
+  if (!is.null(names(x))) {
+    return(x[match(keys, names(x))])
+  }
+  if (length(x) != length(key_levels)) {
+    stop(sprintf(
+      "ERA-RSA `%s` is unnamed with length %d, but there are %d item levels of `key_var`. Name it by item key, or supply one value per item level in level order.",
+      label, length(x), length(key_levels)
+    ), call. = FALSE)
+  }
+  x[match(keys, key_levels)]
+}
+
+#' Align a per-item square RDM or matrix to the item keys
+#'
+#' Labelled matrices (or dist objects with \code{Labels}) must contain every
+#' key in \code{keys} on both dimensions and are subset by name. Unlabelled
+#' matrices must be \code{length(key_levels)} square and are taken in level
+#' order. Returns a numeric matrix with dimnames \code{keys}.
+#'
+#' @keywords internal
+#' @noRd
+.era_align_item_matrix <- function(M, keys, key_levels, label = "item RDM") {
+  labelled <- .era_is_labelled_matrix(M)
+  M <- as.matrix(M)
+  if (labelled && !is.null(rownames(M)) && !is.null(colnames(M))) {
+    if (!all(keys %in% rownames(M)) || !all(keys %in% colnames(M))) {
+      stop(sprintf(
+        "ERA-RSA `%s` must be labelled by every item key used by the model (missing: %s).",
+        label, paste(setdiff(keys, intersect(rownames(M), colnames(M))), collapse = ", ")
+      ), call. = FALSE)
+    }
+    return(M[keys, keys, drop = FALSE])
+  }
+  n <- length(key_levels)
+  if (nrow(M) != n || ncol(M) != n) {
+    stop(sprintf(
+      "ERA-RSA `%s` is unlabelled and %dx%d, but there are %d item levels of `key_var`. Label it by item key, or supply a %dx%d matrix in level order.",
+      label, nrow(M), ncol(M), n, n, n
+    ), call. = FALSE)
+  }
+  idx <- match(keys, key_levels)
+  M[idx, idx, drop = FALSE]
+}
+
+#' @keywords internal
+#' @noRd
+.era_is_labelled_matrix <- function(M) {
+  !(inherits(M, "dist") && is.null(attr(M, "Labels")))
+}
+
 #' @keywords internal
 #' @noRd
 .era_pairing_info <- function(design, key_var, pairing = c("average", "one_to_one")) {
   pairing <- match.arg(pairing)
-  key_enc <- as.character(parse_variable(key_var, design$train_design))
-  key_ret <- as.character(parse_variable(key_var, design$test_design))
+  key_enc_raw <- parse_variable(key_var, design$train_design)
+  key_ret_raw <- parse_variable(key_var, design$test_design)
+  key_enc <- as.character(key_enc_raw)
+  key_ret <- as.character(key_ret_raw)
   if (anyNA(key_enc) || anyNA(key_ret) || any(!nzchar(key_enc)) || any(!nzchar(key_ret))) {
     stop("ERA-RSA item keys must be non-missing and non-empty in both phases.", call. = FALSE)
   }
 
+  key_levels <- .era_key_levels(key_enc_raw, key_ret_raw)
   enc_counts <- table(key_enc)
   ret_counts <- table(key_ret)
   enc_set <- names(enc_counts)
   ret_set <- names(ret_counts)
-  common <- sort(intersect(enc_set, ret_set))
+  common <- .era_order_keys(intersect(enc_set, ret_set), key_levels)
   if (length(common) < 2L) {
     stop("ERA-RSA requires at least two item keys represented in both phases.", call. = FALSE)
   }
@@ -224,6 +326,7 @@
     pairing = pairing,
     key_enc = key_enc,
     key_ret = key_ret,
+    key_levels = key_levels,
     common_keys = common,
     enc_rows = lapply(common, function(key) which(key_enc == key)),
     ret_rows = lapply(common, function(key) which(key_ret == key)),

@@ -228,7 +228,7 @@ mvpa_design <- function(train_design, test_design=NULL, y_train=NULL, y_test=NUL
         stop(paste("error: y_train factor must have at least 2 levels with one or more training instances"))
       }
 
-      ytab <- table(levels(y_train_parsed))
+      ytab <- table(y_train_parsed)
 
       if (any(ytab == 0)) {
         futile.logger::flog.info("y_train: ", table(y_train_parsed), capture=TRUE)
@@ -256,7 +256,7 @@ mvpa_design <- function(train_design, test_design=NULL, y_train=NULL, y_test=NUL
         stop(paste("error: cv_labels factor must have at least 2 levels with one or more instances"))
       }
 
-      ytab <- table(levels(cv_labels))
+      ytab <- table(cv_labels)
 
       if (any(ytab == 0)) {
         futile.logger::flog.info("cv_labels: ", table(cv_labels), capture=TRUE)
@@ -279,6 +279,21 @@ mvpa_design <- function(train_design, test_design=NULL, y_train=NULL, y_test=NUL
       y_test
     } else {
       parse_variable(y_test, test_design)
+    }
+
+    ## Classification: the test response must use exactly the training
+    ## class levels, in the same order. Otherwise wrap_result() indexes
+    ## model probability columns (which follow the training levels) by a
+    ## test-side level set that may be a subset or reordering.
+    if (is.factor(cv_labels)) {
+      y_test_chr <- as.character(y_test)
+      unseen <- setdiff(unique(y_test_chr[!is.na(y_test_chr)]), levels(cv_labels))
+      if (length(unseen) > 0L) {
+        stop(sprintf(
+          "y_test contains class(es) not present in the training labels: %s",
+          paste(unseen, collapse = ", ")), call. = FALSE)
+      }
+      y_test <- factor(y_test_chr, levels = levels(cv_labels))
     }
   }
 
