@@ -149,10 +149,13 @@ test_that("repnet: beta_seed matches hand-computed partial correlation", {
   rownames(D_conf) <- colnames(D_conf) <- items
   d_conf_vec <- D_conf[lower.tri(D_conf)]
 
-  ## Expected: the partial correlation of seed residualized against confound
-  ## (this is what repnet_model computes as beta_seed when confounds present)
+  ## Expected: the semipartial correlation of the seed (correlation of the seed
+  ## residual on the confound with the ROI RDM). This is sp_seed. Before the
+  ## beta fix it was also reported as beta_seed; beta_seed is now the regression
+  ## coefficient (checked below against lm()).
   resid_seed <- lm(d_seed_vec ~ d_conf_vec)$residuals
   expected_partial <- cor(resid_seed, d_roi_vec)
+  expected_beta <- unname(coef(lm(d_roi_vec ~ d_seed_vec + d_conf_vec))["d_seed_vec"])
 
   env <- build_rena_roi(E, items, reps_per_item = 2L)
 
@@ -174,7 +177,8 @@ test_that("repnet: beta_seed matches hand-computed partial correlation", {
   perf <- res$performance[[1]]
 
   expect_false(res$error)
-  expect_equal(unname(perf["beta_seed"]), expected_partial, tolerance = 1e-10)
+  expect_equal(unname(perf["sp_seed"]), expected_partial, tolerance = 1e-10)
+  expect_equal(unname(perf["beta_seed"]), expected_beta, tolerance = 1e-10)
 })
 
 

@@ -35,8 +35,10 @@ test_that("rsa fast kernel state is constructed by default", {
   expect_true(is.list(fix$mspec$.fast_kernel))
   expect_true(is.list(fix$mspec$.fast_kernel$lm))
 
+  # Semi-partial correlations now come from the same cached lm kernel (they were
+  # previously forced onto a per-ROI lm() refit); see test_rsa_regression_perf.R.
   semipartial_fix <- rsa_fast_kernel_fixture(regtype = "lm", distmethod = "pearson", semipartial = TRUE)
-  expect_true(is.null(semipartial_fix$mspec$.fast_kernel) || is.null(semipartial_fix$mspec$.fast_kernel$lm))
+  expect_true(is.list(semipartial_fix$mspec$.fast_kernel$lm))
 })
 
 test_that("rsa fast kernel preserves lm t-values (differential parity)", {

@@ -670,7 +670,7 @@ run_cor <- function(dvec, obj) {
     )
   }
 
-  can_fast_lm <- identical(regtype, "lm") && (is.null(nneg) || length(nneg) == 0L) && !isTRUE(semipartial)
+  can_fast_lm <- identical(regtype, "lm") && (is.null(nneg) || length(nneg) == 0L)
   if (can_fast_lm) {
     X_with_intercept <- cbind(`(Intercept)` = 1, X)
     df <- nrow(X_with_intercept) - ncol(X_with_intercept)
@@ -678,6 +678,14 @@ run_cor <- function(dvec, obj) {
     if (df > 0L) {
       XtX <- crossprod(X_with_intercept)
       XtX_chol <- tryCatch(chol(XtX), error = function(e) NULL)
+      # Semi-partial output must match lm(), which reports NA for aliased terms.
+      # Only designs that lm() itself treats as full rank use the cached kernel;
+      # the rest keep the lm() reference path.
+      if (isTRUE(semipartial) &&
+          !(all(is.finite(X_with_intercept)) &&
+            qr(X_with_intercept)$rank == ncol(X_with_intercept))) {
+        XtX_chol <- NULL
+      }
       if (!is.null(XtX_chol)) {
         XtX_inv <- chol2inv(XtX_chol)
         state$lm <- list(
@@ -941,7 +949,43 @@ run_lm_semipartial <- function(dvec, obj) {
   # Compute sr_i
   sr2 <- (tvals^2 * MSE) / TSS
   sr  <- sign(tvals) * sqrt(sr2)
-  
+
+  sr
+}
+
+# Semi-partial correlations from the cached lm kernel. With RSS = MSE * df and
+# TSS as in run_lm_semipartial(), sr_i = t_i * sqrt(RSS / (TSS * df)), so no
+# per-ROI lm() fit is needed. Anything the kernel cannot reproduce exactly (no
+# kernel, non-finite outcome, constant outcome, perfect fit) is delegated to
+# run_lm_semipartial(), the reference path.
+run_lm_semipartial_fast <- function(dvec, obj) {
+  state <- obj$.fast_kernel$lm
+  if (is.null(state)) {
+    return(run_lm_semipartial(dvec, obj))
+  }
+
+  y <- as.numeric(dvec)
+  if (!all(is.finite(y))) {
+    return(run_lm_semipartial(dvec, obj))
+  }
+  tss <- sum((y - mean(y))^2)
+  if (!is.finite(tss) || tss <= 0) {
+    return(run_lm_semipartial(dvec, obj))
+  }
+
+  xty <- drop(crossprod(state$X_with_intercept, y))
+  beta <- drop(state$XtX_inv %*% xty)
+  residual <- y - drop(state$X_with_intercept %*% beta)
+  rss <- sum(residual^2)
+  sigma2 <- rss / state$df
+  if (!is.finite(sigma2) || sigma2 <= 0) {
+    return(run_lm_semipartial(dvec, obj))
+  }
+
+  se <- sqrt(state$diag_xtx_inv * sigma2)
+  tvals <- beta[-1] / se[-1]
+  sr <- tvals * sqrt(rss / (tss * state$df))
+  names(sr) <- state$var_names
   sr
 }
 
@@ -1055,8 +1099,8 @@ train_model.rsa_model <- function(obj, train_dat, y, indices, ...) {
           # Use constrained approach
           run_lm_constrained(dvec, obj)
         } else if (isTRUE(obj$semipartial)) {
-          # Semi-partial correlations
-          run_lm_semipartial(dvec, obj)
+          # Semi-partial correlations (cached kernel when available)
+          run_lm_semipartial_fast(dvec, obj)
         } else if (use_fast_kernel && !is.null(obj$.fast_kernel$lm)) {
           run_lm_fast(dvec, obj)
         } else {

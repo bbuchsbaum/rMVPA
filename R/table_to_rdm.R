@@ -107,59 +107,57 @@ table_to_rdm <- function(similarity_table,
     similarity_vals <- similarity_vals[keep_idx]
   }
   
-  # Create lookup structure
-  similarity_lookup <- list()
-  for (i in seq_along(label1_vals)) {
-    key1 <- paste(label1_vals[i], label2_vals[i], sep = "___")
-    similarity_lookup[[key1]] <- similarity_vals[i]
-    
-    if (symmetric && label1_vals[i] != label2_vals[i]) {
-      # Add reverse direction for symmetric case
-      key2 <- paste(label2_vals[i], label1_vals[i], sep = "___")
-      similarity_lookup[[key2]] <- similarity_vals[i]
-    }
+  # Lookup keys: each row contributes label1___label2 and, when symmetric and
+  # the labels differ, label2___label1. A later assignment to the same key
+  # replaces an earlier one (last write wins), as the former named-list lookup
+  # did. Assignments are kept in that order and matched from the end.
+  if (symmetric && anyNA(label1_vals != label2_vals)) {
+    stop("missing value where TRUE/FALSE needed")
   }
-  
+  key1 <- paste(label1_vals, label2_vals, sep = "___")
+  key2 <- paste(label2_vals, label1_vals, sep = "___")
+  add_reverse <- symmetric & (label1_vals != label2_vals)
+  add_reverse[is.na(add_reverse)] <- FALSE
+  assign_keys <- as.vector(rbind(key1, ifelse(add_reverse, key2, NA_character_)))
+  assign_vals <- as.vector(rbind(similarity_vals, similarity_vals))
+  assigned <- !is.na(assign_keys)
+  assign_keys <- assign_keys[assigned]
+  assign_vals <- assign_vals[assigned]
+
   # Initialize RDM matrix
   n <- length(labels)
   rdm_matrix <- matrix(NA, nrow = n, ncol = n)
   rownames(rdm_matrix) <- labels
   colnames(rdm_matrix) <- labels
-  
-  # Fill the matrix
-  for (i in seq_len(n)) {
-    for (j in seq_len(n)) {
-      if (i == j) {
-        # Diagonal elements (self-similarity)
-        if (is.na(self_similarity)) {
-          # Look up self-similarity in table
-          key <- paste(labels[i], labels[j], sep = "___")
-          sim_val <- similarity_lookup[[key]]
-          if (is.null(sim_val)) {
-            rdm_matrix[i, j] <- 0  # Default dissimilarity for diagonal
-          } else {
-            rdm_matrix[i, j] <- 1 - sim_val
-          }
-        } else {
-          # Use specified self-similarity
-          rdm_matrix[i, j] <- 1 - self_similarity
-        }
-      } else {
-        # Off-diagonal elements
-        key <- paste(labels[i], labels[j], sep = "___")
-        sim_val <- similarity_lookup[[key]]
-        
-        if (is.null(sim_val)) {
-          # Use default similarity for missing pairs
-          rdm_matrix[i, j] <- 1 - default_similarity
-        } else {
-          # Convert similarity to dissimilarity
-          rdm_matrix[i, j] <- 1 - sim_val
-        }
-      }
-    }
+
+  # Query keys for every (row i, column j) cell, in column-major order:
+  # labels[i]___labels[j]. Diagonal cells are the (i, i) keys.
+  label_chr <- as.character(labels)
+  query_keys <- paste(rep(label_chr, times = n), rep(label_chr, each = n), sep = "___")
+  hit <- rep(FALSE, length(query_keys))
+  sim_q <- rep(NA_real_, length(query_keys))
+  if (length(assign_keys)) {
+    last_pos <- match(query_keys, rev(assign_keys))
+    hit <- !is.na(last_pos)
+    sim_q[hit] <- assign_vals[length(assign_keys) + 1L - last_pos[hit]]
   }
-  
+
+  # Off-diagonal: table value or the default for missing pairs
+  value <- matrix(1 - default_similarity, nrow = n, ncol = n)
+  value[hit] <- 1 - sim_q[hit]
+
+  # Diagonal: fixed self-similarity, or the table value when self_similarity is NA
+  diag_pos <- 1L + (n + 1L) * (seq_len(n) - 1L)
+  if (is.na(self_similarity)) {
+    diag_val <- rep(0, n)
+    diag_hit <- hit[diag_pos]
+    diag_val[diag_hit] <- 1 - sim_q[diag_pos][diag_hit]
+    value[diag_pos] <- diag_val
+  } else {
+    value[diag_pos] <- 1 - self_similarity
+  }
+  if (n > 0L) rdm_matrix[] <- value
+
   # Ensure matrix is symmetric if specified
   if (symmetric) {
     # Average the upper and lower triangles to ensure perfect symmetry

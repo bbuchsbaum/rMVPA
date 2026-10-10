@@ -82,7 +82,8 @@
   regfun <- switch(spec$regtype,
     pearson = ,
     spearman = if (!is.null(kernel$cor)) run_cor_fast,
-    lm = if (!is.null(kernel$lm) && length(spec$nneg) == 0L && !isTRUE(spec$semipartial)) run_lm_fast,
+    lm = if (is.null(kernel$lm) || length(spec$nneg) > 0L) NULL
+         else if (isTRUE(spec$semipartial)) run_lm_semipartial_fast else run_lm_fast,
     NULL
   )
   if (is.null(regfun)) return(NULL)

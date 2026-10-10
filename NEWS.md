@@ -37,6 +37,18 @@
   named by the class levels) from `MGSDA::classifyV()`, since MGSDA gives
   hard class codes only. `MGSDA` is declared in Suggests and checked when the
   model is fitted.
+* RSA regression speed-ups, with one output correction. Semi-partial
+  correlations (`semipartial = TRUE`) now come from the cached lm kernel
+  instead of an lm() refit per ROI, and `repnet_model` and `repmed_model`
+  fit their fixed seed/confound (and repmed path c) designs from a cached QR
+  decomposition; `table_to_rdm()` fills the matrix by vectorised lookup rather
+  than an O(n^4) loop. Results match the previous lm() paths to 1e-12 (semi-partial)
+  and 1e-10 (repnet, repmed). Correction: with confound RDMs, `repnet_model`
+  reported `beta_seed` as the semi-partial correlation, which duplicated
+  `sp_seed` and was on a different scale from the other `beta_*` terms. It now
+  reports the seed's regression coefficient, like every other `beta_*` term.
+  Repnet ROIs with incomplete confound entries no longer fail on mismatched
+  residual lengths.
 
 * Parallel searchlights under the default (non-shard) backend no longer run
   slower than sequential ones. Three causes, all in `run_future()` dispatch:
