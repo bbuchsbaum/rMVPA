@@ -1,5 +1,20 @@
 # rMVPA (development version)
 
+* `rsa_model()` now uses `regtype` for the comparison of the neural RDM with
+  each model RDM, as documented. Previously the comparison used `distmethod`,
+  so `regtype = "pearson"` and `regtype = "spearman"` gave the same result
+  whenever `distmethod` was the same. **This changes default results:** the
+  default is `distmethod = "spearman"` with `regtype = "pearson"`, and that
+  combination now computes a Pearson comparison (previously Spearman). Results
+  change wherever the neural and model RDMs are not linearly related, so
+  re-run RSA analyses that used the defaults. To keep the old Spearman
+  comparison, set `regtype = "spearman"`. `distmethod` still controls the
+  neural RDM only. The fast kernel and the reference path agree, and the
+  golden RSA fixture `rsa_spearman_pearson` was regenerated for this change.
+* `rsa_design(block_var = )` accepts a character or factor block variable.
+  Previously a character block variable made the `include` mask and the model
+  matrix `NA`, and a factor in `data` was rejected. Blocks are now compared by
+  label. Numeric block variables give the same mask as before.
 * Parallel searchlights under the default (non-shard) backend no longer run
   slower than sequential ones. Three causes, all in `run_future()` dispatch:
   - the per-ROI worker closure captured the whole batch frame, so every

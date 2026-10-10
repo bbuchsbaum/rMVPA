@@ -195,9 +195,9 @@ golden_spearman_rsa_components <- function() {
 golden_spearman_rsa_scores <- function(distances, components) {
   scores <- t(vapply(distances, function(d) {
     vapply(components$predictors, function(x) {
-      # Historical rsa_model semantics use distmethod for this correlation,
-      # including when regtype is named "pearson". Preserve that contract.
-      stats::cor(d[components$include], x, method = "spearman")
+      # The scenario uses regtype = "pearson": the comparison with each model
+      # RDM is Pearson. distmethod = "spearman" shaped only the neural RDM.
+      stats::cor(d[components$include], x, method = "pearson")
     }, numeric(1))
   }, numeric(length(components$predictors))))
   colnames(scores) <- names(components$predictors)

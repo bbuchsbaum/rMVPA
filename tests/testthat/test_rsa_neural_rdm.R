@@ -104,9 +104,9 @@ test_that("public neural RDMs reproduce RSA fits with design-level run exclusion
                          pattern_center = center)
       D <- rsa_neural_rdm(X, method, center)
       neural <- D[lower.tri(D)][design$include]
-      # The current correlation-fit path uses distmethod for the second-order
-      # correlation as well as for the neural pattern distances.
-      expected <- stats::cor(neural, model$design$model_mat$template, method = method)
+      # distmethod shapes the neural RDM only. The second-order comparison is
+      # controlled by regtype, here "pearson".
+      expected <- stats::cor(neural, model$design$model_mat$template, method = "pearson")
       expect_equal(as.numeric(train_model(model, X, NULL, NULL)), as.numeric(expected),
                    tolerance = 1e-12)
       expect_equal(length(D[lower.tri(D)]), choose(n, 2))
