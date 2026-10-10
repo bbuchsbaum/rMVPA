@@ -35,23 +35,35 @@ gen_id <- function(n) {
   valid_cols <- which(!nas)
 
   if (length(valid_cols) > 0L && nrow(trdat) >= 2L) {
+    # Per-column min/max in one vectorised pass. Columns here have no NA, so
+    # the span equals the former row-by-row pmin/pmax recursion exactly
+    # (including Inf and overflow cases, which are not finite and so drop).
     x <- trdat[, valid_cols, drop = FALSE]
-    mins <- x[1, , drop = TRUE]
-    maxs <- mins
-
-    if (nrow(x) > 1L) {
-      for (i in 2:nrow(x)) {
-        row_i <- x[i, , drop = TRUE]
-        mins <- pmin(mins, row_i)
-        maxs <- pmax(maxs, row_i)
-      }
-    }
-
-    span <- maxs - mins
+    rng <- matrixStats::colRanges(x)
+    span <- rng[, 2L] - rng[, 1L]
     sdnonzero[valid_cols] <- is.finite(span) & (span > 0)
   }
 
   list(nas = nas, sdnonzero = sdnonzero)
+}
+
+#' Is a preserved centre column unusable?
+#'
+#' A centre voxel is never preserved when it is all-NA in the training data or
+#' has an infinite value in the test data. A partly-NA training column, or NA
+#' in the test data, is preserved as before (retrieval NA is handled downstream).
+#' `cols` are column positions of the train matrix (one voxel, or the basis
+#' columns of one multibasis voxel group).
+#' @keywords internal
+#' @noRd
+.filter_roi_centre_unusable <- function(trdat, tedat, cols) {
+  if (length(cols) == 0L) return(FALSE)
+  all_na_train <- colSums(is.na(trdat[, cols, drop = FALSE])) == nrow(trdat)
+  if (any(all_na_train)) return(TRUE)
+  if (!is.null(tedat)) {
+    return(any(is.infinite(tedat[, cols, drop = FALSE])))
+  }
+  FALSE
 }
 
 #' @keywords internal
@@ -149,6 +161,21 @@ filter_roi.ROIVec <- function(roi, preserve = NULL, min_voxels = 2, ...) {
   nas <- stats$nas
   sdnonzero <- stats$sdnonzero
 
+  # Test-set columns reach predict() unchanged. A column with an infinite test
+  # value is dropped (it is never meaningful). NA in the test data is NOT a
+  # drop criterion here: retrieval missing-data semantics are handled downstream
+  # (fit_roi's pairwise-complete similarity fallback; see
+  # test_era_rsa_searchlight_fast.R). Clean data has no such columns.
+  tedat <- if (is.null(roi$test_roi)) NULL else values(roi$test_roi)
+  test_bad <- if (is.null(tedat)) {
+    rep(FALSE, ncol(trdat))
+  } else {
+    if (ncol(tedat) != ncol(trdat)) {
+      stop("filter_roi: train and test ROI have different numbers of columns")
+    }
+    colSums(is.infinite(tedat)) > 0L
+  }
+
   # Read basis_count: NULL for standard datasets, integer for multibasis
 
   basis_count <- roi$basis_count
@@ -163,8 +190,8 @@ filter_roi.ROIVec <- function(roi, preserve = NULL, min_voxels = 2, ...) {
     # Column layout is basis-major: [b1_v1..b1_vV, b2_v1..b2_vV, ...]
     group_idx <- make_group_idx(V_phys, basis_count)
 
-    # Per-column checks (same criteria as standard path)
-    col_bad <- nas | !sdnonzero
+    # Per-column checks (same criteria as standard path, plus test-set finiteness)
+    col_bad <- nas | !sdnonzero | test_bad
 
     # A physical voxel group is bad if ANY of its k columns fails
     group_bad <- as.logical(tapply(col_bad, group_idx, any))
@@ -182,17 +209,25 @@ filter_roi.ROIVec <- function(roi, preserve = NULL, min_voxels = 2, ...) {
         n_removed, V_phys, n_na, n_zv, sum(group_keep), basis_count)
     }
 
-    # Preserve specified voxel if requested (e.g., center voxel in searchlight)
+    # Preserve specified voxel if requested (e.g., center voxel in searchlight).
+    # An unusable centre (all-NA in train, or infinite in test) is not preserved.
     if (!is.null(preserve)) {
       gi <- neuroim2::indices(roi$train_roi)
       # First V_phys indices correspond to basis-1 block
       first_block_ids <- gi[seq_len(V_phys)]
       preserve_group <- match(preserve, first_block_ids)
       if (!is.na(preserve_group) && !group_keep[preserve_group]) {
-        .log_debug(
-          "Preserving voxel group %s that would have been filtered (NA or zero variance)",
-          preserve)
-        group_keep[preserve_group] <- TRUE
+        group_cols <- which(group_idx == preserve_group)
+        if (.filter_roi_centre_unusable(trdat, tedat, group_cols)) {
+          .log_debug(
+            "Not preserving voxel group %s: all-NA in train or infinite in test data",
+            preserve)
+        } else {
+          .log_debug(
+            "Preserving voxel group %s that would have been filtered (NA or zero variance)",
+            preserve)
+          group_keep[preserve_group] <- TRUE
+        }
       }
     }
 
@@ -219,24 +254,29 @@ filter_roi.ROIVec <- function(roi, preserve = NULL, min_voxels = 2, ...) {
     # --- Standard (non-multibasis) path: unchanged ---
 
     # Determine columns to keep
-    keep <- !nas & sdnonzero
+    keep <- !nas & sdnonzero & !test_bad
 
     n_removed <- sum(!keep)
     if (n_removed > 0) {
       n_na  <- sum(nas)
       n_zv  <- sum(!sdnonzero & !nas)  # zero-var but not already counted as NA
       .log_debug(
-        "filter_roi: removing %d/%d voxels (NA: %d, zero-variance: %d); %d remain.",
-        n_removed, length(keep), n_na, n_zv, sum(keep))
+        "filter_roi: removing %d/%d voxels (NA: %d, zero-variance: %d, infinite test: %d); %d remain.",
+        n_removed, length(keep), n_na, n_zv, sum(test_bad & !nas & sdnonzero), sum(keep))
     }
 
-    # Preserve specified voxel if requested (e.g., center voxel in searchlight)
+    # Preserve specified voxel if requested (e.g., center voxel in searchlight).
+    # An unusable centre (all-NA in train, or infinite in test) is not preserved.
     if (!is.null(preserve)) {
       gi <- neuroim2::indices(roi$train_roi)
       kp <- match(preserve, gi)
       if (!is.na(kp) && !keep[kp]) {
-        .log_debug("Preserving voxel %s that would have been filtered (NA or zero variance)", preserve)
-        keep[kp] <- TRUE
+        if (.filter_roi_centre_unusable(trdat, tedat, kp)) {
+          .log_debug("Not preserving voxel %s: all-NA in train or infinite in test data", preserve)
+        } else {
+          .log_debug("Preserving voxel %s that would have been filtered (NA or zero variance)", preserve)
+          keep[kp] <- TRUE
+        }
       }
     }
 
@@ -256,6 +296,13 @@ filter_roi.ROIVec <- function(roi, preserve = NULL, min_voxels = 2, ...) {
   }
 
   # --- Shared: build filtered ROI and return ---
+  # Nothing filtered: hand back the input unchanged rather than rebuilding
+  # identical ROIVec objects. Without column_positions the retained columns
+  # are all of them (filter_roi.list treats a missing field as identity).
+  if (all(keep)) {
+    return(roi)
+  }
+
   if (is.null(roi$test_roi)) {
     troi <- ROIVec(space(roi$train_roi),
                    coords(roi$train_roi)[keep,,drop=FALSE],
@@ -268,7 +315,6 @@ filter_roi.ROIVec <- function(roi, preserve = NULL, min_voxels = 2, ...) {
                    data=trdat[,keep,drop=FALSE])
 
     # Filter test ROI data
-    tedat <- values(roi$test_roi)
     teroi <- ROIVec(space(roi$test_roi),
                     coords(roi$test_roi)[keep,,drop=FALSE],
                     data=tedat[,keep,drop=FALSE])
@@ -312,8 +358,9 @@ filter_roi.list <- function(roi, preserve = NULL, min_voxels = 2, ...) {
        } else NULL)
   result$basis_count <- roi$basis_count
   if (!is.null(roi$feature_positions)) {
-    if (is.null(filtered$column_positions)) stop("ROI filter did not retain column positions.", call. = FALSE)
-    result$feature_positions <- roi$feature_positions[filtered$column_positions]
+    # A NULL column_positions means filter_roi returned its input unchanged (identity)
+    pos <- filtered$column_positions %||% seq_along(roi$feature_positions)
+    result$feature_positions <- roi$feature_positions[pos]
   }
   result
 }
@@ -389,6 +436,72 @@ compute_mask_indices <- function(mask) {
   }
 }
 
+#' Logical membership lookup for mask voxel indices
+#'
+#' Built once per run (mvpa_iterate stores it as \code{dataset$mask_lookup}) so
+#' that \code{as_roi} can test voxel membership by indexing instead of hashing
+#' the whole mask for every ROI. Position \code{i} is TRUE when voxel \code{i}
+#' is in \code{mask_indices}. The lookup length is \code{max(mask_indices)}:
+#' any index beyond it cannot be in the mask.
+#' @keywords internal
+#' @noRd
+.mask_membership_lookup <- function(mask_indices) {
+  n <- if (length(mask_indices)) as.integer(max(mask_indices)) else 0L
+  lk <- logical(n)
+  lk[as.integer(mask_indices)] <- TRUE
+  lk
+}
+
+#' Per-element membership of voxel indices in a mask lookup
+#'
+#' Equivalent to \code{match(vox, mask_indices, 0L) > 0L}. Values that are NA,
+#' below 1, beyond the lookup, or non-integer are never members.
+#' @keywords internal
+#' @noRd
+.mask_membership <- function(vox, lookup) {
+  v <- as.vector(vox)
+  k <- logical(length(v))
+  n <- length(lookup)
+  ok <- which(!is.na(v) & v >= 1 & v <= n & v == floor(v))
+  if (length(ok)) {
+    k[ok] <- lookup[as.integer(v[ok])]
+  }
+  k
+}
+
+#' Restrict ROI voxel indices to the data mask
+#'
+#' Replicates the former \code{setdiff}/\code{intersect} logic exactly: when every
+#' voxel is inside the mask the input is returned unchanged (duplicates and order
+#' kept); otherwise the result is \code{intersect(vox, mask_indices)}, i.e.
+#' unique in-mask voxels in first-occurrence order, with the type of the mask
+#' index vector. Uses \code{data$mask_lookup} when present, otherwise builds the
+#' lookup from \code{data$mask_indices} (or the mask) for this call.
+#' @return list with \code{vox} (restricted indices) and \code{n_outside} (number
+#'   of distinct voxels outside the mask, as \code{length(setdiff(vox, mask_indices))}).
+#' @keywords internal
+#' @noRd
+.restrict_vox_to_mask <- function(vox, data) {
+  ref <- data$mask_indices
+  lookup <- data$mask_lookup
+  if (!is.logical(lookup)) {
+    if (is.null(ref)) ref <- compute_mask_indices(data$mask)
+    lookup <- .mask_membership_lookup(ref)
+  }
+
+  k <- .mask_membership(vox, lookup)
+  if (all(k)) {
+    return(list(vox = vox, n_outside = 0L))
+  }
+
+  v <- as.vector(vox)
+  first <- !duplicated(v)
+  n_outside <- sum(!k & first)
+  if (is.null(ref)) ref <- integer()
+  # intersect(x, y) in base R is c(u[!duplicated(u) & in y], y[numeric()])
+  list(vox = c(v[k & first], ref[0L]), n_outside = as.integer(n_outside))
+}
+
 #' @keywords internal
 #' @noRd
 #' @importFrom neuroim2 series_roi
@@ -402,18 +515,13 @@ as_roi.data_sample <- function(obj, data, ...) {
   # intersects region_mask with dataset$mask).  For searchlight analysis
   # edge spheres may extend beyond the brain mask, so this catch is needed.
   if (!is.null(data$mask)) {
-    mask_indices <- data$mask_indices
-    if (is.null(mask_indices)) {
-      mask_indices <- compute_mask_indices(data$mask)
-    }
+    restricted <- .restrict_vox_to_mask(obj$vox, data)
 
-    invalid_vox <- setdiff(obj$vox, mask_indices)
-
-    if (length(invalid_vox) > 0) {
+    if (restricted$n_outside > 0L) {
       .log_debug(
         "as_roi.data_sample: %d voxel(s) outside data mask (expected for edge searchlights; should not occur for regional).",
-        length(invalid_vox))
-      obj$vox <- intersect(obj$vox, mask_indices)
+        restricted$n_outside)
+      obj$vox <- restricted$vox
 
       # Don't fail for <2 voxels -- let filter_roi handle the minimum check
       if (length(obj$vox) == 0) {
@@ -463,18 +571,13 @@ combine_multibasis_roi <- function(vec_list, vox) {
 #' @export
 as_roi.multibasis_data_sample <- function(obj, data, ...) {
   if (!is.null(data$mask)) {
-    mask_indices <- data$mask_indices
-    if (is.null(mask_indices)) {
-      mask_indices <- compute_mask_indices(data$mask)
-    }
-
-    invalid_vox <- setdiff(obj$vox, mask_indices)
-    if (length(invalid_vox) > 0) {
+    restricted <- .restrict_vox_to_mask(obj$vox, data)
+    if (restricted$n_outside > 0L) {
       .log_debug(
         "as_roi.multibasis_data_sample: %d voxel(s) outside data mask.",
-        length(invalid_vox)
+        restricted$n_outside
       )
-      obj$vox <- intersect(obj$vox, mask_indices)
+      obj$vox <- restricted$vox
       if (length(obj$vox) == 0) {
         train_roi <- structure(
           list(message = "No voxels remaining after mask filtering"),

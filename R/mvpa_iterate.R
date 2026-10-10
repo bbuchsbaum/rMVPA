@@ -225,42 +225,41 @@ external_crossval <- function(mspec, roi, id, center_global_id = NA,
       center_local_id <- match(center_global_id, ind)
       if (is.na(center_local_id)) {
           # Center voxel was filtered out - return graceful skip instead of crashing
-          futile.logger::flog.warn("Center voxel %s not present after filtering for ROI %s - skipping", 
+          futile.logger::flog.warn("Center voxel %s not present after filtering for ROI %s - skipping",
                                   center_global_id, id)
-          return(tibble::tibble(
-            class = list(NULL),
-            probs = list(NULL),
-            y_true = list(ytest),
-            fit = list(NULL),
-            error = TRUE,
-            error_message = sprintf("Center voxel %s not present after filter_roi; ROI skipped", 
-                                  center_global_id),
-            warning = TRUE,
+          return(.crossval_error_row(
+            id, ind,
+            error_message = sprintf("Center voxel %s not present after filter_roi; ROI skipped",
+                                    center_global_id),
             warning_message = "Center voxel removed by filter_roi"
           ))
       }
   }
 
+  # Same guard as internal_crossval: a model needs at least two features.
+  if (ncol(xtrain_mat) < 2) {
+    return(.crossval_error_row(id, ind, error_message = "error: less than 2 features"))
+  }
+
   # Prepare sl_info
   sl_info <- list(center_local_id = center_local_id, center_global_id = center_global_id)
 
- 
+
   # Train the model and handle any errors
   # Pass sl_info and other dots
   dots <- list(...)
-  result <- try(do.call(train_model, c(list(mspec, xtrain, ytrain, indices=ind, param=mspec$tune_grid, 
+  result <- try(do.call(train_model, c(list(mspec, xtrain, ytrain, indices=ind, param=mspec$tune_grid,
                                           tune_reps=mspec$tune_reps, sl_info = sl_info, quiet_error = TRUE), dots)),
                 silent = TRUE)
-  
- 
+
+
 
   if (inherits(result, "try-error")) {
     # Log a warning if there's an error during model training
     flog.warn("error fitting model %s : %s", id, attr(result, "condition")$message)
     # Store error messages and return a tibble with the error information
     emessage <- if (is.null(attr(result, "condition")$message)) "" else attr(result, "condition")$message
-    tibble::tibble(class=list(NULL), probs=list(NULL), y_true=list(ytest),
-                   fit=list(NULL), error=TRUE, error_message=emessage)
+    .crossval_error_row(id, ind, error_message = emessage)
   } else {
     # Make predictions using the trained model
     xtest_mat <- if (is.null(xtest_mat)) {
@@ -601,6 +600,27 @@ internal_crossval <- function(mspec, roi, id, center_global_id = NA, x_all = NUL
     
 
 
+#' Standard error row for a cross-validated ROI
+#'
+#' Same columns as the other per-ROI rows (result, indices, performance, id,
+#' error, error_message, warning, warning_message), so failed ROIs from the
+#' internal and external CV paths can be combined and summarised.
+#' @keywords internal
+#' @noRd
+.crossval_error_row <- function(id, indices, error_message,
+                                warning_message = error_message) {
+  tibble::tibble(
+    result = list(NULL),
+    indices = list(indices),
+    performance = list(NULL),
+    id = id,
+    error = TRUE,
+    error_message = error_message,
+    warning = TRUE,
+    warning_message = warning_message
+  )
+}
+
 #' @keywords internal
 #' @noRd
 extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2,
@@ -696,6 +716,24 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2,
   as.integer(min(length(vox_list), max_by_memory, task_cap))
 }
 
+# Error rows for ROIs removed before extraction because they are smaller than
+# the minimum size. Same columns as the other per-ROI error rows, so the
+# dropped ROIs appear in the results and can be summarised.
+.size_filtered_error_rows <- function(ids, min_voxels_required) {
+  n <- length(ids)
+  msg <- sprintf("ROI filtered out (size < %d voxels)", as.integer(min_voxels_required))
+  tibble::tibble(
+    result = rep(list(NULL), n),
+    indices = rep(list(NULL), n),
+    performance = rep(list(NULL), n),
+    id = ids,
+    error = rep(TRUE, n),
+    error_message = rep(msg, n),
+    warning = rep(TRUE, n),
+    warning_message = rep(msg, n)
+  )
+}
+
 #' @keywords internal
 #' @noRd
 .prepare_batch_frame <- function(mod_spec, dset, vox_batch, batch_positions,
@@ -704,11 +742,13 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2,
   size <- as.integer(vapply(vox_batch, length, integer(1)))
   keep_idx <- which(size >= min_voxels_required)
   n_after_size_filter <- length(keep_idx)
+  dropped_ids <- batch_rnums[setdiff(seq_along(batch_rnums), keep_idx)]
 
   if (n_after_size_filter == 0L) {
     return(list(
       frame = tibble::tibble(),
       n_after_size_filter = 0L,
+      dropped_ids = dropped_ids,
       get_samples_seconds = 0,
       roi_extract_seconds = 0
     ))
@@ -766,6 +806,7 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2,
   list(
     frame = sf,
     n_after_size_filter = as.integer(n_after_size_filter),
+    dropped_ids = dropped_ids,
     get_samples_seconds = as.numeric(get_samples_elapsed),
     roi_extract_seconds = as.numeric(extract_elapsed)
   )
@@ -943,7 +984,9 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
 
   .log_debug("Starting mvpa_iterate with %d voxels", length(vox_list))
 
-  tryCatch({
+  # Argument and assertion errors propagate to the caller. Only per-batch
+  # processing errors are turned into error rows (below).
+  {
     assert_that(length(ids) == length(vox_list),
                 msg = paste("length(ids) = ", length(ids), "::", "length(vox_list) =", length(vox_list)))
 
@@ -1001,9 +1044,14 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
       on.exit(shard_cleanup(mod_spec$shard_data), add = TRUE)
     }
 
-    # Precompute nonzero mask indices once per invocation to avoid repeated O(#voxels) scans in as_roi.
-    if (!is.null(dset$mask) && is.null(dset$mask_indices)) {
-      dset$mask_indices <- compute_mask_indices(dset$mask)
+    # Precompute nonzero mask indices and their membership lookup once per
+    # invocation, so as_roi tests each ROI voxel by indexing rather than
+    # re-hashing the whole mask for every ROI.
+    if (!is.null(dset$mask)) {
+      if (is.null(dset$mask_indices)) {
+        dset$mask_indices <- compute_mask_indices(dset$mask)
+      }
+      dset$mask_lookup <- .mask_membership_lookup(dset$mask_indices)
     }
     tot <- length(ids)
     
@@ -1104,6 +1152,15 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
                                      drop_probs = drop_probs,
                                      fail_fast = fail_fast,
                                      item_seeds = if (!is.null(iteration_seeds)) iteration_seeds[sf$.id])
+          # ROIs removed by the size filter in this batch get error rows too.
+          n_dropped <- length(batch_prepared$dropped_ids)
+          if (n_dropped > 0L) {
+            skipped_rois <- skipped_rois + n_dropped
+            results[[i]] <- dplyr::bind_rows(
+              results[[i]],
+              .size_filtered_error_rows(batch_prepared$dropped_ids, min_voxels_required)
+            )
+          }
           if (!is.null(save_rdm_vectors_dir) &&
               inherits(mod_spec, "feature_rsa_model") &&
               isTRUE(mod_spec$return_rdm_vectors)) {
@@ -1135,19 +1192,11 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
           .maybe_gc()
         } else {
           skipped_rois <- skipped_rois + length(batch_positions)
-          futile.logger::flog.warn("%s Batch %s: All ROIs filtered out (size < 2 voxels)", 
+          futile.logger::flog.warn("%s Batch %s: All ROIs filtered out (size < %d voxels)",
                                   crayon::yellow("!"),
-                                  crayon::blue(i))
-          results[[i]] <- tibble::tibble(
-            result = list(NULL),
-            indices = list(NULL),
-            performance = list(NULL),
-            id = batch_rnums,
-            error = TRUE,
-            error_message = "ROI filtered out (size < 2 voxels)",
-            warning = TRUE,
-            warning_message = "ROI filtered out (size < 2 voxels)"
-          )
+                                  crayon::blue(i),
+                                  min_voxels_required)
+          results[[i]] <- .size_filtered_error_rows(batch_rnums, min_voxels_required)
         }
         batch_elapsed <- proc.time()[3] - batch_t0
         if (profile_enabled) {
@@ -1212,20 +1261,7 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
     attr(final_results, "rdm_batch_dir") <- save_rdm_vectors_dir
   }
   return(final_results)
-  }, error = function(e) {
-    futile.logger::flog.error("mvpa_iterate failed: %s", e$message)
-    # Return a well-formed error tibble so upstream callers don't crash
-    tibble::tibble(
-      result = list(NULL),
-      indices = list(NULL),
-      performance = list(NULL),
-      id = NA_integer_,
-      error = TRUE,
-      error_message = paste("mvpa_iterate fatal error:", e$message),
-      warning = TRUE,
-      warning_message = "mvpa_iterate fatal error"
-    )
-  })
+  }
 }
 
 #' Create a lightweight model spec for parallel workers
@@ -1402,7 +1438,9 @@ as_worker_spec <- function(obj) {
       if (is.null(roi)) {
         # ROI failed validation (e.g. from extract_roi returning NULL due to <2 voxels after filter_roi)
         .log_debug("ROI ID %s: Skipped (failed initial validation in extract_roi, e.g. <2 voxels).", rnum)
-        msg <- sprintf("ROI %s failed validation (e.g., <2 voxels after filtering or other extract_roi issue)", rnum)
+        # The id is a column of the row, so the message stays identical across
+        # ROIs and summarize_errors can group them.
+        msg <- "ROI failed validation (e.g., <2 voxels after filtering or other extract_roi issue)"
         if (fail_fast) {
           rlang::abort(message = sprintf("ROI %s failed validation: <2 voxels or invalid after filtering.", rnum))
         }
@@ -1456,14 +1494,16 @@ as_worker_spec <- function(obj) {
         if (nchar(raw) > 500L) paste0(substr(raw, 1L, 500L), "\n... [truncated]") else raw
       }, error = function(...) NA_character_)
       .log_debug("ROI %d: Processing error (%s)", rnum, e$message)
+      # error_message stays free of ids and traces so identical failures can be
+      # grouped; the (truncated) traceback lives in its own column.
       tibble::tibble(
         result = list(NULL),
         indices = list(NULL),
         performance = list(NULL),
         id = rnum,
         error = TRUE,
-        error_message = paste0("Error processing ROI: ", e$message,
-                               if (!is.na(tb)) paste0("\ntrace:\n", tb) else ""),
+        error_message = paste("Error processing ROI:", e$message),
+        error_trace = as.character(tb),
         warning = TRUE,
         warning_message = paste("Error processing ROI:", e$message)
       )

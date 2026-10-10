@@ -155,8 +155,11 @@ summarize_errors <- function(results, context = "mvpa") {
     futile.logger::flog.warn("%s: %d of %d ROIs failed (%.1f%%)",
                              context, n_errors, n_total,
                              100 * n_errors / max(n_total, 1L))
-    bad <- results[results$error, , drop = FALSE]
-    err_tab <- sort(table(bad$error_message), decreasing = TRUE)
+    # `%in% TRUE` treats NA flags as not failed. error_message is kept free of
+    # ROI ids (the id is a column), so identical failures group together.
+    bad_msg <- as.character(results$error_message[which(results$error %in% TRUE)])
+    bad_msg[is.na(bad_msg)] <- "<no message>"
+    err_tab <- sort(table(bad_msg), decreasing = TRUE)
     for (i in seq_len(min(length(err_tab), 5L))) {
       futile.logger::flog.warn("  - [%d ROIs] %s", err_tab[i], names(err_tab)[i])
     }
