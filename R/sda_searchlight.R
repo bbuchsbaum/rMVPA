@@ -59,18 +59,18 @@
     stop("sda_fast: mismatch between train rows and y_train length.")
   }
   if (!all(is.finite(x_all))) {
-    stop(.aggregate_ineligible("data contain missing or non-finite values"))
+    stop(.engine_ineligible("sda_fast", "data contain missing or non-finite values"))
   }
   folds <- generate_folds(model_spec$crossval, tibble::tibble(.row = seq_len(nrow(x_all))), y_all)
   fold_list <- lapply(seq_len(nrow(folds)), function(i) {
     tr <- as.integer(.extract_sample_indices(folds$train[[i]]))
     te <- as.integer(.extract_sample_indices(folds$test[[i]]))
     if (length(tr) < 3L) {
-      stop(.aggregate_ineligible("fewer than three training observations"))
+      stop(.engine_ineligible("sda_fast", "fewer than three training observations"))
     }
     valid <- nonzeroVarianceColumns2(x_all[tr, , drop = FALSE])
     if (anyDuplicated(t(x_all[tr, valid, drop = FALSE])) > 0L) {
-      stop(.aggregate_ineligible("identical voxel columns in a training fold"))
+      stop(.engine_ineligible("sda_fast", "identical voxel columns in a training fold"))
     }
     list(train = tr, test = te, valid = valid)
   })
@@ -94,7 +94,7 @@
   fold_list <- lapply(prep$folds, function(f) {
     f$ytr <- factor(y_all[f$train], levels = classes)
     if (any(table(f$ytr) == 0L)) {
-      stop(.aggregate_ineligible("a class is absent from a training fold"))
+      stop(.engine_ineligible("sda_fast", "a class is absent from a training fold"))
     }
     f$stats <- .sda_column_stats(x_all[f$train, , drop = FALSE], f$ytr)
     f

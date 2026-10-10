@@ -807,19 +807,25 @@ print.mvpa_surface_dataset <- function(x, ...) {
 
 #' @keywords internal
 #' @noRd
-.searchlight_geometry_cache_get <- function(key) {
+.searchlight_geometry_cache_get <- function(key, guard = NULL) {
   if (!exists(key, envir = .searchlight_geometry_cache_env, inherits = FALSE)) {
+    return(NULL)
+  }
+  entry <- get(key, envir = .searchlight_geometry_cache_env, inherits = FALSE)
+  # A hash match is not proof of identity: the stored guard (the exact inputs
+  # the key summarises) must match too, otherwise this is a miss.
+  if (!identical(entry$guard, guard)) {
     return(NULL)
   }
   order <- .searchlight_geometry_cache_state$order
   .searchlight_geometry_cache_state$order <- c(order[order != key], key)
-  get(key, envir = .searchlight_geometry_cache_env, inherits = FALSE)
+  entry$value
 }
 
 #' @keywords internal
 #' @noRd
-.searchlight_geometry_cache_set <- function(key, value) {
-  assign(key, value, envir = .searchlight_geometry_cache_env)
+.searchlight_geometry_cache_set <- function(key, value, guard = NULL) {
+  assign(key, list(value = value, guard = guard), envir = .searchlight_geometry_cache_env)
   order <- .searchlight_geometry_cache_state$order
   order <- c(order[order != key], key)
   max_entries <- .searchlight_geometry_cache_max_entries()
@@ -840,21 +846,18 @@ print.mvpa_surface_dataset <- function(x, ...) {
 #' @keywords internal
 #' @noRd
 .searchlight_geometry_raw_signature <- function(raw) {
-  x <- as.numeric(as.integer(raw))
-  n <- length(x)
+  n <- length(raw)
   if (n == 0L) {
     return("r0")
   }
-  pos <- seq_len(n)
-  s1 <- sum(x * ((pos %% 251L) + 1L))
-  s2 <- sum(x * ((pos %% 65521L) + 1L))
-  paste0(
-    "r", n, "_",
-    formatC(round(s1 %% 1e12), format = "f", digits = 0), "_",
-    formatC(round(s2 %% 1e12), format = "f", digits = 0)
-  )
+  paste0("r", n, "_", rlang::hash(raw))
 }
 
+#' Hash signature of a numeric vector (e.g. mask indices)
+#'
+#' Uses a content hash. Position-weighted sums are not used: they collide for
+#' simple edits (e.g. indices 10,20,30 vs 11,18,31). Cache hits are also
+#' checked against the stored input (see `.searchlight_geometry_cache_get()`).
 #' @keywords internal
 #' @noRd
 .searchlight_geometry_numeric_signature <- function(x) {
@@ -863,14 +866,7 @@ print.mvpa_surface_dataset <- function(x, ...) {
   if (n == 0L) {
     return("n0")
   }
-  pos <- seq_len(n)
-  s1 <- sum(vals * ((pos %% 8191L) + 1L))
-  s2 <- sum(vals * ((pos %% 131071L) + 3L))
-  paste0(
-    "n", n, "_",
-    formatC(round(s1 %% 1e12), format = "f", digits = 0), "_",
-    formatC(round(s2 %% 1e12), format = "f", digits = 0)
-  )
+  paste0("n", n, "_", rlang::hash(vals))
 }
 
 #' @keywords internal
@@ -886,6 +882,19 @@ print.mvpa_surface_dataset <- function(x, ...) {
 
 #' @keywords internal
 #' @noRd
+.searchlight_geometry_image_indices <- function(obj) {
+  if (!is.null(obj$mask_indices)) {
+    return(as.integer(obj$mask_indices))
+  }
+  vals <- neuroim2::values(obj$mask)
+  if (is.matrix(vals)) {
+    vals <- vals[, 1, drop = TRUE]
+  }
+  which(vals != 0)
+}
+
+#' @keywords internal
+#' @noRd
 .searchlight_geometry_image_signature <- function(obj) {
   mask <- obj$mask
   sp <- neuroim2::space(mask)
@@ -896,23 +905,36 @@ print.mvpa_surface_dataset <- function(x, ...) {
   spacing <- neuroim2::spacing(sp)[seq_len(length(dims))]
   origin <- neuroim2::origin(sp)[seq_len(length(dims))]
 
-  idx <- if (!is.null(obj$mask_indices)) {
-    as.integer(obj$mask_indices)
-  } else {
-    vals <- neuroim2::values(mask)
-    if (is.matrix(vals)) {
-      vals <- vals[, 1, drop = TRUE]
-    }
-    which(vals != 0)
-  }
-
   paste(
     "img",
     paste(dims, collapse = ","),
     paste(formatC(spacing, digits = 8, format = "fg"), collapse = ","),
     paste(formatC(origin, digits = 8, format = "fg"), collapse = ","),
-    .searchlight_geometry_numeric_signature(idx),
+    .searchlight_geometry_numeric_signature(.searchlight_geometry_image_indices(obj)),
     sep = "::"
+  )
+}
+
+#' Exact inputs of the image geometry cache key (checked on every hit)
+#' @keywords internal
+#' @noRd
+.searchlight_geometry_image_guard <- function(obj) {
+  sp <- neuroim2::space(obj$mask)
+  list(
+    dims = dim(sp),
+    spacing = neuroim2::spacing(sp),
+    origin = neuroim2::origin(sp),
+    indices = .searchlight_geometry_image_indices(obj)
+  )
+}
+
+#' Exact inputs of the surface geometry cache key (checked on every hit)
+#' @keywords internal
+#' @noRd
+.searchlight_geometry_surface_guard <- function(obj) {
+  list(
+    nodes = length(neurosurf::nodes(neurosurf::geometry(obj$train_data))),
+    active_nodes = which(obj$mask > 0)
   )
 }
 
@@ -1018,7 +1040,8 @@ get_searchlight.mvpa_image_dataset <- function(obj,
     signature = .searchlight_geometry_image_signature(obj),
     dots_signature = dots_signature
   )
-  cached <- .searchlight_geometry_cache_get(key)
+  guard <- .searchlight_geometry_image_guard(obj)
+  cached <- .searchlight_geometry_cache_get(key, guard)
   if (!is.null(cached)) {
     .log_debug("searchlight geometry cache hit [image]: radius=%s", paste(radius, collapse = ","))
     return(cached)
@@ -1032,7 +1055,7 @@ get_searchlight.mvpa_image_dataset <- function(obj,
     nonzero = nonzero,
     ...
   )
-  .searchlight_geometry_cache_set(key, slight)
+  .searchlight_geometry_cache_set(key, slight, guard)
   slight
 }
 
@@ -1061,7 +1084,8 @@ get_searchlight.mvpa_surface_dataset <- function(obj, type = c("standard", "rand
     signature = .searchlight_geometry_surface_signature(obj),
     dots_signature = dots_signature
   )
-  cached <- .searchlight_geometry_cache_get(key)
+  guard <- .searchlight_geometry_surface_guard(obj)
+  cached <- .searchlight_geometry_cache_get(key, guard)
   if (!is.null(cached)) {
     .log_debug("searchlight geometry cache hit [surface]: radius=%s", paste(radius, collapse = ","))
     return(cached)
@@ -1073,7 +1097,7 @@ get_searchlight.mvpa_surface_dataset <- function(obj, type = c("standard", "rand
     radius = radius,
     ...
   )
-  .searchlight_geometry_cache_set(key, slight)
+  .searchlight_geometry_cache_set(key, slight, guard)
   slight
 }
 

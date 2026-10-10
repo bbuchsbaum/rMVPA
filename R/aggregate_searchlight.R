@@ -18,10 +18,28 @@
 #' @keywords internal
 #' @noRd
 .is_aggregate_fast_path <- function(model_spec, method) {
-  if (!inherits(model_spec, "mvpa_model")) return(FALSE)
-  if (!identical(method, "standard")) return(FALSE)
+  if (!.fast_classifier_eligible(model_spec, method)) return(FALSE)
   label <- model_spec$model$label
   if (!(identical(label, "corclass") || identical(label, "naive_bayes"))) return(FALSE)
+
+  grid <- model_spec$tune_grid
+  if (identical(label, "corclass") && !is.null(grid) &&
+      (!identical(as.character(grid$method), "pearson") ||
+       !identical(as.logical(grid$robust), FALSE))) return(FALSE)
+  TRUE
+}
+
+#' Conditions shared by every classifier fast engine
+#'
+#' Checks that do not depend on the engine's own model: the method, a
+#' cross-validated image dataset (not multibasis), no feature selector, factor
+#' responses with at least two classes, a single-row tuning grid, the
+#' performance metric the engine reproduces, and no split list.
+#' @keywords internal
+#' @noRd
+.fast_classifier_eligible <- function(model_spec, method, methods = "standard") {
+  if (!inherits(model_spec, "mvpa_model")) return(FALSE)
+  if (!(method %in% methods)) return(FALSE)
   if (!isTRUE(has_crossval(model_spec)) || isTRUE(has_test_set(model_spec))) return(FALSE)
 
   ds <- model_spec$dataset
@@ -33,12 +51,7 @@
   if (!is.factor(y) || nlevels(y) < 2L) return(FALSE)
 
   grid <- model_spec$tune_grid
-  if (!is.null(grid)) {
-    if (!is.data.frame(grid) || nrow(grid) != 1L) return(FALSE)
-    if (identical(label, "corclass") &&
-        (!identical(as.character(grid$method), "pearson") ||
-         !identical(as.logical(grid$robust), FALSE))) return(FALSE)
-  }
+  if (!is.null(grid) && (!is.data.frame(grid) || nrow(grid) != 1L)) return(FALSE)
 
   if (!isTRUE(model_spec$compute_performance)) return(FALSE)
   perf <- model_spec$performance
@@ -49,12 +62,37 @@
   TRUE
 }
 
+#' Whether a fast engine reproduces the requested combiner
+#'
+#' Fast engines hard-wire the built-in combiner for their method. Any other
+#' combiner (a user function, or a string the legacy path would resolve
+#' differently) must run on the general path, which calls it.
 #' @keywords internal
 #' @noRd
-.aggregate_ineligible <- function(reason) {
+.fast_combiner_eligible <- function(combiner, method) {
+  if (is.function(combiner)) {
+    reference <- if (identical(method, "standard")) combine_standard else combine_randomized
+    return(identical(combiner, reference))
+  }
+  if (!is.character(combiner) || length(combiner) == 0L) return(FALSE)
+  choice <- as.character(combiner)[1]
+  if (identical(method, "standard")) {
+    return(choice %in% c("average", "standard"))
+  }
+  choice %in% c("average", "combine_randomized")
+}
+
+#' Ineligibility condition for a fast engine
+#'
+#' Raised when an engine refuses data or a fit outside its proven regime. The
+#' message names the engine that declined. Class "rmvpa_engine_ineligible" is
+#' what the dispatcher uses to fall back under engine = "auto".
+#' @keywords internal
+#' @noRd
+.engine_ineligible <- function(engine, reason) {
   structure(
     class = c("rmvpa_engine_ineligible", "error", "condition"),
-    list(message = paste0("aggregate_fast: ", reason), call = NULL)
+    list(message = paste0(engine, ": ", reason), call = NULL)
   )
 }
 
@@ -405,7 +443,7 @@
     stop("aggregate_fast: mismatch between train rows and y_train length.")
   }
   if (!all(is.finite(x_all))) {
-    stop(.aggregate_ineligible("data contain missing or non-finite values"))
+    stop(.engine_ineligible("aggregate_fast", "data contain missing or non-finite values"))
   }
   is_nb <- identical(model_spec$model$label, "naive_bayes")
   # Pearson correlation across voxels is invariant to a common shift; removing
@@ -421,7 +459,7 @@
     te <- as.integer(.extract_sample_indices(folds$test[[i]]))
     valid <- nonzeroVarianceColumns2(x_all[tr, , drop = FALSE])
     if (anyDuplicated(t(x_all[tr, valid, drop = FALSE])) > 0L) {
-      stop(.aggregate_ineligible("identical voxel columns in a training fold"))
+      stop(.engine_ineligible("aggregate_fast", "identical voxel columns in a training fold"))
     }
     list(train = tr, test = te, valid = valid)
   })
@@ -458,14 +496,14 @@
   fold_list <- lapply(prep$folds, function(f) {
     ytr <- factor(y_all[f$train], levels = classes)
     if (any(table(ytr) == 0L)) {
-      stop(.aggregate_ineligible("a class is absent from a training fold"))
+      stop(.engine_ineligible("aggregate_fast", "a class is absent from a training fold"))
     }
     if (is_nb) {
       # naive_bayes floors a zero within-class variance at a value that depends
       # on the other voxels in the sphere; such data are left to the general path.
       f$nb_fit <- .aggregate_nb_fit(x_all[f$train, , drop = FALSE], ytr, classes)
       if (any(f$nb_fit$vars[, f$valid, drop = FALSE] <= .Machine$double.eps)) {
-        stop(.aggregate_ineligible("zero within-class variance in a training fold"))
+        stop(.engine_ineligible("aggregate_fast", "zero within-class variance in a training fold"))
       }
     }
     f
