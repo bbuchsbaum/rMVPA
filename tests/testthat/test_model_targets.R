@@ -62,8 +62,10 @@ test_that("model_targets test partition uses targets_test and falls back to y_te
   expect_equal(mt_test$values, tt)
   expect_equal(mt_test$observation_ids, 1:6)
 
-  # y_test semantics preserved
-  expect_equal(y_test(des), rep(c("a", "b"), 3))
+  # y_test semantics preserved. Classification test labels are now stored as a
+  # factor on the training levels, so compare the labels, not the storage type.
+  expect_equal(as.character(y_test(des)), rep(c("a", "b"), 3))
+  expect_equal(levels(y_test(des)), c("a", "b"))
 
   des2 <- mvpa_design(train_df, test_df, y_train = ~ cond, y_test = ~ cond)
   mt2 <- model_targets(des2, "test")
