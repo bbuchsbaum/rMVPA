@@ -1007,6 +1007,13 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
     }
     tot <- length(ids)
     
+    # One RNG stream per ROI for the whole iteration, indexed by its position
+    # in `vox_list`, so a ROI's stream does not depend on batch size, worker
+    # count or backend (see .rmvpa_item_seeds()).
+    iteration_seeds <- if (!inherits(mod_spec, "era_rsa_model")) {
+      .rmvpa_item_seeds(length(ids))
+    }
+
     results <- vector("list", nbatches)
     skipped_rois <- 0
     processed_rois <- 0
@@ -1095,7 +1102,8 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
           results[[i]] <- run_future(mod_spec, sf, processor, verbose,
                                      analysis_type = analysis_type,
                                      drop_probs = drop_probs,
-                                     fail_fast = fail_fast)
+                                     fail_fast = fail_fast,
+                                     item_seeds = if (!is.null(iteration_seeds)) iteration_seeds[sf$.id])
           if (!is.null(save_rdm_vectors_dir) &&
               inherits(mod_spec, "feature_rsa_model") &&
               isTRUE(mod_spec$return_rdm_vectors)) {
@@ -1338,6 +1346,24 @@ as_worker_spec <- function(obj) {
   seeds
 }
 
+#' Resolve the per-item seeds a run_future() method uses
+#'
+#' \code{supplied} (from mvpa_iterate, one stream per frame row) is used as is;
+#' otherwise streams are drawn here. NULL when the model opts out of per-item
+#' streams or there is nothing to run.
+#' @keywords internal
+#' @noRd
+.run_future_item_seeds <- function(supplied, future_seed, total_items) {
+  if (!isTRUE(future_seed) || total_items < 1L) return(NULL)
+  if (!is.null(supplied)) {
+    if (length(supplied) != total_items) {
+      stop("`item_seeds` must have one RNG stream per frame row.", call. = FALSE)
+    }
+    return(supplied)
+  }
+  .rmvpa_item_seeds(total_items)
+}
+
 #' Per-item worker for run_future.default
 #'
 #' A namespace-level factory, so the returned closure captures only its
@@ -1463,7 +1489,7 @@ as_worker_spec <- function(obj) {
 #' @export
 run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
                                analysis_type = "searchlight", drop_probs = FALSE,
-                               fail_fast = FALSE, ...) {
+                               fail_fast = FALSE, item_seeds = NULL, ...) {
   .maybe_gc()
   future_seed <- !inherits(obj, "era_rsa_model")
   # Ensure workers never receive the full dataset.
@@ -1491,14 +1517,12 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
 
   # Per-item RNG streams make stochastic results independent of the plan.
   # The same list drives the sequential loop and furrr, so both paths see
-  # identical seeds. era_rsa_model keeps its previous behaviour: no per-item
-  # streams (furrr seed = FALSE), and the sequential loop leaves the global
-  # stream untouched.
-  item_seeds <- if (future_seed && total_items > 0L) {
-    .rmvpa_item_seeds(total_items)
-  } else {
-    NULL
-  }
+  # identical seeds. mvpa_iterate() draws the streams once for the whole
+  # iteration and passes each batch its rows' streams (`item_seeds`), so batch
+  # boundaries do not matter either; direct callers get streams drawn here.
+  # era_rsa_model keeps its previous behaviour: no per-item streams (furrr
+  # seed = FALSE), and the sequential loop leaves the global stream untouched.
+  item_seeds <- .run_future_item_seeds(item_seeds, future_seed, total_items)
   item_seed_option <- if (is.null(item_seeds)) FALSE else item_seeds
   rng_after_seeds <- .rmvpa_save_rng()
 

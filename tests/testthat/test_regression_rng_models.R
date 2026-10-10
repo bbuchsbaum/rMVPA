@@ -42,7 +42,7 @@ make_draw_processor <- function() {
 }
 
 # Runs mvpa_iterate from a fixed global seed under the current future plan.
-run_draws <- function(shard = FALSE, min_chunk = 16L) {
+run_draws <- function(shard = FALSE, min_chunk = 16L, batch_size = NULL) {
   spec <- make_rng_spec(shard = shard)
   mask_idx <- spec$mask_idx
   vox_list <- lapply(1:12, function(i) as.integer(mask_idx[i:(i + 2)]))
@@ -57,6 +57,7 @@ run_draws <- function(shard = FALSE, min_chunk = 16L) {
     mod_spec = spec$mspec,
     vox_list = vox_list,
     ids = ids,
+    batch_size = batch_size,
     verbose = FALSE,
     analysis_type = "searchlight",
     processor = make_draw_processor(),
@@ -232,4 +233,32 @@ test_that("mgsda prob uses classifier output and matches predict()", {
   expect_true(all(abs(rowSums(probs) - 1) < 1e-12))
   expect_equal(levels(y)[max.col(probs, ties.method = "first")],
                as.character(mod$predict(fit, x)))
+})
+
+# ---- batch boundaries ---------------------------------------------------------
+# Batch size depends on worker count, memory budget and backend, so a ROI's
+# stream must not depend on which batch it lands in.
+
+test_that("per-ROI draws do not depend on batch size", {
+  old_plan <- future::plan(future::sequential)
+  on.exit(future::plan(old_plan), add = TRUE)
+  ref <- run_draws(batch_size = 12L)
+  for (bs in c(1L, 2L, 5L)) {
+    got <- run_draws(batch_size = bs)
+    expect_identical(got$id, ref$id, info = bs)
+    expect_identical(got$draws, ref$draws, info = bs)
+    expect_identical(got$state, ref$state, info = bs)
+  }
+})
+
+test_that("per-ROI draws are the same under the default and shard backends", {
+  skip_if_not_installed("shard")
+  old_plan <- future::plan(future::sequential)
+  on.exit(future::plan(old_plan), add = TRUE)
+  default <- run_draws(shard = FALSE, batch_size = 3L)
+  sharded <- run_draws(shard = TRUE, batch_size = 7L)
+  ord_d <- order(default$id); ord_s <- order(sharded$id)
+  expect_identical(sharded$id[ord_s], default$id[ord_d])
+  expect_identical(sharded$draws[ord_s], default$draws[ord_d])
+  expect_identical(sharded$state, default$state)
 })

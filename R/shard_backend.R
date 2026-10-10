@@ -543,7 +543,8 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
                                          verbose = FALSE,
                                          analysis_type = "searchlight",
                                          drop_probs = FALSE,
-                                         fail_fast = FALSE, ...) {
+                                         fail_fast = FALSE,
+                                         item_seeds = NULL, ...) {
   if (isTRUE(getOption("rMVPA.shard_gc_each_batch", FALSE))) {
     gc()
   }
@@ -563,11 +564,7 @@ run_future.shard_model_spec <- function(obj, frame, processor = NULL,
   # Per-item RNG streams, shared by the sequential loop and furrr (see
   # run_future.default). era_rsa_model keeps its previous behaviour (no
   # per-item streams).
-  item_seeds <- if (future_seed && total_items > 0L) {
-    .rmvpa_item_seeds(total_items)
-  } else {
-    NULL
-  }
+  item_seeds <- .run_future_item_seeds(item_seeds, future_seed, total_items)
   item_seed_option <- if (is.null(item_seeds)) FALSE else item_seeds
   rng_after_seeds <- .rmvpa_save_rng()
 

@@ -614,6 +614,10 @@ crossval_samples.kfold_cross_validation <- function(obj, data, y, ...) {
   # Folds are fixed at construction time and stored in block_var (fold labels 1..nfolds),
   # so this must not redraw them. Matches train_indices/partition_indices.
   check_len(y, obj$block_var)
+  if (nrow(data) != length(obj$block_var)) {
+    stop(sprintf("kfold_cross_validation was built for %d observations but the data have %d rows.",
+                 length(obj$block_var), nrow(data)), call. = FALSE)
+  }
   fold_idx <- split(seq_len(nrow(data)), factor(obj$block_var, levels = seq_len(obj$nfolds)))
   crossv_from_folds(data, y, unname(fold_idx))
 }

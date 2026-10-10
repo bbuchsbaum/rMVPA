@@ -221,3 +221,12 @@ test_that("run_regional with kfold CV is reproducible across differing seeds", {
   expect_equal(as.data.frame(res1$performance_table),
                as.data.frame(res2$performance_table))
 })
+
+test_that("kfold crossval_samples rejects data whose row count differs from the fold assignment", {
+  set.seed(7)
+  cv <- kfold_cross_validation(len = 20, nfolds = 4)
+  y <- factor(rep(c("a", "b"), 10))
+  expect_error(crossval_samples(cv, data.frame(x = rnorm(24)), y), "built for 20 observations")
+  expect_error(crossval_samples(cv, data.frame(x = rnorm(16)), y), "built for 20 observations")
+  expect_silent(crossval_samples(cv, data.frame(x = rnorm(20)), y))
+})
