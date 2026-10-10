@@ -908,19 +908,6 @@ get_searchlight <- function(obj, ...) {
   UseMethod("get_searchlight")
 }
 
-#' Wrap Output
-#'
-#' Wrap output values into a desired format.
-#'
-#' @param obj The object used to determine the wrapping method.
-#' @param vals The values to be wrapped.
-#' @param ... Additional arguments passed to methods.
-#' @return A wrapped output object.
-#' @keywords internal
-wrap_output <- function(obj, vals, ...) {
-  UseMethod("wrap_output")
-}
-
 #' Merge Predictions
 #'
 #' Combine predictions from multiple models on the same test set.
@@ -1051,7 +1038,8 @@ predict_model <- function(object, fit, newdata, ...) {
 
 #' @keywords internal
 #' @noRd
-.name_repair = ~ vctrs::vec_as_names(..., repair = "unique", quiet = TRUE)
+#' @importFrom vctrs vec_as_names
+.name_repair = ~ vec_as_names(..., repair = "unique", quiet = TRUE)
 
 #' @keywords internal
 #' @noRd

@@ -12,9 +12,23 @@
 #'   and subsequent columns representing the binary factors derived from the spec.
 #'   Coding is typically +1 for the left side, -1 for the right side (or `.`), 0 otherwise.
 #'
+# Base-R stand-ins for the stringr calls the spec parser used to make.
+# .str_squish(): trim and collapse runs of whitespace to one space
+# (stringr::str_squish()).
+.str_squish <- function(x) trimws(gsub("[[:space:]]+", " ", x))
+
+# .str_split_keep(): split one string on a regex, keeping a trailing empty
+# piece (strsplit() drops it), matching stringr::str_split() on one string.
+.str_split_keep <- function(x, pattern) {
+  m <- gregexpr(pattern, x, perl = TRUE)[[1]]
+  if (identical(as.integer(m[1]), -1L)) return(x)
+  starts <- as.integer(m)
+  ends <- starts + attr(m, "match.length") - 1L
+  substring(x, c(1L, ends + 1L), c(starts - 1L, nchar(x)))
+}
+
 #' @keywords internal
 #' @noRd
-#' @importFrom stringr str_match str_squish str_split
 #' @importFrom tibble tibble
 parse_spec_to_metadata <- function(labels, spec) {
   if (!inherits(spec, "formula")) {
@@ -37,18 +51,18 @@ parse_spec_to_metadata <- function(labels, spec) {
   parsed_factors <- character() # Keep track of factors created
   
   for (term in term_labels) {
-    match <- str_match(term, pattern)
-    
-    if (is.na(match[1, 1])) {
+    match <- regmatches(term, regexec(pattern, term, perl = TRUE))[[1]]
+
+    if (length(match) == 0L) {
       # If it doesn't match the factor(...) pattern, it might be an interaction or simple term
       # These are handled later by model.matrix itself using the columns we create here.
       # We just need to make sure we parse the *definitions* first.
       next
     }
     
-    factor_name <- match[1, 2]
-    levels_A_str <- str_squish(match[1, 3])
-    levels_B_str <- str_squish(match[1, 4])
+    factor_name <- match[2]
+    levels_A_str <- .str_squish(match[3])
+    levels_B_str <- .str_squish(match[4])
     
     if (factor_name %in% parsed_factors) {
         stop("Factor '", factor_name, "' defined multiple times in the mini-formula spec.", call. = FALSE)
@@ -56,11 +70,11 @@ parse_spec_to_metadata <- function(labels, spec) {
     
     # Split levels by spaces or '+'
     split_levels <- function(level_str) {
-        level_str_sq <- str_squish(level_str)
+        level_str_sq <- .str_squish(level_str)
         if (level_str_sq == ".") return(character(0))
         # Split by '+', trim whitespace
-        levels <- str_split(level_str_sq, pattern = "\\s*\\+\\s*", simplify = TRUE)[1,]
-        return(str_squish(levels[levels != ""])) 
+        levels <- .str_split_keep(level_str_sq, "\\s*\\+\\s*")
+        return(.str_squish(levels[levels != ""])) 
     }
     
     levels_A <- split_levels(levels_A_str)

@@ -39,10 +39,10 @@ Imports:
     neuroim2 (>= 0.19.1),
     purrr,
     rlang,
-    stringr,
     tibble,
     tidyr,
     tidyselect,
+    vctrs,
     rsample,
     optparse,
     parallel,
@@ -64,7 +64,7 @@ Collate:
     'item_design.R'
     'feature_selection.R'
     'globals.R'
-    'manual_debug_helpers.R'
+    'options.R'
     'manova_model.R'
     'mvpa_iterate.R'
     'mvpa_model.R'
@@ -83,7 +83,6 @@ Collate:
     'rsa_model.R'
     'rsa_searchlight_engine.R'
     'rsa_schematic.R'
-    'roisplit.R'
     'searchlight_engine_utils.R'
     'dual_lda_searchlight.R'
     'searchlight_engine.R'

@@ -386,11 +386,6 @@ temporal <- function(index, block = NULL, ..., as_dist = TRUE) {
 }
 
 
-# Internal helper for NULL-coalescing operator
-`%||%` <- function(x, y) {
-  if (is.null(x)) y else x
-}
-
 
 # Internal helpers ---------------------------------------------------------
 
@@ -413,12 +408,6 @@ default_decay_params <- function(index, TR, kernel, lambda, sigma, units) {
     if (is.null(sigma))  out$sigma  <- ifelse(isTRUE(is.finite(base_scale)), base_scale, 1)
   }
   out
-}
-
-#' @keywords internal
-to_distance <- function(dv) {
-  mx <- max(dv, na.rm = TRUE)
-  if (is.finite(mx) && mx > 0) 1 - (dv / mx) else 1 - dv
 }
 
 

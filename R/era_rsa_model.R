@@ -724,13 +724,11 @@ fit_roi.era_rsa_model <- function(model, roi_data, context, ...) {
           beta_vec <- cf[keep, "Estimate"]
           names(beta_vec) <- paste0("beta_", rownames(cf)[keep])
         }
-        if (exists("run_lm_semipartial", mode = "function")) {
-          tmp <- list(design = list(model_mat = mm))
-          sr  <- try(run_lm_semipartial(dvec = dR, obj = tmp), silent = TRUE)
-          if (!inherits(sr, "try-error") && is.numeric(sr)) {
-            names(sr) <- paste0("sp_", names(sr))
-            sp_vec <- sr
-          }
+        tmp <- list(design = list(model_mat = mm))
+        sr  <- try(run_lm_semipartial(dvec = dR, obj = tmp), silent = TRUE)
+        if (!inherits(sr, "try-error") && is.numeric(sr)) {
+          names(sr) <- paste0("sp_", names(sr))
+          sp_vec <- sr
         }
       }
     }

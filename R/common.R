@@ -1,4 +1,3 @@
-#' @import stringr
 #' @noRd
 .searchlight_mode_allowed <- c("fast")
 
@@ -39,44 +38,6 @@
 
 #' @keywords internal
 #' @noRd
-.resolve_searchlight_profile <- function(option_name = "rMVPA.searchlight_profile") {
-  .resolve_searchlight_mode(
-    mode_option = "rMVPA.searchlight_mode",
-    profile_option = option_name
-  )
-  "optimized"
-}
-
-#' @keywords internal
-#' @noRd
-.searchlight_profile_bool_default <- function(optimized_default, legacy_default) {
-  isTRUE(optimized_default)
-}
-
-#' @keywords internal
-#' @noRd
-.warn_searchlight_legacy_override <- function(option_name,
-                                              replacement = "rMVPA.searchlight_mode") {
-  invisible(FALSE)
-}
-
-#' @keywords internal
-#' @noRd
-.warn_searchlight_legacy_ignored <- function(option_name,
-                                             replacement = NULL) {
-  invisible(FALSE)
-}
-
-#' @keywords internal
-#' @noRd
-.resolve_searchlight_bool_option <- function(option_name,
-                                             optimized_default,
-                                             legacy_default) {
-  isTRUE(optimized_default)
-}
-
-#' @keywords internal
-#' @noRd
 .resolve_searchlight_backend_default_option <- function(
     option_name = "rMVPA.searchlight_backend_default") {
   "auto"
@@ -112,11 +73,11 @@ initialize_configuration <- function(args) {
     if (!file.exists(args$config)) {
       flog.error("cannot find configuration file: %s", args$config)
       stop()
-    } else if (str_detect(args$config, "\\.yaml$")) {
+    } else if (grepl("\\.yaml$", args$config)) {
       require_package("io", "to read YAML configuration files")
       confyaml <- io::qread(args$config)
       config <- as.environment(confyaml)
-    } else if (str_detect(args$config, "\\.[rR]")) {
+    } else if (grepl("\\.[rR]", args$config)) {
       config <- new.env()
       source(args$config, config)
     }
@@ -172,23 +133,6 @@ normalize_image_samples <- function(bvec, mask) {
   norm_datavec <- do.call(cbind, vlist)
   #norm_datavec <- do.call(cbind, eachVolume(bvec, function(x) scale(x)[,1], mask=mask))
   SparseNeuroVec(norm_datavec, space(bvec), mask=mask)  
-}
-
-#' @noRd
-#' @keywords internal
-#' @importFrom purrr map_dbl map
-#' @importFrom neuroim2 vectors
-standardize_vars <- function(bvec, mask, blockvar) {
-  assertthat::assert_that(length(blockvar) == dim(bvec)[4])
-  vlist <- bvec %>% vectors(subset=which(mask>0)) %>% furrr::future_map(function(v) {
-    if (all(v == 0)) v else {
-      unlist(map(split(v, blockvar), scale))
-    }
-  }, .options = furrr::furrr_options(seed=TRUE))
-  
-  sdatavec <- do.call(cbind, vlist)
-  #norm_datavec <- do.call(cbind, eachVolume(bvec, function(x) scale(x)[,1], mask=mask))
-  SparseNeuroVec(sdatavec, space(bvec), mask=mask)  
 }
 
 
@@ -476,14 +420,6 @@ initialize_tune_grid <- function(args, config) {
   
 }
 
-
-#' @noRd
-#' @keywords internal
-set_default <- function(name, config, default) {
-  if (is.null(config[[name]])) {
-    config[[name]]<- default
-  }
-}
 
 #' @noRd
 #' @keywords internal

@@ -246,7 +246,8 @@ MVPAModels$spls_mixomics <- list(
   },
   
   fit = function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-    # Use mixOmics splsda for classification
+    # Use mixOmics splsda for classification (optional dependency)
+    require_package("mixOmics", "for the splsda model")
     keepX_vec <- rep(param$keepX, param$ncomp)
     model <- mixOmics::splsda(X = x, Y = y, ncomp = param$ncomp, keepX = keepX_vec, ...)
     model$obsLevels <- lev

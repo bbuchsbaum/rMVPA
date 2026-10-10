@@ -125,50 +125,6 @@ remap_rrr_model <- function(dataset,
 
 # --- helpers ---------------------------------------------------------------
 
-#' @keywords internal
-#' @importFrom stats cov
-.remap_whiten <- function(X, do_shrink = TRUE, center = TRUE) {
-  if (center) X <- scale(X, center = TRUE, scale = FALSE)
-  S <- try({
-    if (!isTRUE(do_shrink)) {
-      cov(X)
-    } else {
-      # Suppress verbose console output from corpcor during shrinkage
-      {require_package("corpcor", "for shrinkage covariance in REMAP-RRR"); corpcor::cov.shrink(X, verbose = FALSE)}
-    }
-  }, silent = TRUE)
-  if (inherits(S, "try-error")) S <- cov(X)
-  E <- eigen(S, symmetric = TRUE)
-  # ZCA whitening matrix
-  W <- E$vectors %*% diag(1 / sqrt(pmax(E$values, .Machine$double.eps))) %*% t(E$vectors)
-  list(Xw = X %*% W, W = W, mean = attr(X, "scaled:center"))
-}
-
-#' @keywords internal
-.remap_fit_rrr <- function(Xw, Yw, rank = "auto", max_rank = 20, ridge_lambda = NULL) {
-  stopifnot(nrow(Xw) == nrow(Yw))
-  n <- nrow(Xw); p <- ncol(Xw); q <- ncol(Yw)
-  max_rank <- max(0L, min(max_rank, p, q, max(1L, n - 1L)))
-
-  if (is.numeric(rank) && as.integer(rank) == 0L) {
-    return(list(method = "identity", Cw = matrix(0, nrow = p, ncol = q), rank = 0L, Ad = numeric(0)))
-  }
-
-  if (!requireNamespace("rrpack", quietly = TRUE)) {
-    return(list(method = "unavailable", Cw = matrix(0, nrow = p, ncol = q), rank = 0L, Ad = numeric(0)))
-  }
-
-  if (!is.null(ridge_lambda)) {
-    fit <- rrpack::rrs.fit(Yw, Xw, nrank = if (identical(rank, "auto")) max_rank else as.integer(rank),
-                           lambda = ridge_lambda)
-  } else if (identical(rank, "auto")) {
-    fit <- rrpack::cv.rrr(Y = Yw, X = Xw, nfold = min(5, max(2, floor(n/3))), maxrank = max_rank)
-  } else {
-    fit <- rrpack::rrr.fit(Y = Yw, X = Xw, nrank = as.integer(rank))
-  }
-  fit
-}
-
 # ----------------------------------------------------------------------------
 # Residual REMAP helpers (joint whitening + low-rank correction)
 # ----------------------------------------------------------------------------

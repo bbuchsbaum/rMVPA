@@ -633,13 +633,15 @@ print.mvpa_sysinfo <- function(x, ...) {
 }
 
 
-# Helper for print method (borrowed from purrr, avoids dependency)
-# No longer strictly needed by print.mvpa_sysinfo after the changes, but keep for now 
-# in case it's used elsewhere or intended for future use.
-#' @noRd 
+# NULL-coalescing operator. This is the single package-wide definition.
+# Semantics: returns `x` unless it is NULL, in which case `y`. A zero-length
+# non-NULL `x` is returned as-is (not replaced). Every call site in the package
+# has been running with this plain is.null() behaviour (it was the definition
+# that won under the Collate order), so do not add a length-0 check here.
+#' @noRd
 #' @keywords internal
 `%||%` <- function(x, y) {
-  if (is.null(x) || length(x) == 0) y else x
+  if (is.null(x)) y else x
 }
 
 #' Build a group index for multibasis column layout

@@ -74,8 +74,8 @@ print.roi_result <- function(x, ...) {
 #' Convert an roi_result to the tibble format expected by combiners
 #'
 #' Translates the structured \code{roi_result} into the single-row tibble
-#' format that existing combiner functions (\code{combine_standard},
-#' \code{combine_rsa_standard}, etc.) expect from \code{process_roi}.
+#' format that existing combiner functions (\code{combine_standard}, etc.)
+#' expect from \code{process_roi}.
 #'
 #' @param res An \code{roi_result} object.
 #' @return A single-row tibble with columns \code{result}, \code{indices},
