@@ -1481,6 +1481,15 @@ as_worker_spec <- function(obj) {
 
 #' @param verbose Logical; print progress messages if \code{TRUE}.
 #' @param analysis_type The type of analysis (e.g., "searchlight").
+#' @param drop_probs Logical; if \code{TRUE}, drop per-observation class
+#'   probabilities from returned results and keep only the observed-class
+#'   probability.
+#' @param fail_fast Logical; if \code{TRUE}, stop on the first ROI error.
+#' @param item_seeds Optional list with one L'Ecuyer-CMRG RNG stream
+#'   (\code{.Random.seed} vector) per row of \code{frame}. \code{mvpa_iterate()}
+#'   supplies the streams it drew for the whole iteration, so a ROI's random
+#'   numbers do not depend on batching or the future plan. When \code{NULL},
+#'   streams are drawn here.
 #' @details
 #' If the \pkg{progressr} package is installed, this method emits per-task
 #' progress updates from parallel workers. Progress handling is enabled for
