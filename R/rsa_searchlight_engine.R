@@ -31,32 +31,13 @@
 .rsa_engine_prepare <- function(model_spec, radius, centers = NULL) {
   ds <- model_spec$dataset
   mask_indices <- ds$mask_indices %||% compute_mask_indices(ds$mask)
-  sl <- get_searchlight(ds, "standard", radius)
-  sp <- neuroim2::space(ds$mask)
-  x_all <- as.matrix(neuroim2::series(ds$train_data, mask_indices))
-  if (!all(is.finite(x_all))) {
-    stop(.engine_ineligible("rsa_fast", "data contain missing or non-finite values"))
-  }
+  x_all <- .engine_extract_data(ds, "rsa_fast", mask_indices)
   # filter_roi(): keep voxels whose range across observations is non-zero.
-  span <- matrixStats::colMaxs(x_all) - matrixStats::colMins(x_all)
-  keep_voxel <- is.finite(span) & span > 0
-  # The searchlight list builds each sphere on access; build them once.
-  rois <- as.list(sl)
-  ids <- vapply(rois, function(w) as.integer(w@parent_index), 1L)
-  sel <- if (is.null(centers)) seq_along(rois) else which(ids %in% centers)
-  # Grid index -> mask column, built once (a per-sphere match() against the
-  # mask indices rehashes them for every centre). Out-of-mask voxels map to 0.
-  dims <- dim(sp)[1:3]
-  col_of <- integer(prod(dims))
-  col_of[mask_indices] <- seq_along(mask_indices)
-  cols <- lapply(sel, function(i) {
-    co <- rois[[i]]@coords
-    cc <- col_of[co[, 1] + (co[, 2] - 1L) * dims[1] + (co[, 3] - 1L) * (dims[1] * dims[2])]
-    cc <- cc[cc > 0L]
-    cc[keep_voxel[cc] | mask_indices[cc] == ids[i]]
-  })
-  list(ds = ds, x_all = x_all, mask_indices = mask_indices, centers = ids[sel], cols = cols,
-       cache = new.env(parent = emptyenv()))
+  keep_voxel <- .engine_roi_keep(x_all)
+  sphere <- .engine_sphere_cols(ds, radius, centers = centers, keep_voxel = keep_voxel,
+                                mask_indices = mask_indices)
+  list(ds = ds, x_all = x_all, mask_indices = mask_indices, centers = sphere$centers,
+       cols = sphere$cols, cache = new.env(parent = emptyenv()))
 }
 
 #' Direct RDM plan for the common rsa_model variants
@@ -290,11 +271,18 @@ run_searchlight_rsa_fast <- function(model_spec, radius, verbose = FALSE, ...) {
   prep <- .rsa_engine_prepare(model_spec, radius)
   if (length(prep$centers) == 0L) return(empty_searchlight_result(ds))
   perf <- .rsa_engine_score(prep, model_spec)
-  if (is.null(perf)) return(empty_searchlight_result(ds))
-  good <- attr(perf, "scored")
-  out <- wrap_out(perf[good, , drop = FALSE], ds, ids = prep$centers[good])
-  attr(out, "bad_results") <- tibble::tibble()
-  out
+  scored <- if (is.null(perf)) integer(0) else attr(perf, "scored")
+  good <- seq_along(prep$centers) %in% scored
+  bad <- which(!good)
+  no_voxels <- lengths(prep$cols[bad]) < 1L
+  bad_results <- .engine_bad_results(
+    prep$centers[bad],
+    error_message = ifelse(no_voxels,
+                           "error: no voxels left after filter_roi()",
+                           "error: RSA fit failed for this sphere"),
+    indices = lapply(bad, function(i) as.numeric(prep$mask_indices[prep$cols[[i]]]))
+  )
+  .engine_wrap(perf, ds, prep$centers, good, bad_results)
 }
 
 #' @keywords internal

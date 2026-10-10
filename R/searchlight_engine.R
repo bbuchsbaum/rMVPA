@@ -19,7 +19,7 @@
     swift = list(
       label = "SWIFT nearest-class-mean estimator (explicit opt-in only)",
       eligible = function(model_spec, method) {
-        .swift_searchlight_enabled() && .is_swift_fast_path(model_spec, method)
+        .is_swift_fast_path(model_spec, method)
       }
     ),
     dual_lda_fast = list(

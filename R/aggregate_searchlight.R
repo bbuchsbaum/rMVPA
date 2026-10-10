@@ -374,20 +374,6 @@
   flag & ok
 }
 
-#' Mask-column indices of each centre's sphere in the general path's voxel
-#' order (as get_searchlight() returns them), for exact recomputation.
-#' @keywords internal
-#' @noRd
-.aggregate_generic_order <- function(ds, radius, centres, mask_indices) {
-  sl <- get_searchlight(ds, "standard", radius)
-  sp <- neuroim2::space(ds$mask)
-  parent <- vapply(sl, function(w) as.integer(w@parent_index), 1L)
-  lapply(centres, function(cid) {
-    w <- sl[[match(cid, parent)]]
-    match(as.integer(neuroim2::grid_to_index(sp, w@coords)), mask_indices)
-  })
-}
-
 #' Metrics for a block of centres from pooled fold probabilities
 #'
 #' `pooled` has one row per (observation, centre), observation varying
@@ -438,13 +424,7 @@
     nb$S <- nb$S[keep, , drop = FALSE]
     nb$centers <- nb$centers[keep]
   }
-  x_all <- as.matrix(neuroim2::series(ds$train_data, nb$mask_indices))
-  if (nrow(x_all) != length(y_all)) {
-    stop("aggregate_fast: mismatch between train rows and y_train length.")
-  }
-  if (!all(is.finite(x_all))) {
-    stop(.engine_ineligible("aggregate_fast", "data contain missing or non-finite values"))
-  }
+  x_all <- .engine_extract_data(ds, "aggregate_fast", nb$mask_indices, y_all)
   is_nb <- identical(model_spec$model$label, "naive_bayes")
   # Pearson correlation across voxels is invariant to a common shift; removing
   # the grand mean limits cancellation in the aggregated sums. The original
@@ -466,13 +446,14 @@
   cache <- new.env(parent = emptyenv())
   list(
     ds = ds, radius = radius, nb = nb, x_all = x_all, x_orig = x_orig, is_nb = is_nb,
+    keep_roi = .engine_roi_keep(x_orig),
     folds = fold_list, tS_all = Matrix::t(nb$S), block_size = block_size,
     kind = attr(model_spec$performance, "rmvpa_perf_kind", exact = TRUE),
     class_metrics = isTRUE(attr(model_spec$performance, "rmvpa_class_metrics", exact = TRUE)),
     generic_cols = function(centre_ids) {
       missing <- setdiff(as.character(centre_ids), ls(cache))
       if (length(missing)) {
-        cols <- .aggregate_generic_order(ds, radius, as.integer(missing), nb$mask_indices)
+        cols <- .engine_sphere_cols_aligned(ds, radius, as.integer(missing), nb$mask_indices)
         for (k in seq_along(missing)) assign(missing[k], cols[[k]], envir = cache)
       }
       lapply(as.character(centre_ids), get, envir = cache)
@@ -584,10 +565,30 @@ run_searchlight_aggregate_fast <- function(model_spec, radius, verbose = FALSE,
   prep <- .aggregate_prepare(model_spec, radius, block_size = block_size)
   if (length(prep$nb$centers) == 0L) return(empty_searchlight_result(ds))
   sc <- .aggregate_score(prep, y_train(model_spec))
+  # A centre is dropped when some training fold leaves it fewer than two
+  # non-constant voxels; its metrics are then NA.
   good <- !is.na(sc$perf[, "Accuracy"])
-  if (!any(good)) return(empty_searchlight_result(ds))
-  out <- wrap_out(sc$perf[good, , drop = FALSE], ds, ids = prep$nb$centers[good])
-  attr(out, "bad_results") <- tibble::tibble()
+  bad <- which(!good)
+  bad_results <- .engine_bad_results(
+    prep$nb$centers[bad],
+    error_message = paste("error: less than 2 features",
+                          "(aggregate_fast: fewer than two non-constant voxels in a training fold)"),
+    indices = .aggregate_centre_indices(prep, bad)
+  )
+  out <- .engine_wrap(sc$perf, ds, prep$nb$centers, good, bad_results)
   attr(out, "aggregate_recomputed_centres") <- sc$n_repaired
   out
+}
+
+#' Grid indices of the sphere voxels of the centres `idx` (rows of nb$S)
+#' @keywords internal
+#' @noRd
+.aggregate_centre_indices <- function(prep, idx) {
+  tS <- prep$tS_all
+  lapply(idx, function(i) {
+    first <- tS@p[i] + 1L
+    n <- tS@p[i + 1L] - tS@p[i]
+    cols <- tS@i[seq.int(first, length.out = n)] + 1L
+    .engine_roi_indices(prep$nb$mask_indices, cols, prep$nb$centers[i], prep$keep_roi)
+  })
 }

@@ -54,13 +54,7 @@
     keep <- match(centers, nb$centers)
     nb$centers <- nb$centers[keep[!is.na(keep)]]
   }
-  x_all <- as.matrix(neuroim2::series(ds$train_data, nb$mask_indices))
-  if (nrow(x_all) != length(y_all)) {
-    stop("sda_fast: mismatch between train rows and y_train length.")
-  }
-  if (!all(is.finite(x_all))) {
-    stop(.engine_ineligible("sda_fast", "data contain missing or non-finite values"))
-  }
+  x_all <- .engine_extract_data(ds, "sda_fast", nb$mask_indices, y_all)
   folds <- generate_folds(model_spec$crossval, tibble::tibble(.row = seq_len(nrow(x_all))), y_all)
   fold_list <- lapply(seq_len(nrow(folds)), function(i) {
     tr <- as.integer(.extract_sample_indices(folds$train[[i]]))
@@ -76,8 +70,9 @@
   })
   list(
     ds = ds, centers = nb$centers, x_all = x_all, folds = fold_list,
+    mask_indices = nb$mask_indices, keep_roi = .engine_roi_keep(x_all),
     sphere_cols = if (length(nb$centers)) {
-      .aggregate_generic_order(ds, radius, nb$centers, nb$mask_indices)
+      .engine_sphere_cols_aligned(ds, radius, nb$centers, nb$mask_indices)
     } else list(),
     kind = attr(model_spec$performance, "rmvpa_perf_kind", exact = TRUE),
     class_metrics = isTRUE(attr(model_spec$performance, "rmvpa_class_metrics", exact = TRUE))
@@ -136,9 +131,17 @@ run_searchlight_sda_fast <- function(model_spec, radius, verbose = FALSE, ...) {
   prep <- .sda_engine_prepare(model_spec, radius)
   if (length(prep$centers) == 0L) return(empty_searchlight_result(ds))
   perf <- .sda_engine_score(prep, y_train(model_spec))$perf
+  # A centre is dropped when some training fold leaves it fewer than two
+  # non-constant voxels; its metrics are then NA.
   good <- !is.na(perf[, "Accuracy"])
-  if (!any(good)) return(empty_searchlight_result(ds))
-  out <- wrap_out(perf[good, , drop = FALSE], ds, ids = prep$centers[good])
-  attr(out, "bad_results") <- tibble::tibble()
-  out
+  bad <- which(!good)
+  bad_results <- .engine_bad_results(
+    prep$centers[bad],
+    error_message = paste("error: less than 2 features",
+                          "(sda_fast: fewer than two non-constant voxels in a training fold)"),
+    indices = lapply(bad, function(i) {
+      .engine_roi_indices(prep$mask_indices, prep$sphere_cols[[i]], prep$centers[i], prep$keep_roi)
+    })
+  )
+  .engine_wrap(perf, ds, prep$centers, good, bad_results)
 }

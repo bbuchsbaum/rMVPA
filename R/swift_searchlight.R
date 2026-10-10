@@ -1,11 +1,5 @@
 #' @keywords internal
 #' @noRd
-.swift_searchlight_enabled <- function() {
-  TRUE
-}
-
-#' @keywords internal
-#' @noRd
 .swift_whitening_mode <- function(mode = NULL) {
   allowed <- c("none", "zscore", "diag_shrink")
 
@@ -173,18 +167,6 @@
     cols <- col_lookup[ids]
     unique(cols[cols > 0L])
   })
-}
-
-#' @keywords internal
-#' @noRd
-.swift_score_centers <- function(evidence, center_cols) {
-  vapply(center_cols, function(cols) {
-    if (length(cols) == 0L) {
-      NA_real_
-    } else {
-      sum(evidence[cols])
-    }
-  }, numeric(1))
 }
 
 #' @keywords internal
@@ -680,14 +662,6 @@ run_searchlight_swift_fast <- function(model_spec, radius, whitening = NULL, ver
 
 #' @keywords internal
 #' @noRd
-.swift_extract_roi_indices <- .engine_extract_roi_indices
-
-#' @keywords internal
-#' @noRd
-.swift_extract_roi_ids <- .engine_extract_roi_ids
-
-#' @keywords internal
-#' @noRd
 .swift_randomized_iteration <- function(slight,
                                         fold_base,
                                         metric_mode,
@@ -701,8 +675,8 @@ run_searchlight_swift_fast <- function(model_spec, radius, whitening = NULL, ver
     return(NULL)
   }
 
-  roi_indices <- .swift_extract_roi_indices(slight)
-  roi_ids <- .swift_extract_roi_ids(slight)
+  roi_indices <- .engine_extract_roi_indices(slight)
+  roi_ids <- .engine_extract_roi_ids(slight)
   roi_cols <- lapply(roi_indices, function(ids) {
     cols <- col_lookup[ids]
     unique(cols[cols > 0L])

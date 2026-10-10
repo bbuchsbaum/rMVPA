@@ -65,15 +65,17 @@ with_swift_options <- function(code) {
   force(code)
 }
 
-test_that("swift gate remains enabled regardless ambient mode options", {
+test_that("swift engine eligibility remains independent of ambient mode options", {
+  ms <- build_swift_mspec()
+  reference <- rMVPA:::.is_swift_fast_path(ms, "standard")
   with_swift_options({
     options(rMVPA.searchlight_mode = "fast")
     options(rMVPA.swift_searchlight = NULL)
-    expect_true(rMVPA:::.swift_searchlight_enabled())
+    expect_identical(rMVPA:::.is_swift_fast_path(ms, "standard"), reference)
 
     options(rMVPA.searchlight_mode = "legacy")
     options(rMVPA.swift_searchlight = NULL)
-    expect_true(rMVPA:::.swift_searchlight_enabled())
+    expect_identical(rMVPA:::.is_swift_fast_path(ms, "standard"), reference)
   })
 })
 
