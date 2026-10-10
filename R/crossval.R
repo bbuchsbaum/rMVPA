@@ -326,7 +326,9 @@ crossv_seq_block <- function(data, y, nfolds, block_var, nreps=4, block_ind = NU
   foldseq <- replicate(nreps, {
     fs <- integer(length(block_var))
     for (id_vec in block_idx) {
-      fs[id_vec] <- as.integer(as.character(cut(id_vec, nfolds, labels=sample(1:nfolds))))
+      # Cut by position within the block (not by row-index value) so that a
+      # block whose rows are unevenly spaced still gets equal-count segments.
+      fs[id_vec] <- as.integer(as.character(cut(seq_along(id_vec), nfolds, labels=sample(1:nfolds))))
     }
     fs
   }, simplify=FALSE)

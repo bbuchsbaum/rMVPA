@@ -283,7 +283,7 @@ external_crossval <- function(mspec, roi, id, center_global_id = NA,
     ret <- tibble::as_tibble(plist, .name_repair = .name_repair)
 
     # Wrap the results and return the fitted model if required
-    cres <- if (mspec$return_fit) {
+    cres <- if (isTRUE(mspec$return_fits)) {
       wrap_result(ret, mspec$design, result$fit)
     } else {
       wrap_result(ret, mspec$design)
@@ -1310,22 +1310,32 @@ as_worker_spec <- function(obj) {
 
 #' Per-element RNG seeds for a batch of \code{n} items.
 #'
-#' Returns one L'Ecuyer-CMRG \code{.Random.seed} vector per item. The seeds
-#' are derived from one draw of \code{n} integers from the caller's stream, so
-#' the global RNG advances by the same amount whatever the future plan or
-#' chunk size. Item \code{i} is always evaluated from \code{seeds[[i]]}, which
-#' makes stochastic results independent of where the item runs.
-#' The caller's RNG state (including RNG kind) is restored before returning.
+#' Returns one L'Ecuyer-CMRG \code{.Random.seed} vector per item: one integer
+#' is drawn from the caller's stream to seed the generator, and successive
+#' items take successive streams (\code{parallel::nextRNGStream()}), which are
+#' guaranteed not to overlap. The global RNG advances by that single draw
+#' whatever the future plan or chunk size, and item \code{i} is always
+#' evaluated from \code{seeds[[i]]}, so stochastic results do not depend on
+#' where the item runs. The caller's RNG state (including RNG kind) is
+#' restored before returning.
 #' @keywords internal
 #' @noRd
 .rmvpa_item_seeds <- function(n) {
-  base <- sample.int(.Machine$integer.max, n)
+  if (n < 1L) return(list())
+  base <- sample.int(.Machine$integer.max, 1L)
   saved <- .rmvpa_save_rng()
-  on.exit(.rmvpa_restore_rng(saved), add = TRUE)
-  lapply(base, function(s) {
-    set.seed(s, kind = "L'Ecuyer-CMRG")
-    get(".Random.seed", envir = globalenv(), inherits = FALSE)
-  })
+  saved_kind <- RNGkind()
+  on.exit({
+    RNGkind(saved_kind[1L], saved_kind[2L], saved_kind[3L])
+    .rmvpa_restore_rng(saved)
+  }, add = TRUE)
+  set.seed(base, kind = "L'Ecuyer-CMRG")
+  seeds <- vector("list", n)
+  seeds[[1L]] <- get(".Random.seed", envir = globalenv(), inherits = FALSE)
+  for (i in seq_len(n - 1L)) {
+    seeds[[i + 1L]] <- parallel::nextRNGStream(seeds[[i]])
+  }
+  seeds
 }
 
 #' Per-item worker for run_future.default

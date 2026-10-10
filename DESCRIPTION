@@ -45,6 +45,7 @@ Imports:
     tidyselect,
     rsample,
     optparse,
+    parallel,
     yardstick
 Collate:
     'allgeneric.R'
@@ -175,7 +176,6 @@ Suggests:
     jsonlite,
     knitr,
     MGSDA,
-    parallel,
     parallelly,
     pkgload,
     ragg,
