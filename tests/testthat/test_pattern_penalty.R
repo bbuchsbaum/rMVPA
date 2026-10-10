@@ -1,10 +1,5 @@
 library(testthat)
 
-quiet_run <- function(expr) {
-  utils::capture.output(res <- suppressMessages(expr))
-  res
-}
-
 test_that("the group-lasso prox and lambda_max behave as advertised", {
   set.seed(1)
   B <- matrix(rnorm(20 * 3), 20, 3)

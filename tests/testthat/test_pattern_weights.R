@@ -12,11 +12,6 @@ library(testthat)
 #   * the inner tuning loss is weighted the same way the fit is,
 #   * reported metrics stay unweighted.
 
-quiet_run <- function(expr) {
-  utils::capture.output(res <- suppressMessages(expr))
-  res
-}
-
 .sim_xy <- function(n = 48, p = 60, K = 3, snr = 1.5, seed = 1) {
   set.seed(seed)
   y <- factor(rep(letters[seq_len(K)], length.out = n))

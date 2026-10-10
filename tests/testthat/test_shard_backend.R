@@ -4,20 +4,6 @@ library(rMVPA)
 # Skip entire file if shard is not installed
 skip_if_not_installed("shard")
 
-# Muffle environment-specific package version warnings emitted on some workers
-# (e.g., "package 'purrr' was built under R version ..."), while preserving
-# all other warnings.
-muffle_worker_version_warnings <- function(expr) {
-  withCallingHandlers(
-    expr,
-    warning = function(w) {
-      if (grepl("was built under R version", conditionMessage(w), fixed = TRUE)) {
-        invokeRestart("muffleWarning")
-      }
-    }
-  )
-}
-
 run_shard_with_plan <- function(mspec, vox_iter, strategy, workers = NULL) {
   old_plan <- future::plan()
   on.exit(future::plan(old_plan), add = TRUE)

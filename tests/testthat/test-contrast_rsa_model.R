@@ -55,32 +55,6 @@ mock_msreve_design <- function(n_cond = 4, name = "MockMSREVE", center_contrasts
 }
 
 
-# --- Helpers from former test-compute_cv_means.R ---
-# Mock mvpa_design (simplified for CV tests)
-mock_mvpa_design_cv <- function(n_samples = 24, n_cond = 4, n_blocks = 3, Y_labels=NULL) {
-  if (is.null(Y_labels)) {
-    cond_labels <- factor(rep(paste0("Cond", 1:n_cond), each = n_samples / n_cond))
-  } else {
-    cond_labels <- factor(Y_labels)
-    n_cond <- length(levels(cond_labels))
-  }
-  block_var <- factor(rep(1:n_blocks, length.out = n_samples)) 
-  conditions <- levels(cond_labels)
-  design_matrix <- matrix(0, nrow = n_samples, ncol = 1) 
-  
-  structure(
-    list(
-      Y = cond_labels,
-      block_var = block_var,
-      conditions = conditions,
-      ncond = n_cond,
-      design_matrix = design_matrix, 
-      samples = 1:n_samples
-    ),
-    class = c("mvpa_design", "list")
-  )
-}
-
 # Mock cv_spec object with S3 methods (from former test-compute_cv_means.R)
 mock_cv_spec_s3 <- function(mvpa_design) {
   n_folds_val <- length(unique(mvpa_design$block_var))
@@ -289,22 +263,6 @@ mock_searchlight_info <- function(n_voxels = 10, n_designs = 1) {
     ),
     class = c("searchlight_info", "list")
   )
-}
-
-# --- Mock implementations for with_mocked_bindings ---
-# These are moved here to be available for all tests in this context
-.mock_get_nfolds_contrast <- function(obj, ...) {
-  if (inherits(obj, "mock_cv_spec")) {
-    return(obj$.n_folds_val)
-  }
-  stop(".mock_get_nfolds_contrast called with unexpected object type in this test context.")
-}
-
-.mock_train_indices_contrast <- function(obj, fold_num, ...) {
-  if (inherits(obj, "mock_cv_spec")) {
-    return(which(obj$.folds_val != fold_num))
-  }
-  stop(".mock_train_indices_contrast called with unexpected object type in this test context.")
 }
 
 # More comprehensive mock dataset for train_model tests
