@@ -576,7 +576,7 @@ output_schema.era_partition_model <- function(model) {
   }
 
   keep <- stats::complete.cases(dat)
-  keep <- keep & apply(dat, 1, function(row) all(is.finite(row)))
+  keep <- keep & rowSums(!is.finite(as.matrix(dat))) == 0L
   dat <- dat[keep, , drop = FALSE]
 
   out_na <- list(

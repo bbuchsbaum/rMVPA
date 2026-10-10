@@ -1,3 +1,55 @@
+# Lower-triangle intra-block flags for ordered condition blocks.
+#
+# Entry (r, c) with r > c is TRUE when conditions r and c share at least one
+# block element. This is the vectorised equivalent of the former
+# intersect()-per-pair double loop: intersect(x, y) is non-empty exactly when
+# any(x %in% y), and both use match() semantics (NA matches NA).
+#' @noRd
+.contrast_intra_block_lower <- function(blocks_ordered) {
+  K <- length(blocks_ordered)
+  if (K < 2L) return(logical(0))
+  all_vals <- unique(unlist(blocks_ordered, use.names = FALSE))
+  incidence <- matrix(0, nrow = K, ncol = length(all_vals))
+  for (r in seq_len(K)) {
+    idx <- match(blocks_ordered[[r]], all_vals)
+    incidence[r, idx] <- 1
+  }
+  shared <- (incidence %*% t(incidence)) > 0
+  shared[lower.tri(shared)]
+}
+
+# Design-only precomputation for contrast_rsa_model(): the contrast RDM
+# predictors and the nuisance RDM vectors do not depend on the sphere.
+#' @noRd
+.contrast_rsa_prepare <- function(design) {
+  C <- design$contrast_matrix
+  contrast_pred <- lapply(seq_len(ncol(C)), function(q) {
+    contrast_rdm <- C[, q, drop = FALSE] %*% t(C[, q, drop = FALSE])
+    contrast_rdm[lower.tri(contrast_rdm)]
+  })
+
+  nuisance <- list()
+  for (nm in names(design$nuisance_rdms)) {
+    M <- design$nuisance_rdms[[nm]]
+    nuisance[[nm]] <- if (inherits(M, "dist")) {
+      as.vector(M)
+    } else {
+      M[lower.tri(M)]
+    }
+  }
+  list(contrast_pred = contrast_pred, nuisance = nuisance)
+}
+
+# Emitted once per model (not once per searchlight sphere).
+#' @noRd
+.contrast_rsa_missing_blocks_warning <- function(design) {
+  mvpa_des <- design$mvpa_design
+  if (isFALSE(mvpa_des$keep_intra_run) && is.null(design$condition_block_list)) {
+    warning("keep_intra_run is FALSE, but condition-to-block mapping (condition_block_list) was not available in the design. Intra-block RDM cells cannot be excluded.")
+  }
+  invisible(NULL)
+}
+
 #' Constructor for contrast_rsa_model
 #'
 #' Creates a contrast_rsa_model specification object, which encapsulates the necessary
@@ -224,6 +276,7 @@ contrast_rsa_model <- function(dataset,
   # --- Input Checks ---
   assert_that(inherits(dataset, "mvpa_dataset"))
   assert_that(inherits(design, "msreve_design"))
+  .contrast_rsa_missing_blocks_warning(design)
 
   estimation_method <- match.arg(estimation_method, c("average", "L2_norm", "crossnobis"))
   regression_type   <- match.arg(regression_type, c("pearson", "spearman", "lm", "rfit", "ridge_hkb"))
@@ -317,6 +370,11 @@ contrast_rsa_model <- function(dataset,
     allow_nonorth_composite = allow_nonorth_composite,
     calc_reliability = calc_reliability,
     whitening_matrix_W = whitening_matrix_W, # Store W in the spec
+    contrast_prep = if (is.matrix(design$contrast_matrix)) {
+      .contrast_rsa_prepare(design)
+    } else {
+      NULL
+    },
     ...
   )
 }
@@ -582,16 +640,7 @@ train_model.contrast_rsa_model <- function(obj, sl_data, sl_info, cv_spec, ...) 
               
               condition_blocks_ordered <- condition_blocks[ordered_condition_names_uhat]
 
-              is_intra_block_pair <- matrix(FALSE, nrow = K, ncol = K)
-              for (r in 1:(K-1)) {
-                  for (c_col in (r+1):K) {
-                      if (length(intersect(condition_blocks_ordered[[r]], condition_blocks_ordered[[c_col]])) > 0) {
-                          is_intra_block_pair[r, c_col] <- TRUE
-                          is_intra_block_pair[c_col, r] <- TRUE # Symmetric
-                      }
-                  }
-              }
-              include_vec <- !is_intra_block_pair[lower.tri(is_intra_block_pair)]
+              include_vec <- !.contrast_intra_block_lower(condition_blocks_ordered)
           } else {
               warning("Names/order in condition_block_list do not match conditions in U_hat_for_delta_calc. Cannot reliably exclude intra-block RDM cells.")
           }
@@ -599,10 +648,9 @@ train_model.contrast_rsa_model <- function(obj, sl_data, sl_info, cv_spec, ...) 
           warning(paste0("Length of condition_block_list (", K_conditions_in_list, 
                          ") does not match number of conditions in U_hat_for_delta_calc (", K, "). Cannot exclude intra-block RDM cells."))
       }
-  } else if (isFALSE(mvpa_des$keep_intra_run) && is.null(obj$design$condition_block_list)){
-      # Original warning if keep_intra_run is FALSE but we couldn't make the list
-      warning("keep_intra_run is FALSE, but condition-to-block mapping (condition_block_list) was not available in the design. Intra-block RDM cells cannot be excluded.")
   }
+  # The "condition_block_list not available" case is reported once, when the
+  # model is constructed (see .contrast_rsa_missing_blocks_warning()), not per sphere.
   
   # Apply include_vec filtering if it was generated
   if (!is.null(include_vec)) {
@@ -622,33 +670,25 @@ train_model.contrast_rsa_model <- function(obj, sl_data, sl_info, cv_spec, ...) 
   }
 
   # Create predictor matrix X_sl from contrast RDMs
-  X_sl_list <- lapply(1:Q, function(q) {
-      contrast_rdm <- C[, q, drop = FALSE] %*% t(C[, q, drop = FALSE])
-      pred_vec <- contrast_rdm[lower.tri(contrast_rdm)]
+  prep <- obj$contrast_prep %||% .contrast_rsa_prepare(obj$design)
+  X_sl_list <- lapply(seq_len(Q), function(q) {
+      pred_vec <- prep$contrast_pred[[q]]
       if (!is.null(include_vec)) {
           pred_vec <- pred_vec[include_vec]
       }
       pred_vec
   })
   names(X_sl_list) <- contrast_names
-  
-  # Add nuisance RDMs if present
+
+  # Add nuisance RDMs if present (lower triangles precomputed in prep)
   nuis_list <- list()
-  if (!is.null(obj$design$nuisance_rdms)) {
-    for (nm in names(obj$design$nuisance_rdms)) {
-      M <- obj$design$nuisance_rdms[[nm]]
-      # Extract lower triangle
-      v <- if (inherits(M, "dist")) {
-        as.vector(M)
-      } else {
-        M[lower.tri(M)]
-      }
-      # Apply include_vec mask if present
-      if (!is.null(include_vec)) {
-        v <- v[include_vec]
-      }
-      nuis_list[[paste0("nuis_", nm)]] <- v
+  for (nm in names(prep$nuisance)) {
+    v <- prep$nuisance[[nm]]
+    # Apply include_vec mask if present
+    if (!is.null(include_vec)) {
+      v <- v[include_vec]
     }
+    nuis_list[[paste0("nuis_", nm)]] <- v
   }
   
   # Combine contrast and nuisance predictors
