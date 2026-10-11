@@ -702,7 +702,10 @@ train_model.contrast_rsa_model <- function(obj, sl_data, sl_info, cv_spec, ...) 
   
   dvec_sl_valid <- dvec_sl[valid_idx]
   Xmat_valid <- Xmat[valid_idx, , drop = FALSE]
-  colnames(Xmat_valid) <- contrast_names # Ensure names are preserved
+  # Keep the predictor names from cbind(): contrasts first (indices
+  # `contrast_idx`), then any nuisance RDM columns. Assigning only
+  # `contrast_names` fails whenever nuisance RDMs are present.
+  colnames(Xmat_valid) <- colnames(Xmat)
   
   # Additional check for dimensional consistency after all filtering and NA removal
   if (nrow(Xmat_valid) != length(dvec_sl_valid)) {

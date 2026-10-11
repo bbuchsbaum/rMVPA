@@ -17,6 +17,7 @@ run_future(obj, frame, processor, ...)
   analysis_type = "searchlight",
   drop_probs = FALSE,
   fail_fast = FALSE,
+  item_seeds = NULL,
   ...
 )
 
@@ -28,6 +29,7 @@ run_future(obj, frame, processor, ...)
   analysis_type = "searchlight",
   drop_probs = FALSE,
   fail_fast = FALSE,
+  item_seeds = NULL,
   ...
 )
 }
@@ -43,6 +45,18 @@ run_future(obj, frame, processor, ...)
 \item{verbose}{Logical; print progress messages if \code{TRUE}.}
 
 \item{analysis_type}{The type of analysis (e.g., "searchlight").}
+
+\item{drop_probs}{Logical; if \code{TRUE}, drop per-observation class
+probabilities from returned results and keep only the observed-class
+probability.}
+
+\item{fail_fast}{Logical; if \code{TRUE}, stop on the first ROI error.}
+
+\item{item_seeds}{Optional list with one L'Ecuyer-CMRG RNG stream
+(\code{.Random.seed} vector) per row of \code{frame}. \code{mvpa_iterate()}
+supplies the streams it drew for the whole iteration, so a ROI's random
+numbers do not depend on batching or the future plan. When \code{NULL},
+streams are drawn here.}
 }
 \value{
 A tibble containing the processed results.

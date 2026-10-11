@@ -68,8 +68,18 @@ rsa_design <- function(formula, data, block_var=NULL, split_by=NULL, keep_intra_
   }
   
   # Check that all variables are either matrices, "dist", or vectors
-  nr <- sapply(c(data, nuisance), .rsa_design_entry_size)
-  
+  # A factor block variable in `data` is allowed (it is only used for labels).
+  block_name <- .rsa_block_entry_name(block_var, formula, nuisance)
+  size_entries <- c(data, nuisance)
+  nr <- vapply(seq_along(size_entries), function(i) {
+    x <- size_entries[[i]]
+    if (is.factor(x) && i <= length(data) && identical(names(data)[i], block_name)) {
+      length(x)
+    } else {
+      .rsa_design_entry_size(x)
+    }
+  }, numeric(1))
+
   assert_that(all(nr == nr[1]), msg="all elements in 'data' and 'nuisance' must have the same number of rows")
   
   check_split <- function(split_var) {
@@ -92,7 +102,7 @@ rsa_design <- function(formula, data, block_var=NULL, split_by=NULL, keep_intra_
   
   # Include/exclude within-run comparisons based on keep_intra_run
   include <- if (!is.null(block_var) && !keep_intra_run) {
-    as.vector(dist(block_var)) != 0
+    .rsa_block_include(block_var)
   }
   
   n_items <- as.integer(nr[1L])
@@ -158,6 +168,38 @@ rsa_design <- function(formula, data, block_var=NULL, split_by=NULL, keep_intra_
   des
 }
 
+
+#' Name of a data entry used only as the block variable, or NULL.
+#'
+#' Covers a character name or a one-variable formula. Such an entry may be a
+#' factor. It is exempt from the predictor type check only when no formula or
+#' nuisance term uses it.
+#' @noRd
+.rsa_block_entry_name <- function(block_var, formula, nuisance) {
+  nm <- if (is.character(block_var) && length(block_var) == 1L) {
+    block_var
+  } else if (purrr::is_formula(block_var) && length(block_var) == 2L) {
+    vars <- all.vars(block_var[[2]])
+    if (length(vars) == 1L) vars else NULL
+  }
+  if (is.null(nm) || nm %in% all.vars(formula) || nm %in% names(nuisance)) {
+    return(NULL)
+  }
+  nm
+}
+
+#' Pairwise block mismatch (TRUE for pairs in different blocks), in dist() order.
+#'
+#' Factor, character and logical block labels are coded as integers first.
+#' Numeric values keep the original dist() rule, so their result is unchanged.
+#' @noRd
+.rsa_block_include <- function(block_var) {
+  if (is.numeric(block_var) && !is.factor(block_var)) {
+    return(as.vector(dist(block_var)) != 0)
+  }
+  codes <- as.integer(as.factor(block_var))
+  as.vector(dist(codes)) != 0
+}
 
 #' @noRd
 .rsa_design_entry_size <- function(x) {
@@ -568,8 +610,12 @@ run_lm <- function(dvec, obj) {
 #' @keywords internal
 #' @noRd
 run_cor <- function(dvec, obj) {
-  # For 'pearson' or 'spearman' regtype, we just do correlation with each predictor
-  res <- sapply(obj$design$model_mat, function(x) cor(dvec, x, method=if (identical(obj$distmethod, "crossvalidated_euclidean")) obj$regtype else obj$distmethod))
+  # The comparison of the neural RDM with each model RDM is controlled by
+  # regtype (Pearson or Spearman). distmethod only shaped the neural RDM. The
+  # fallback to distmethod serves callers that build a bare helper object
+  # (contrast_rsa_model) and set only distmethod.
+  cmethod <- obj$regtype %||% obj$distmethod
+  res <- sapply(obj$design$model_mat, function(x) cor(dvec, x, method = cmethod))
   names(res) <- names(obj$design$model_mat)
   res
 }
@@ -578,7 +624,7 @@ run_cor <- function(dvec, obj) {
   .fast_path_enabled("rsa_fast_kernel")
 }
 
-.rsa_prepare_fast_kernel <- function(design, regtype, distmethod, semipartial, nneg) {
+.rsa_prepare_fast_kernel <- function(design, regtype, semipartial, nneg) {
   model_mat <- design$model_mat
   if (is.null(model_mat) || length(model_mat) == 0L) {
     return(NULL)
@@ -603,7 +649,8 @@ run_cor <- function(dvec, obj) {
   state <- list(cor = NULL, lm = NULL)
 
   if (regtype %in% c("pearson", "spearman")) {
-    X_cor <- if (identical(distmethod, "spearman")) {
+    # Ranks of the model matrix follow regtype, matching run_cor().
+    X_cor <- if (identical(regtype, "spearman")) {
       apply(X, 2, rank, ties.method = "average")
     } else {
       X
@@ -619,7 +666,7 @@ run_cor <- function(dvec, obj) {
       X_center = X_center,
       x_ss = x_ss,
       var_names = var_names,
-      method = distmethod
+      method = regtype
     )
   }
 
@@ -1319,11 +1366,17 @@ print.rsa_design <- function(x, ...) {
 #'
 #' @param dataset An instance of an \code{mvpa_dataset}.
 #' @param design An instance of an \code{rsa_design} created by \code{rsa_design()}.
-#' @param distmethod A character string specifying the method used to compute distances between observations. 
-#'        One of: \code{"pearson"}, \code{"spearman"} (default), or
-#'        \code{"crossvalidated_euclidean"} (see below).
-#' @param regtype A character string specifying the analysis method. 
-#'        One of: \code{"pearson"}, \code{"spearman"}, \code{"lm"}, or \code{"rfit"} (defaults to "pearson").
+#' @param distmethod Controls how the neural RDM is computed: the correlation
+#'        distance \code{1 - r} between each pair of observation patterns, with
+#'        \code{r} Pearson (\code{"pearson"}) or Spearman (\code{"spearman"}, the
+#'        default), or \code{"crossvalidated_euclidean"} (see below). It does not
+#'        choose the comparison with the model RDMs; that is \code{regtype}.
+#' @param regtype Controls how the neural RDM is compared with each model RDM:
+#'        \code{"pearson"} (Pearson correlation, the default), \code{"spearman"}
+#'        (Spearman correlation, ranks of both vectors), \code{"lm"} or \code{"rfit"}.
+#'        With \code{distmethod = "crossvalidated_euclidean"}, \code{regtype} also
+#'        sets the model fit. Pearson and Spearman results differ when the relation
+#'        between the two RDMs is not linear.
 #' @param check_collinearity Logical. When \code{regtype = "lm"}, stop if two
 #'   predictor RDMs correlate above 0.99 or the design matrix is rank deficient.
 #'   When \code{regtype} is \code{"lm"} or \code{"rfit"}, also warn if a model
@@ -1622,7 +1675,6 @@ rsa_model <- function(dataset,
     fast_kernel <- .rsa_prepare_fast_kernel(
       design = design,
       regtype = regtype,
-      distmethod = if (identical(distmethod, "crossvalidated_euclidean")) regtype else distmethod,
       semipartial = semipartial,
       nneg = nneg
     )

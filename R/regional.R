@@ -45,20 +45,32 @@ combine_regional_results = function(results) {
   if (!is.data.frame(results) || !"result" %in% names(results) || nrow(results) == 0) {
     return(tibble::tibble())
   }
+  # Failed ROIs carry result = NULL; they contribute no rows.
+  ok <- !vapply(results$result, is.null, logical(1))
+  if (!any(ok)) {
+    return(tibble::tibble())
+  }
+  results <- results[ok, , drop = FALSE]
+
   # Check if the observed values are factors (for categorical data)
-  if (!is.null(results$result[[1]]) && is.factor(results$result[[1]]$observed)) {
+  if (is.factor(results$result[[1]]$observed)) {
     results %>% dplyr::rowwise() %>% dplyr::do( {
-      
+
       # Use test indices if provided in the classification_result to preserve
       # alignment with the original test design (important when some rows are dropped)
       row_index <- if (!is.null(.$result$testind)) .$result$testind else seq_along(.$result$observed)
+
+      obs_chr <- as.character(.$result$observed)
+      probs_m <- as.matrix(.$result$probs)
+      # Look up each observation's class column by name, not by factor code.
+      pobs <- probs_m[cbind(seq_along(obs_chr), match(obs_chr, colnames(probs_m)))]
 
       # Create a tibble containing observed, predicted, and additional information
       tib1 <- tibble::tibble(
         .rownum=row_index,
         roinum=rep(.$id, length(row_index)),
         observed=.$result$observed,
-        pobserved=sapply(seq_along(.$result$observed), function(i) .$result$probs[i, .$result$observed[i]]),
+        pobserved=pobs,
         predicted=.$result$predicted,
         correct=as.character(.$result$observed) == as.character(.$result$predicted)
       )

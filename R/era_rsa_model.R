@@ -388,8 +388,9 @@ era_rsa_model <- function(dataset,
   stopifnot(inherits(distfun, "distfun"))
 
   # Parse normalized design variables for stable levels/order.
-  key_vec   <- parse_variable(key_var,   design$train_design)
-  key_fac   <- factor(key_vec)
+  key_levels <- pairing_info$key_levels
+  key_vec   <- as.character(parse_variable(key_var, design$train_design))
+  key_fac   <- factor(key_vec, levels = key_levels)
   phase_fac <- factor(
     rep(as.character(encoding_level), length(key_vec)),
     levels = c(as.character(encoding_level), as.character(retrieval_level))
@@ -415,26 +416,22 @@ era_rsa_model <- function(dataset,
     }
   }
 
-  # Normalize confound RDMs into matrices with names if provided
+  # Normalize confound RDMs into labelled matrices. Unlabelled RDMs must be
+  # one row/column per item level and are labelled in level order.
   if (!is.null(confound_rdms)) {
     stopifnot(is.list(confound_rdms), !is.null(names(confound_rdms)))
-    items_all <- levels(key_fac)
-    confound_rdms <- lapply(confound_rdms, function(M) {
-      if (inherits(M, "dist")) {
-        lab <- attr(M, "Labels")
-        if (is.null(lab)) lab <- items_all[seq_len(attr(M, "Size"))]
-        M <- as.matrix(M)
-        rownames(M) <- colnames(M) <- lab
-      } else {
-        M <- as.matrix(M)
-        if (is.null(rownames(M)) || is.null(colnames(M))) {
-          rn <- items_all[seq_len(min(length(items_all), nrow(M)))]
-          rownames(M) <- colnames(M) <- rn
-        }
-      }
-      M
-    })
+    for (nm in names(confound_rdms)) {
+      confound_rdms[[nm]] <- .era_normalize_confound_rdm(
+        confound_rdms[[nm]], key_levels = key_levels, label = nm
+      )
+    }
   }
+
+  # Validate per-item metadata length now (unnamed vectors are level-ordered).
+  .era_align_item_vector(item_block, key_levels, key_levels, label = "item_block")
+  .era_align_item_vector(item_lag, key_levels, key_levels, label = "item_lag")
+  .era_align_item_vector(item_run_enc, key_levels, key_levels, label = "item_run_enc")
+  .era_align_item_vector(item_run_ret, key_levels, key_levels, label = "item_run_ret")
 
   create_model_spec(
     "era_rsa_model",
@@ -442,6 +439,7 @@ era_rsa_model <- function(dataset,
     design   = design,
     # store parsed vectors to maintain levels/order
     key      = key_fac,
+    key_levels = key_levels,
     phase    = phase_fac,
     key_var  = key_var,
     phase_var= phase_var,
@@ -608,8 +606,7 @@ fit_roi.era_rsa_model <- function(model, roi_data, context, ...) {
   need_geometry <- "geometry" %in% components
 
   align_item_metadata <- function(x) {
-    if (is.null(x)) return(NULL)
-    if (!is.null(names(x))) x[match(common_keys, names(x))] else x[seq_len(K)]
+    .era_align_item_vector(x, common_keys, model$key_levels, label = "item metadata")
   }
   mean_finite <- function(x) {
     x <- x[is.finite(x)]
@@ -691,12 +688,8 @@ fit_roi.era_rsa_model <- function(model, roi_data, context, ...) {
   if (need_geometry && !is.null(model$confound_rdms) && K >= 3L) {
     mm <- list(enc_geom = dE)
     for (nm in names(model$confound_rdms)) {
-      M <- as.matrix(model$confound_rdms[[nm]])
-      if (!is.null(rownames(M)) && all(common_keys %in% rownames(M))) {
-        M <- M[common_keys, common_keys, drop = FALSE]
-      } else {
-        M <- M[seq_len(K), seq_len(K), drop = FALSE]
-      }
+      M <- .era_align_item_matrix(model$confound_rdms[[nm]], common_keys,
+                                  model$key_levels, label = nm)
       mm[[nm]] <- as.numeric(M[lower.tri(M)])
     }
     df  <- as.data.frame(mm)
@@ -725,7 +718,8 @@ fit_roi.era_rsa_model <- function(model, roi_data, context, ...) {
       confound_rdms = model$confound_rdms,
       item_run_enc = model$item_run_enc,
       item_run_ret = model$item_run_ret,
-      keys = common_keys
+      keys = common_keys,
+      key_levels = model$key_levels
     )
     geom_cor_partial <- .era_partial_geometry_cor(
       dE = dE,
@@ -733,7 +727,8 @@ fit_roi.era_rsa_model <- function(model, roi_data, context, ...) {
       confound_rdms = all_confounds,
       keys = common_keys,
       partial_against = model$partial_against %||% "run",
-      method = model$rsa_simfun
+      method = model$rsa_simfun,
+      key_levels = model$key_levels
     )
     geom_cor_run_partial <- .era_partial_geometry_cor(
       dE = dE,
@@ -741,7 +736,8 @@ fit_roi.era_rsa_model <- function(model, roi_data, context, ...) {
       confound_rdms = all_confounds,
       keys = common_keys,
       partial_against = "run",
-      method = model$rsa_simfun
+      method = model$rsa_simfun,
+      key_levels = model$key_levels
     )
     ire <- align_item_metadata(model$item_run_enc)
     irr <- align_item_metadata(model$item_run_ret)
@@ -823,16 +819,34 @@ roi_result(metrics = perf, indices = ind, id = id)
 
 
 #' @noRd
+#' Normalize one item-level confound RDM to a labelled matrix
+#'
+#' Labelled matrices and dist objects keep their labels. Unlabelled ones must
+#' be one row/column per item level and are labelled in level order.
+#' @noRd
+.era_normalize_confound_rdm <- function(M, key_levels, label = "confound_rdms") {
+  if (.era_is_labelled_matrix(M)) {
+    M2 <- as.matrix(M)
+    if (!is.null(rownames(M2)) && !is.null(colnames(M2))) {
+      return(M2)
+    }
+  }
+  M2 <- .era_align_item_matrix(M, key_levels, key_levels, label = label)
+  dimnames(M2) <- list(key_levels, key_levels)
+  M2
+}
+
 .era_geometry_confound_rdms <- function(confound_rdms = NULL,
                                         item_run_enc = NULL,
                                         item_run_ret = NULL,
-                                        keys) {
+                                        keys,
+                                        key_levels = keys) {
   out <- confound_rdms %||% list()
   if (length(out) && is.null(names(out))) {
     names(out) <- paste0("confound_", seq_along(out))
   }
 
-  run_rdms <- .era_run_confound_rdms(item_run_enc, item_run_ret, keys)
+  run_rdms <- .era_run_confound_rdms(item_run_enc, item_run_ret, keys, key_levels)
   for (nm in names(run_rdms)) {
     if (is.null(out[[nm]])) {
       out[[nm]] <- run_rdms[[nm]]
@@ -842,20 +856,14 @@ roi_result(metrics = perf, indices = ind, id = id)
 }
 
 #' @noRd
-.era_run_confound_rdms <- function(item_run_enc = NULL, item_run_ret = NULL, keys) {
+.era_run_confound_rdms <- function(item_run_enc = NULL, item_run_ret = NULL, keys,
+                                   key_levels = keys) {
   if (is.null(item_run_enc) || is.null(item_run_ret)) {
     return(list())
   }
 
-  align <- function(x) {
-    if (!is.null(names(x))) {
-      x[match(keys, names(x))]
-    } else {
-      x[seq_along(keys)]
-    }
-  }
-  ire <- align(item_run_enc)
-  irr <- align(item_run_ret)
+  ire <- .era_align_item_vector(item_run_enc, keys, key_levels, label = "item_run_enc")
+  irr <- .era_align_item_vector(item_run_ret, keys, key_levels, label = "item_run_ret")
 
   Renc <- outer(ire, ire, FUN = function(a, b) as.numeric(a == b))
   Rret <- outer(irr, irr, FUN = function(a, b) as.numeric(a == b))
@@ -870,7 +878,8 @@ roi_result(metrics = perf, indices = ind, id = id)
                                       confound_rdms,
                                       keys,
                                       partial_against = "run",
-                                      method = c("pearson", "spearman")) {
+                                      method = c("pearson", "spearman"),
+                                      key_levels = keys) {
   method <- match.arg(method)
   if (is.null(confound_rdms) || !length(confound_rdms) || length(partial_against) == 0L) {
     return(NA_real_)
@@ -882,7 +891,8 @@ roi_result(metrics = perf, indices = ind, id = id)
     return(NA_real_)
   }
 
-  conf <- lapply(confound_rdms[selected], .era_vectorize_geometry_confound, keys = keys)
+  conf <- lapply(confound_rdms[selected], .era_vectorize_geometry_confound,
+                 keys = keys, key_levels = key_levels)
   lens_ok <- vapply(conf, length, integer(1L)) == length(dE)
   conf <- conf[lens_ok]
   if (!length(conf)) {
@@ -928,31 +938,34 @@ roi_result(metrics = perf, indices = ind, id = id)
   }
 
   selected <- partial_against[partial_against %in% nms]
-  group_patterns <- list(
+  # Group names match whole name parts (split on non-letters), so "location"
+  # and "duplicate_flag" are not treated as "cat" and "run_enc" / "enc_time"
+  # still match "run" / "time".
+  group_tokens <- list(
     run = "run",
-    time = "time|temporal|lag",
+    time = c("time", "temporal", "lag"),
     block = "block",
-    category = "category|cat",
-    global = "^global"
+    category = c("category", "cat"),
+    global = "global"
   )
-  for (grp in intersect(names(group_patterns), partial_against)) {
-    selected <- c(selected, nms[grepl(group_patterns[[grp]], nms, ignore.case = TRUE)])
+  for (grp in intersect(names(group_tokens), partial_against)) {
+    selected <- c(selected, nms[.era_name_has_token(nms, group_tokens[[grp]])])
   }
   unique(selected)
 }
 
 #' @noRd
-.era_vectorize_geometry_confound <- function(x, keys) {
+.era_name_has_token <- function(nms, tokens) {
+  parts <- strsplit(tolower(nms), "[^a-z]+")
+  vapply(parts, function(p) any(p %in% tokens), logical(1L))
+}
+
+#' @noRd
+.era_vectorize_geometry_confound <- function(x, keys, key_levels = keys) {
   K <- length(keys)
   lower_n <- K * (K - 1L) / 2L
   if (inherits(x, "dist") || is.matrix(x) || is.data.frame(x)) {
-    M <- as.matrix(x)
-    if (!is.null(rownames(M)) && !is.null(colnames(M)) &&
-        all(keys %in% rownames(M)) && all(keys %in% colnames(M))) {
-      M <- M[keys, keys, drop = FALSE]
-    } else {
-      M <- M[seq_len(K), seq_len(K), drop = FALSE]
-    }
+    M <- .era_align_item_matrix(x, keys, key_levels, label = "confound RDM")
     return(as.numeric(M[lower.tri(M)]))
   }
 

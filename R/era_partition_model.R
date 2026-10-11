@@ -161,7 +161,20 @@ era_partition_model <- function(dataset,
     stop("era_partition_model: `distfun` must be a distfun object or constructor name.", call. = FALSE)
   }
 
-  key_vec <- factor(parse_variable(key_var, design$train_design))
+  key_levels <- .era_key_levels(
+    parse_variable(key_var, design$train_design),
+    parse_variable(key_var, design$test_design)
+  )
+  key_vec <- factor(as.character(parse_variable(key_var, design$train_design)),
+                    levels = key_levels)
+  # Unnamed per-item metadata is taken in level order; check the length now.
+  .era_align_item_vector(item_block_enc, key_levels, key_levels, "item_block_enc")
+  .era_align_item_vector(item_block_ret, key_levels, key_levels, "item_block_ret")
+  .era_align_item_vector(item_run_enc, key_levels, key_levels, "item_run_enc")
+  .era_align_item_vector(item_run_ret, key_levels, key_levels, "item_run_ret")
+  .era_align_item_vector(item_time_enc, key_levels, key_levels, "item_time_enc")
+  .era_align_item_vector(item_time_ret, key_levels, key_levels, "item_time_ret")
+  .era_align_item_vector(item_category, key_levels, key_levels, "item_category")
   global_rdms <- .era_resolve_global_nuisance(
     global_nuisance, dataset, design, key_var, distfun
   )
@@ -186,6 +199,7 @@ era_partition_model <- function(dataset,
     dataset = dataset,
     design = design,
     key = key_vec,
+    key_levels = key_levels,
     key_var = key_var,
     distfun = distfun,
     rsa_simfun = rsa_simfun,
@@ -257,13 +271,18 @@ fit_roi.era_partition_model <- function(model, roi_data, context, ...) {
   }
 
   des <- model$design
-  key_enc <- factor(parse_variable(model$key_var, des$train_design), levels = levels(model$key))
-  key_ret <- factor(parse_variable(model$key_var, des$test_design), levels = levels(model$key))
+  key_levels <- model$key_levels
+  raw_enc <- as.character(parse_variable(model$key_var, des$train_design))
+  raw_ret <- as.character(parse_variable(model$key_var, des$test_design))
+  # Levels restricted to the keys present in each phase, so group_means() does
+  # not see empty groups.
+  key_enc <- factor(raw_enc, levels = key_levels[key_levels %in% raw_enc])
+  key_ret <- factor(raw_ret, levels = key_levels[key_levels %in% raw_ret])
 
   E_full <- group_means(Xenc, margin = 1, group = key_enc)
   R_full <- group_means(Xret, margin = 1, group = key_ret)
 
-  common_keys <- sort(intersect(rownames(E_full), rownames(R_full)))
+  common_keys <- .era_order_keys(intersect(rownames(E_full), rownames(R_full)), key_levels)
   K <- length(common_keys)
   if (K < 3L) {
     return(roi_result(
@@ -646,24 +665,24 @@ output_schema.era_partition_model <- function(model) {
   out <- list()
 
   if (.era_partition_auto_nuisance_enabled(model, "block")) {
-    block_enc <- .era_partition_align_item_vector(model$item_block_enc, keys)
-    block_ret <- .era_partition_align_item_vector(model$item_block_ret, keys)
+    block_enc <- .era_align_item_vector(model$item_block_enc, keys, model$key_levels, "model$item_block_enc")
+    block_ret <- .era_align_item_vector(model$item_block_ret, keys, model$key_levels, "model$item_block_ret")
     if (!is.null(block_enc) && !is.null(block_ret)) {
       out$same_block_cross <- as.numeric(outer(as.character(block_ret), as.character(block_enc), "=="))
     }
   }
 
   if (.era_partition_auto_nuisance_enabled(model, "run")) {
-    run_enc <- .era_partition_align_item_vector(model$item_run_enc, keys)
-    run_ret <- .era_partition_align_item_vector(model$item_run_ret, keys)
+    run_enc <- .era_align_item_vector(model$item_run_enc, keys, model$key_levels, "model$item_run_enc")
+    run_ret <- .era_align_item_vector(model$item_run_ret, keys, model$key_levels, "model$item_run_ret")
     if (!is.null(run_enc) && !is.null(run_ret)) {
       out$same_run_cross <- as.numeric(outer(as.character(run_ret), as.character(run_enc), "=="))
     }
   }
 
   if (.era_partition_auto_nuisance_enabled(model, "time")) {
-    time_enc <- .era_partition_align_item_vector(model$item_time_enc, keys)
-    time_ret <- .era_partition_align_item_vector(model$item_time_ret, keys)
+    time_enc <- .era_align_item_vector(model$item_time_enc, keys, model$key_levels, "model$item_time_enc")
+    time_ret <- .era_align_item_vector(model$item_time_ret, keys, model$key_levels, "model$item_time_ret")
     if (!is.null(time_enc) && !is.null(time_ret)) {
       out$enc_time <- matrix(rep(as.numeric(time_enc), each = K), nrow = K)
       out$ret_time <- matrix(rep(as.numeric(time_ret), times = K), nrow = K)
@@ -672,18 +691,18 @@ output_schema.era_partition_model <- function(model) {
   }
 
   if (.era_partition_auto_nuisance_enabled(model, "category")) {
-    category <- .era_partition_align_item_vector(model$item_category, keys)
+    category <- .era_align_item_vector(model$item_category, keys, model$key_levels, "model$item_category")
     if (!is.null(category)) {
       out$same_category <- as.numeric(outer(as.character(category), as.character(category), "=="))
     }
   }
 
   if (.era_partition_auto_nuisance_enabled(model, "global")) {
-    global_first <- .era_partition_global_first_nuisance(model$global_nuisance, keys)
+    global_first <- .era_partition_global_first_nuisance(model$global_nuisance, keys, model$key_levels)
     out <- c(out, global_first)
   }
 
-  user <- .era_partition_cross_user_nuisance(model$first_order_nuisance, keys)
+  user <- .era_partition_cross_user_nuisance(model$first_order_nuisance, keys, model$key_levels)
   c(out, user)
 }
 
@@ -692,8 +711,8 @@ output_schema.era_partition_model <- function(model) {
   out <- list()
 
   if (.era_partition_auto_nuisance_enabled(model, "block")) {
-    block_enc <- .era_partition_align_item_vector(model$item_block_enc, keys)
-    block_ret <- .era_partition_align_item_vector(model$item_block_ret, keys)
+    block_enc <- .era_align_item_vector(model$item_block_enc, keys, model$key_levels, "model$item_block_enc")
+    block_ret <- .era_align_item_vector(model$item_block_ret, keys, model$key_levels, "model$item_block_ret")
     if (!is.null(block_enc)) {
       M <- outer(as.character(block_enc), as.character(block_enc), "==")
       out$same_block_enc <- as.numeric(M[lower.tri(M)])
@@ -705,8 +724,8 @@ output_schema.era_partition_model <- function(model) {
   }
 
   if (.era_partition_auto_nuisance_enabled(model, "run")) {
-    run_enc <- .era_partition_align_item_vector(model$item_run_enc, keys)
-    run_ret <- .era_partition_align_item_vector(model$item_run_ret, keys)
+    run_enc <- .era_align_item_vector(model$item_run_enc, keys, model$key_levels, "model$item_run_enc")
+    run_ret <- .era_align_item_vector(model$item_run_ret, keys, model$key_levels, "model$item_run_ret")
     if (!is.null(run_enc)) {
       M <- outer(as.character(run_enc), as.character(run_enc), "==")
       out$same_run_enc <- as.numeric(M[lower.tri(M)])
@@ -718,8 +737,8 @@ output_schema.era_partition_model <- function(model) {
   }
 
   if (.era_partition_auto_nuisance_enabled(model, "time")) {
-    time_enc <- .era_partition_align_item_vector(model$item_time_enc, keys)
-    time_ret <- .era_partition_align_item_vector(model$item_time_ret, keys)
+    time_enc <- .era_align_item_vector(model$item_time_enc, keys, model$key_levels, "model$item_time_enc")
+    time_ret <- .era_align_item_vector(model$item_time_ret, keys, model$key_levels, "model$item_time_ret")
     if (!is.null(time_enc)) {
       M <- abs(outer(as.numeric(time_enc), as.numeric(time_enc), "-"))
       out$temporal_distance_enc <- as.numeric(M[lower.tri(M)])
@@ -731,7 +750,7 @@ output_schema.era_partition_model <- function(model) {
   }
 
   if (.era_partition_auto_nuisance_enabled(model, "category")) {
-    category <- .era_partition_align_item_vector(model$item_category, keys)
+    category <- .era_align_item_vector(model$item_category, keys, model$key_levels, "model$item_category")
     if (!is.null(category)) {
       M <- outer(as.character(category), as.character(category), "==")
       out$same_category <- as.numeric(M[lower.tri(M)])
@@ -739,11 +758,11 @@ output_schema.era_partition_model <- function(model) {
   }
 
   if (.era_partition_auto_nuisance_enabled(model, "global")) {
-    global_second <- .era_partition_global_second_nuisance(model$global_nuisance, keys)
+    global_second <- .era_partition_global_second_nuisance(model$global_nuisance, keys, model$key_levels)
     out <- c(out, global_second)
   }
 
-  user <- .era_partition_geometry_user_nuisance(model$second_order_nuisance, keys)
+  user <- .era_partition_geometry_user_nuisance(model$second_order_nuisance, keys, model$key_levels)
   c(out, user)
 }
 
@@ -764,18 +783,18 @@ output_schema.era_partition_model <- function(model) {
 }
 
 #' @noRd
-.era_partition_global_first_nuisance <- function(global_nuisance, keys) {
+.era_partition_global_first_nuisance <- function(global_nuisance, keys, key_levels) {
   if (is.null(global_nuisance) || is.null(global_nuisance$S_cross)) {
     return(list())
   }
   .era_partition_cross_user_nuisance(
     list(global_cross = global_nuisance$S_cross),
-    keys = keys
+    keys = keys, key_levels = key_levels
   )
 }
 
 #' @noRd
-.era_partition_global_second_nuisance <- function(global_nuisance, keys) {
+.era_partition_global_second_nuisance <- function(global_nuisance, keys, key_levels) {
   if (is.null(global_nuisance)) {
     return(list())
   }
@@ -789,56 +808,36 @@ output_schema.era_partition_model <- function(model) {
   if (!length(mats)) {
     return(list())
   }
-  .era_partition_geometry_user_nuisance(mats, keys = keys)
+  .era_partition_geometry_user_nuisance(mats, keys = keys, key_levels = key_levels)
 }
 
 #' @keywords internal
-.era_partition_align_item_vector <- function(x, keys) {
-  if (is.null(x)) {
-    return(NULL)
-  }
-  if (!is.null(names(x))) {
-    x <- x[match(keys, names(x))]
-  } else {
-    x <- x[seq_along(keys)]
-  }
-  x
-}
-
-#' @keywords internal
-.era_partition_cross_user_nuisance <- function(nuisance, keys) {
+.era_partition_cross_user_nuisance <- function(nuisance, keys, key_levels) {
   if (is.null(nuisance)) return(list())
-  K <- length(keys)
-  lapply(nuisance, function(x) {
+  out <- lapply(seq_along(nuisance), function(i) {
+    x <- nuisance[[i]]
     if (is.matrix(x) || is.data.frame(x) || inherits(x, "dist")) {
-      M <- as.matrix(x)
-      if (!is.null(rownames(M)) && !is.null(colnames(M)) &&
-          all(keys %in% rownames(M)) && all(keys %in% colnames(M))) {
-        M <- M[keys, keys, drop = FALSE]
-      } else {
-        M <- M[seq_len(K), seq_len(K), drop = FALSE]
-      }
+      M <- .era_align_item_matrix(x, keys, key_levels,
+                                  label = names(nuisance)[i] %||% "nuisance")
       as.numeric(M)
     } else {
       as.numeric(x)
     }
   })
+  names(out) <- names(nuisance)
+  out
 }
 
 #' @keywords internal
-.era_partition_geometry_user_nuisance <- function(nuisance, keys) {
+.era_partition_geometry_user_nuisance <- function(nuisance, keys, key_levels) {
   if (is.null(nuisance)) return(list())
   K <- length(keys)
   lower_n <- K * (K - 1L) / 2L
-  lapply(nuisance, function(x) {
+  out <- lapply(seq_along(nuisance), function(i) {
+    x <- nuisance[[i]]
     if (is.matrix(x) || is.data.frame(x) || inherits(x, "dist")) {
-      M <- as.matrix(x)
-      if (!is.null(rownames(M)) && !is.null(colnames(M)) &&
-          all(keys %in% rownames(M)) && all(keys %in% colnames(M))) {
-        M <- M[keys, keys, drop = FALSE]
-      } else {
-        M <- M[seq_len(K), seq_len(K), drop = FALSE]
-      }
+      M <- .era_align_item_matrix(x, keys, key_levels,
+                                  label = names(nuisance)[i] %||% "nuisance")
       as.numeric(M[lower.tri(M)])
     } else {
       v <- as.numeric(x)
@@ -852,6 +851,8 @@ output_schema.era_partition_model <- function(model) {
       }
     }
   })
+  names(out) <- names(nuisance)
+  out
 }
 
 #' @keywords internal

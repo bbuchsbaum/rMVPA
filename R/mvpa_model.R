@@ -8,37 +8,44 @@ wrap_result <- function(result_table, design, fit=NULL) {
   testind <- unique(sort(unlist(result_table$test_ind)))
   
   if (is.factor(observed)) {
-    prob <- matrix(0, length(testind), length(levels(observed)))
-    colnames(prob) <- levels(observed)
-    
+    lv <- levels(observed)
+    prob <- matrix(0, length(testind), length(lv), dimnames = list(NULL, lv))
+
     for (i in seq_along(result_table$probs)) {
-      p <- as.matrix(result_table$probs[[i]])
-      tind <- match(result_table$test_ind[[i]], testind)
-      prob[tind,] <- prob[tind,] + p
+      ## Align by class name, not position: a fold may report only a subset
+      ## of the classes, in any order.
+      p <- .align_class_probs(result_table$probs[[i]], lv)
+      key <- match(result_table$test_ind[[i]], testind)
+      ## rowsum() sums repeated test indices within a fold (oversampled test
+      ## sets); plain `prob[tind, ] <- prob[tind, ] + p` keeps only the last write.
+      acc <- rowsum(p, key)
+      rows <- as.integer(rownames(acc))
+      prob[rows, lv] <- prob[rows, lv, drop = FALSE] + acc[, lv, drop = FALSE]
     }
-    
+
     ## probs must sum to one, can divide by sum.
-    prob <- t(apply(prob, 1, function(vals) vals / sum(vals)))
+    prob <- prob / rowSums(prob)
     maxid <- max.col(prob, ties.method = "first")
-    pclass <- levels(observed)[maxid]
-    
-    ## storing observed, testind, test_design 
+    pclass <- lv[maxid]
+
+    ## storing observed, testind, test_design
     classification_result(observed[testind], pclass, prob, testind=testind, design$test_design, fit)
   } else {
-    
-    testind <- unique(sort(unlist(result_table$test_ind)))
     preds <- numeric(length(testind))
-    
+    counts <- numeric(length(testind))
+
     for (i in seq_along(result_table$preds)) {
-      #tind <- result_table$test_ind[[i]]
-      tind <- match(result_table$test_ind[[i]], testind)
-      preds[tind] <- preds[tind] + result_table$preds[[i]]
+      key <- match(result_table$test_ind[[i]], testind)
+      ## Sum repeated test indices, then divide by the true number of
+      ## predictions per test observation below.
+      acc <- rowsum(as.numeric(result_table$preds[[i]]), key)
+      rows <- as.integer(rownames(acc))
+      preds[rows] <- preds[rows] + acc[, 1]
+      counts <- counts + tabulate(key, nbins = length(testind))
     }
-    
-    counts <- table(sort(unlist(result_table$test_ind)))
-    # Ensure counts aligns with testind order and convert to numeric vector
-    preds <- preds/as.numeric(counts[as.character(testind)])
-    regression_result(observed, preds, testind=testind, test_design=design$test_design, fit)
+
+    preds <- preds / counts
+    regression_result(observed[testind], preds, testind=testind, test_design=design$test_design, fit)
   }
 }
 
@@ -54,7 +61,7 @@ merge_results.mvpa_model <- function(obj, result_set, indices, id, ...) {
                    id=id, error=TRUE, error_message=emessage)
   } else {
     # If no errors, wrap the result and compute performance if required
-    cres <- if (obj$return_fit) {
+    cres <- if (isTRUE(obj$return_fits)) {
       predictor <- weighted_model(result_set$fit)
       wrap_result(result_set, obj$design, predictor)
     } else {
@@ -99,7 +106,7 @@ format_result.mvpa_model <- function(obj, result, error_message=NULL, context, .
     plist <- lapply(pred, list)
     plist$y_true <- list(context$ytest)
     plist$test_ind <- list(test_ind)
-    plist$fit <- if (obj$return_fit) list(result) else list(NULL)
+    plist$fit <- if (isTRUE(obj$return_fits)) list(result) else list(NULL)
     plist$error <- FALSE
     plist$error_message <- "~"
     tibble::as_tibble(plist, .name_repair=.name_repair)

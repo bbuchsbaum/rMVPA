@@ -245,14 +245,31 @@ merge_classif_results.regression_result <- function(x, ...) {
 
 
 
+#' Probability assigned to each observation's true class
+#'
+#' Looks up the probability column by class name. Indexing by
+#' \code{as.integer(observed)} is wrong whenever \code{probs} columns do not
+#' follow the factor-code order of \code{observed}.
+#' @keywords internal
+#' @noRd
+.observed_prob_cols <- function(probs, observed) {
+  probs <- as.matrix(probs)
+  obs_chr <- as.character(observed)
+  col <- match(obs_chr, colnames(probs))
+  if (anyNA(col)) {
+    stop("observed class labels are not all present as probability columns")
+  }
+  probs[cbind(seq_len(nrow(probs)), col)]
+}
+
 #' @export
 prob_observed.binary_classification_result <- function(x) {
-  x$probs[cbind(seq(1,nrow(x$probs)),as.integer(x$observed))]
+  .observed_prob_cols(x$probs, x$observed)
 }
 
 #' @export
 prob_observed.multiway_classification_result <- function(x) {
-  x$probs[cbind(seq(1,nrow(x$probs)),as.integer(x$observed))]
+  .observed_prob_cols(x$probs, x$observed)
 }
 
 #' @export
@@ -307,17 +324,6 @@ performance.multiway_classification_result <- function(x, split_list=NULL, class
   }
   apply_metric_with_splits(x, metric_fun, split_list)
 }
-
-#' @keywords internal
-#' @noRd
-combinedACC <- function(Pred, Obs) {
-  levs <- levels(as.factor(Obs))
-  maxind <- apply(Pred, 1, which.max)
-  pclass <- levs[maxind]
-  sum(pclass == Obs)/length(pclass)
-  
-}
-
 
 #' @keywords internal
 #' @importFrom yardstick accuracy_vec roc_auc_vec
@@ -375,7 +381,12 @@ multiclass_perf <- function(observed, predicted, probs, class_metrics=FALSE) {
     # p_k - mean(p_-k) = (K * p_k - 1) / (K - 1) for rows summing to one, gives
     # the same AUC in exact arithmetic, but rounding the mean manufactured
     # last-bit ties among observations with tiny p_k.
-    score <- probs[, i]
+    # Score by class name: probs columns are labelled by level, not by position.
+    score <- if (!is.null(colnames(probs)) && lev %in% colnames(probs)) {
+      probs[, lev]
+    } else {
+      probs[, i]
+    }
     binary_truth <- factor(ifelse(pos, "positive", "negative"),
                            levels = c("negative", "positive"))
 
@@ -397,15 +408,15 @@ multiclass_perf <- function(observed, predicted, probs, class_metrics=FALSE) {
     )
   })
   
-  names(aucres) <- paste0("AUC_", colnames(probs))
+  names(aucres) <- paste0("AUC_", lvls)
 
   auc_centered <- 2 * aucres - 1
   mean_auc_centered <- mean(auc_centered, na.rm = TRUE)
-  
+
   metrics <- c(Accuracy = acc, AUC = mean_auc_centered)
-  
+
   if (class_metrics) {
-    names(auc_centered) <- paste0("AUC_", colnames(probs))
+    names(auc_centered) <- paste0("AUC_", lvls)
     c(metrics, auc_centered)
   } else {
     metrics

@@ -283,7 +283,7 @@ external_crossval <- function(mspec, roi, id, center_global_id = NA,
     ret <- tibble::as_tibble(plist, .name_repair = .name_repair)
 
     # Wrap the results and return the fitted model if required
-    cres <- if (mspec$return_fit) {
+    cres <- if (isTRUE(mspec$return_fits)) {
       wrap_result(ret, mspec$design, result$fit)
     } else {
       wrap_result(ret, mspec$design)
@@ -1007,6 +1007,13 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
     }
     tot <- length(ids)
     
+    # One RNG stream per ROI for the whole iteration, indexed by its position
+    # in `vox_list`, so a ROI's stream does not depend on batch size, worker
+    # count or backend (see .rmvpa_item_seeds()).
+    iteration_seeds <- if (!inherits(mod_spec, "era_rsa_model")) {
+      .rmvpa_item_seeds(length(ids))
+    }
+
     results <- vector("list", nbatches)
     skipped_rois <- 0
     processed_rois <- 0
@@ -1095,7 +1102,8 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
           results[[i]] <- run_future(mod_spec, sf, processor, verbose,
                                      analysis_type = analysis_type,
                                      drop_probs = drop_probs,
-                                     fail_fast = fail_fast)
+                                     fail_fast = fail_fast,
+                                     item_seeds = if (!is.null(iteration_seeds)) iteration_seeds[sf$.id])
           if (!is.null(save_rdm_vectors_dir) &&
               inherits(mod_spec, "feature_rsa_model") &&
               isTRUE(mod_spec$return_rdm_vectors)) {
@@ -1283,6 +1291,79 @@ as_worker_spec <- function(obj) {
   as.integer(max(1L, min(max(balanced, min_chunk), per_worker)))
 }
 
+#' Snapshot the global RNG state (NULL when no stream exists yet).
+#' @keywords internal
+#' @noRd
+.rmvpa_save_rng <- function() {
+  if (exists(".Random.seed", envir = globalenv(), inherits = FALSE)) {
+    get(".Random.seed", envir = globalenv(), inherits = FALSE)
+  } else {
+    NULL
+  }
+}
+
+#' Restore a global RNG snapshot taken by \code{.rmvpa_save_rng()}.
+#' @keywords internal
+#' @noRd
+.rmvpa_restore_rng <- function(seed) {
+  if (is.null(seed)) {
+    if (exists(".Random.seed", envir = globalenv(), inherits = FALSE)) {
+      rm(".Random.seed", envir = globalenv())
+    }
+  } else {
+    assign(".Random.seed", seed, envir = globalenv())
+  }
+  invisible(NULL)
+}
+
+#' Per-element RNG seeds for a batch of \code{n} items.
+#'
+#' Returns one L'Ecuyer-CMRG \code{.Random.seed} vector per item: one integer
+#' is drawn from the caller's stream to seed the generator, and successive
+#' items take successive streams (\code{parallel::nextRNGStream()}), which are
+#' guaranteed not to overlap. The global RNG advances by that single draw
+#' whatever the future plan or chunk size, and item \code{i} is always
+#' evaluated from \code{seeds[[i]]}, so stochastic results do not depend on
+#' where the item runs. The caller's RNG state (including RNG kind) is
+#' restored before returning.
+#' @keywords internal
+#' @noRd
+.rmvpa_item_seeds <- function(n) {
+  if (n < 1L) return(list())
+  base <- sample.int(.Machine$integer.max, 1L)
+  saved <- .rmvpa_save_rng()
+  saved_kind <- RNGkind()
+  on.exit({
+    RNGkind(saved_kind[1L], saved_kind[2L], saved_kind[3L])
+    .rmvpa_restore_rng(saved)
+  }, add = TRUE)
+  set.seed(base, kind = "L'Ecuyer-CMRG")
+  seeds <- vector("list", n)
+  seeds[[1L]] <- get(".Random.seed", envir = globalenv(), inherits = FALSE)
+  for (i in seq_len(n - 1L)) {
+    seeds[[i + 1L]] <- parallel::nextRNGStream(seeds[[i]])
+  }
+  seeds
+}
+
+#' Resolve the per-item seeds a run_future() method uses
+#'
+#' \code{supplied} (from mvpa_iterate, one stream per frame row) is used as is;
+#' otherwise streams are drawn here. NULL when the model opts out of per-item
+#' streams or there is nothing to run.
+#' @keywords internal
+#' @noRd
+.run_future_item_seeds <- function(supplied, future_seed, total_items) {
+  if (!isTRUE(future_seed) || total_items < 1L) return(NULL)
+  if (!is.null(supplied)) {
+    if (length(supplied) != total_items) {
+      stop("`item_seeds` must have one RNG stream per frame row.", call. = FALSE)
+    }
+    return(supplied)
+  }
+  .rmvpa_item_seeds(total_items)
+}
+
 #' Per-item worker for run_future.default
 #'
 #' A namespace-level factory, so the returned closure captures only its
@@ -1400,6 +1481,15 @@ as_worker_spec <- function(obj) {
 
 #' @param verbose Logical; print progress messages if \code{TRUE}.
 #' @param analysis_type The type of analysis (e.g., "searchlight").
+#' @param drop_probs Logical; if \code{TRUE}, drop per-observation class
+#'   probabilities from returned results and keep only the observed-class
+#'   probability.
+#' @param fail_fast Logical; if \code{TRUE}, stop on the first ROI error.
+#' @param item_seeds Optional list with one L'Ecuyer-CMRG RNG stream
+#'   (\code{.Random.seed} vector) per row of \code{frame}. \code{mvpa_iterate()}
+#'   supplies the streams it drew for the whole iteration, so a ROI's random
+#'   numbers do not depend on batching or the future plan. When \code{NULL},
+#'   streams are drawn here.
 #' @details
 #' If the \pkg{progressr} package is installed, this method emits per-task
 #' progress updates from parallel workers. Progress handling is enabled for
@@ -1408,7 +1498,7 @@ as_worker_spec <- function(obj) {
 #' @export
 run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
                                analysis_type = "searchlight", drop_probs = FALSE,
-                               fail_fast = FALSE, ...) {
+                               fail_fast = FALSE, item_seeds = NULL, ...) {
   .maybe_gc()
   future_seed <- !inherits(obj, "era_rsa_model")
   # Ensure workers never receive the full dataset.
@@ -1434,10 +1524,27 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
   process_item <- .run_future_item_fun(obj, processor, analysis_type,
                                        drop_probs, fail_fast)
 
+  # Per-item RNG streams make stochastic results independent of the plan.
+  # The same list drives the sequential loop and furrr, so both paths see
+  # identical seeds. mvpa_iterate() draws the streams once for the whole
+  # iteration and passes each batch its rows' streams (`item_seeds`), so batch
+  # boundaries do not matter either; direct callers get streams drawn here.
+  # era_rsa_model keeps its previous behaviour: no per-item streams (furrr
+  # seed = FALSE), and the sequential loop leaves the global stream untouched.
+  item_seeds <- .run_future_item_seeds(item_seeds, future_seed, total_items)
+  item_seed_option <- if (is.null(item_seeds)) FALSE else item_seeds
+  rng_after_seeds <- .rmvpa_save_rng()
+
   run_map <- function(progress_tick = NULL) {
+    if (!is.null(item_seeds)) {
+      # Leave the global stream where the seed draw put it, whatever the plan.
+      on.exit(.rmvpa_restore_rng(rng_after_seeds), add = TRUE)
+    }
+
     if (nworkers <= 1L) {
       out <- vector("list", total_items)
       for (i in seq_len(total_items)) {
+        if (!is.null(item_seeds)) .rmvpa_restore_rng(item_seeds[[i]])
         out[[i]] <- process_item(
           .id = frame$.id[[i]],
           rnum = frame$rnum[[i]],
@@ -1450,7 +1557,7 @@ run_future.default <- function(obj, frame, processor=NULL, verbose=FALSE,
     }
 
     frame %>% furrr::future_pmap(.run_future_map_fun(process_item, progress_tick),
-                                 .options = furrr::furrr_options(seed = future_seed, conditions = "condition",
+                                 .options = furrr::furrr_options(seed = item_seed_option, conditions = "condition",
                                        chunk_size = chunk_size))
   }
 

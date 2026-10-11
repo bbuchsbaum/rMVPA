@@ -9,13 +9,19 @@
 #' @param contrast_matrix A numeric matrix (\code{K x Q}) where \code{K} is
 #'   the number of conditions and \code{Q} is the number of contrasts.
 #'   Each column represents a contrast vector. It is highly recommended
-#'   that columns are named to identify the contrasts.
+#'   that columns are named to identify the contrasts. Rows should be named
+#'   by the condition labels: named rows must match the condition levels
+#'   exactly, and are reordered to level order (factor levels of the
+#'   condition labels, or first appearance for non-factor labels). Unnamed
+#'   rows must number \code{K} and are taken in that level order.
 #' @param name An optional character string to name the design.
 #' @param include_interactions Logical. If TRUE, automatically add pairwise interaction contrasts using \code{\link{add_interaction_contrasts}}.
 #' @param nuisance_rdms Optional named list of K x K matrices or \code{dist} objects representing
 #'   nuisance RDMs to be included as additional predictors in the MS-ReVE regression.
 #'   These are typically temporal or spatial nuisance patterns that should be accounted
-#'   for but are not of primary interest.
+#'   for but are not of primary interest. Labelled RDMs (dimnames or dist
+#'   \code{Labels}) must use exactly the condition labels and are stored in level
+#'   order; unlabelled K x K RDMs are taken in level order.
 #'
 #' @return An object of class \code{msreve_design}, which is a list containing:
 #' \describe{
@@ -82,6 +88,15 @@ msreve_design <- function(mvpa_design, contrast_matrix, name = "msreve_design_01
     }
   }
 
+  # Align contrast rows to the condition order used by the cross-validated
+  # means (see .msreve_condition_levels). The regression predictors are built
+  # from the rows of `contrast_matrix` in their stored order, while the Delta
+  # projections realign by row name, so the two must agree by construction.
+  cond_levels <- .msreve_condition_levels(mvpa_design$Y)
+  if (!is.null(cond_levels)) {
+    contrast_matrix <- .msreve_align_contrast_rows(contrast_matrix, cond_levels)
+  }
+
   # Check: Number of rows in contrast_matrix should match number of conditions
   if (nrow(contrast_matrix) != mvpa_design$ncond) {
     stop(paste0("Number of rows in contrast_matrix (", nrow(contrast_matrix),
@@ -125,6 +140,14 @@ msreve_design <- function(mvpa_design, contrast_matrix, name = "msreve_design_01
         }
       } else {
         stop(paste0("Nuisance RDM '", nm, "' must be a matrix or dist object."))
+      }
+    }
+
+    # Store every nuisance RDM as a K x K matrix in condition order so that its
+    # lower triangle lines up with the contrast predictors and the RDM vector.
+    if (!is.null(cond_levels)) {
+      for (nm in names(nuisance_rdms)) {
+        nuisance_rdms[[nm]] <- .msreve_align_nuisance_rdm(nuisance_rdms[[nm]], cond_levels, nm)
       }
     }
   }
@@ -196,6 +219,75 @@ msreve_design <- function(mvpa_design, contrast_matrix, name = "msreve_design_01
   }
 
   obj_final
+}
+
+#' Condition order used for contrast and nuisance rows
+#'
+#' Mirrors the condition order of \code{compute_crossvalidated_means_sl()}:
+#' factor levels when the labels are a factor, otherwise the order of first
+#' appearance. Cross-validated means (and therefore Delta projections) are
+#' indexed in this order.
+#'
+#' @keywords internal
+#' @noRd
+.msreve_condition_levels <- function(Y) {
+  if (is.null(Y) || is.matrix(Y)) {
+    return(NULL)
+  }
+  if (is.factor(Y)) levels(Y) else as.character(unique(Y))
+}
+
+#' Align contrast rows to condition levels
+#'
+#' Named rows must match the condition levels exactly (same set, no
+#' duplicates) and are reordered to level order. Unnamed contrast matrices
+#' must have one row per condition and are taken in level order.
+#'
+#' @keywords internal
+#' @noRd
+.msreve_align_contrast_rows <- function(M, levels) {
+  rn <- rownames(M)
+  if (!is.null(rn)) {
+    if (anyDuplicated(rn) || !setequal(rn, levels)) {
+      stop(paste0(
+        "Row names of `contrast_matrix` must match the condition labels exactly, one row per level. ",
+        "Expected: ", paste(levels, collapse = ", "), ". Got: ", paste(rn, collapse = ", "), "."
+      ), call. = FALSE)
+    }
+    return(M[levels, , drop = FALSE])
+  }
+  if (nrow(M) != length(levels)) {
+    stop(paste0("Number of rows in contrast_matrix (", nrow(M),
+                ") must match number of conditions in mvpa_design (", length(levels),
+                ") when rows are unnamed."), call. = FALSE)
+  }
+  rownames(M) <- levels
+  M
+}
+
+#' Align a nuisance RDM to condition levels
+#'
+#' Returns a K x K matrix with dimnames set to \code{levels}. Labelled matrices
+#' and dist objects are reordered by name; unlabelled ones (a dist without
+#' \code{Labels}, or a matrix without both dimnames) are taken in level order.
+#'
+#' @keywords internal
+#' @noRd
+.msreve_align_nuisance_rdm <- function(rdm, levels, nm) {
+  labelled <- !(inherits(rdm, "dist") && is.null(attr(rdm, "Labels")))
+  M <- as.matrix(rdm)
+  if (!labelled || is.null(rownames(M)) || is.null(colnames(M))) {
+    dimnames(M) <- list(levels, levels)
+    return(M)
+  }
+  if (!setequal(rownames(M), levels) || !setequal(colnames(M), levels) ||
+      anyDuplicated(rownames(M)) || anyDuplicated(colnames(M))) {
+    stop(paste0(
+      "Nuisance RDM '", nm, "' item labels must match the condition labels exactly. ",
+      "Expected: ", paste(levels, collapse = ", "), "."
+    ), call. = FALSE)
+  }
+  M[levels, levels, drop = FALSE]
 }
 
 #' @export

@@ -94,7 +94,12 @@ era_rsa_design <- function(design,
   }
 
   # items with at least one enc and one ret trial
-  common_items <- sort(intersect(unique(key_enc), unique(key_ret)))
+  # Same canonical item order as the ERA models (see .era_key_levels).
+  common_items <- .era_order_keys(
+    intersect(stats::na.omit(as.character(unique(key_enc))),
+              stats::na.omit(as.character(unique(key_ret)))),
+    .era_key_levels(key_enc, key_ret)
+  )
 
   Mode <- function(x) { ux <- unique(x); ux[which.max(tabulate(match(x, ux)))] }
 

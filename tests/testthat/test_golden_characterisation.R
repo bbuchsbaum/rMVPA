@@ -41,9 +41,10 @@ for (scenario in names(golden_scenarios())) {
         expected$performance$AUC <- NULL
       }
       if (identical(nm, "rsa_spearman_pearson")) {
-        # The second correlation ranks neural distances. Comparing final
-        # coefficients across platforms incorrectly requires last-bit distance
-        # ties to be invariant. Freeze distances and verify each stage instead.
+        # distmethod = "spearman" ranks the neural patterns, so neural distances
+        # can tie. Comparing final coefficients across platforms would need
+        # last-bit tie invariance. Freeze distances and verify each stage. The
+        # comparison with model RDMs is regtype = "pearson" (Pearson).
         components <- golden_spearman_rsa_components()
         frozen_distances <- fixture$distance_reference$value
         expect_false(is.null(frozen_distances))

@@ -176,7 +176,7 @@ explain_searchlight_engine <- function(model_spec,
 #'
 #' @keywords internal
 #' @noRd
-.resolve_searchlight_engine <- function(model_spec, method, engine = "auto") {
+.resolve_searchlight_engine <- function(model_spec, method, engine = "auto", combiner = "average") {
   if (inherits(model_spec, "rsa_model") &&
       identical(model_spec$distmethod, "crossvalidated_euclidean") &&
       !engine %in% c("auto", "legacy")) {
@@ -190,7 +190,7 @@ explain_searchlight_engine <- function(model_spec,
     return(.resolve_searchlight_engine.naive_xdec_model(model_spec, method, engine))
   }
   if (inherits(model_spec, "mvpa_model")) {
-    return(.resolve_searchlight_engine.mvpa_model(model_spec, method, engine))
+    return(.resolve_searchlight_engine.mvpa_model(model_spec, method, engine, combiner = combiner))
   }
   if (inherits(model_spec, "rsa_model")) {
     requested <- .match_searchlight_engine(engine)
@@ -204,7 +204,8 @@ explain_searchlight_engine <- function(model_spec,
 
 #' @keywords internal
 #' @noRd
-.resolve_searchlight_engine.mvpa_model <- function(model_spec, method, engine = "auto") {
+.resolve_searchlight_engine.mvpa_model <- function(model_spec, method, engine = "auto",
+                                                   combiner = "average") {
   requested <- .match_searchlight_engine(engine)
   registry <- .searchlight_engine_registry()
 
@@ -212,22 +213,29 @@ explain_searchlight_engine <- function(model_spec,
     return("legacy")
   }
 
+  # Fast engines hard-wire the built-in combiner. A different combiner is a
+  # general-path feature, so no fast engine is eligible for it.
+  combiner_ok <- .fast_combiner_eligible(combiner, method)
+  fast_eligible <- function(nm) {
+    combiner_ok && isTRUE(registry[[nm]]$eligible(model_spec, method))
+  }
+
   if (!identical(requested, "auto")) {
-    if (isTRUE(registry[[requested]]$eligible(model_spec, method))) {
+    if (fast_eligible(requested)) {
       return(requested)
     }
     return("legacy")
   }
 
-  if (isTRUE(registry$dual_lda_fast$eligible(model_spec, method))) {
+  if (fast_eligible("dual_lda_fast")) {
     return("dual_lda_fast")
   }
 
-  if (isTRUE(registry$aggregate_fast$eligible(model_spec, method))) {
+  if (fast_eligible("aggregate_fast")) {
     return("aggregate_fast")
   }
 
-  if (isTRUE(registry$sda_fast$eligible(model_spec, method))) {
+  if (fast_eligible("sda_fast")) {
     return("sda_fast")
   }
 
@@ -369,7 +377,8 @@ explain_searchlight_engine <- function(model_spec,
   engine <- .resolve_searchlight_engine.mvpa_model(
     model_spec = model_spec,
     method = method,
-    engine = requested
+    engine = requested,
+    combiner = combiner
   )
 
   strict_requested <- !identical(requested, "auto") && !identical(requested, "legacy")

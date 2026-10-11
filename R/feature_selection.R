@@ -29,9 +29,11 @@ matrixAnova <- function(Y, x) {
   if (nrow(x) != length(Y)) stop("x and Y must have compatible dimensions")
   if (any(is.na(x)) || any(is.na(Y))) stop("NA values not supported")
   x <- as.matrix(x)
-  Y <- as.numeric(Y)
+  ## Re-code to dense integer groups 1..k. Unused factor levels would otherwise
+  ## make k and tabulate(Y) count empty groups that rowsum() drops, giving NaN.
+  Y <- as.integer(droplevels(as.factor(Y)))
   k <- max(Y)
-  ni <- tabulate(Y)
+  ni <- tabulate(Y, nbins = k)
   n <- dim(x)[1]
   sx2 <- colSums(x^2)
   m <- rowsum(x, Y)
@@ -84,32 +86,21 @@ select_features.catscore <- function(obj, X, Y,  ranking.score=c("entropy", "avg
   require_package("sda", "for catscore feature selection")
   assertthat::assert_that(obj$cutoff_type %in% c("topk", "top_k", "topp", "top_p"))
   ranking.score <- match.arg(ranking.score)
-  message("selecting features via catscore")
-  
+  .log_debug("selecting features via catscore (cutoff %s = %s)",
+             obj$cutoff_type, obj$cutoff_value)
+
   if (is.numeric(Y)) {
     medY <- median(Y)
     Y <- factor(ifelse(Y > medY, "high", "low"))
   }
   sda.1 <- quiet_sda_ranking(as.matrix(X), Y, ranking.score=ranking.score, fdr=FALSE, verbose=FALSE)
-  
-  keep.idx <- if (obj$cutoff_type == "top_k") {
-    k <- min(ncol(X), obj$cutoff_value)
-    sda.1[, "idx"][1:k]
-  } else if (obj$cutoff_type == "top_p") {
-    if (obj$cutoff_value <= 0 || obj$cutoff_value > 1) {
-      stop("select_features.catscore: with top_p, cutoff_value must be > 0 and <= 1")
-    }
-    k <- max(obj$cutoff_value * ncol(X),1)
-    sda.1[, "idx"][1:k]
-   
-  } else {
-    stop(paste("select_features.catscore: unsupported cutoff_type: ", obj$cutoff_type))
-  }
-  
-  
+
+  k <- validate_cutoff(obj$cutoff_type, obj$cutoff_value, ncol(X))
+  keep.idx <- sda.1[, "idx"][seq_len(k)]
+
   keep <- logical(ncol(X))
   keep[keep.idx] <- TRUE
-  message("retaining ", sum(keep), " features in matrix with ", ncol(X), " columns")
+  .log_debug("retaining %d features in matrix with %d columns", sum(keep), ncol(X))
   keep
    
 }
@@ -120,17 +111,16 @@ select_features.catscore <- function(obj, X, Y,  ranking.score=c("entropy", "avg
 #' @export
 #' @importFrom assertthat assert_that
 select_features.FTest <- function(obj, X, Y,...) {
-  message("selecting features via FTest")
-  message("cutoff type ", obj$cutoff_type)
-  message("cutoff value ", obj$cutoff_value)
-  
+  .log_debug("selecting features via FTest (cutoff %s = %s)",
+             obj$cutoff_type, obj$cutoff_value)
+
   assertthat::assert_that(obj$cutoff_type %in% c("topk", "top_k", "topp", "top_p"))
-  
+
   if (is.numeric(Y)) {
     medY <- median(Y)
     Y <- factor(ifelse(Y > medY, "high", "low"))
   }
-  
+
   # Ensure X is numeric
   if (!is.numeric(X)) {
     X <- as.matrix(X)
@@ -138,28 +128,17 @@ select_features.FTest <- function(obj, X, Y,...) {
       stop("X must be convertible to a numeric matrix")
     }
   }
-  
+
   pvals <- matrixAnova(Y, X)[,2]
-  
-  keep.idx <- if (obj$cutoff_type == "top_k" || obj$cutoff_type == "topk") {
-    k <- min(ncol(X), obj$cutoff_value)
-    order(pvals)[1:k]
-  } else if (obj$cutoff_type == "top_p" || obj$cutoff_type == "topp") {
-    if (obj$cutoff_value <= 0 || obj$cutoff_value > 1) {
-      stop("select_features.FTest: with top_p, cutoff_value must be > 0 and <= 1")
-    }
-    k <- max(ceiling(obj$cutoff_value * ncol(X)), 1)
-    order(pvals)[1:k]
-  } else {
-  
-    stop(paste("select_features.FTest: unsupported cutoff_type: ", obj$cutoff_type))
-  }
+
+  k <- validate_cutoff(obj$cutoff_type, obj$cutoff_value, ncol(X))
+  keep.idx <- order(pvals)[seq_len(k)]
   
   
   keep <- logical(ncol(X))
   keep[keep.idx] <- TRUE
   
-  message("retaining ", sum(keep), " features in matrix with ", ncol(X), " columns")
+  .log_debug("retaining %d features in matrix with %d columns", sum(keep), ncol(X))
   
   keep
   

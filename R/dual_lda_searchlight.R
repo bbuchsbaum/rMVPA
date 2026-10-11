@@ -1,11 +1,8 @@
 #' @keywords internal
 #' @noRd
 .is_dual_lda_fast_path <- function(model_spec, method) {
-  inherits(model_spec, "mvpa_model") &&
-    method %in% c("standard", "randomized", "resampled") &&
-    isTRUE(has_crossval(model_spec)) &&
-    !isTRUE(has_test_set(model_spec)) &&
-    !is.null(model_spec$model) &&
+  .fast_classifier_eligible(model_spec, method,
+                            methods = c("standard", "randomized", "resampled")) &&
     identical(model_spec$model$label, "dual_lda")
 }
 
@@ -820,11 +817,6 @@
   x_test <- x_all[test_idx, , drop = FALSE]
   y_train <- factor(y_all[train_idx], levels = classes)
 
-  if (any(!is.finite(x_train)) || any(!is.finite(x_test))) {
-    x_train[!is.finite(x_train)] <- 0
-    x_test[!is.finite(x_test)] <- 0
-  }
-
   class_counts <- as.numeric(table(y_train)[classes])
   if (any(class_counts == 0L)) {
     stop("dual_lda fast path requires every class to appear in every training fold.")
@@ -1129,22 +1121,38 @@
 
 #' @keywords internal
 #' @noRd
+#' Refuse data with missing or non-finite values
+#'
+#' The general path drops voxels with missing values (filter_roi()); this
+#' engine does not reproduce that rule, so such data raise an ineligibility
+#' condition and run on the general path under engine = "auto".
+#' @keywords internal
+#' @noRd
+.dual_lda_check_finite <- function(x_all) {
+  if (!all(is.finite(x_all))) {
+    stop(.engine_ineligible("dual_lda_fast", "data contain missing or non-finite values"))
+  }
+  invisible(TRUE)
+}
+
+#' @keywords internal
+#' @noRd
 .validate_dual_lda_inputs <- function(model_spec, gamma) {
   ds <- model_spec$dataset
   if (!inherits(ds, "mvpa_image_dataset")) {
-    stop("dual_lda fast path currently supports mvpa_image_dataset only.")
+    stop(.engine_ineligible("dual_lda_fast", "requires an mvpa_image_dataset"))
   }
   if (inherits(ds, "mvpa_multibasis_image_dataset")) {
-    stop("dual_lda fast path does not currently support multibasis datasets.")
+    stop(.engine_ineligible("dual_lda_fast", "does not support multibasis datasets"))
   }
 
   y_all <- y_train(model_spec)
   if (!is.factor(y_all)) {
-    stop("dual_lda fast path requires factor responses.")
+    stop(.engine_ineligible("dual_lda_fast", "requires factor responses"))
   }
   classes <- levels(y_all)
   if (length(classes) < 2L) {
-    stop("dual_lda fast path requires at least two classes.")
+    stop(.engine_ineligible("dual_lda_fast", "requires at least two classes"))
   }
 
   gamma <- .dual_lda_gamma(model_spec, gamma = gamma)
@@ -1206,6 +1214,7 @@ run_searchlight_dual_lda_fast <- function(model_spec, radius, incremental = TRUE
   if (nrow(x_all) != length(y_all)) {
     stop("dual_lda fast path: mismatch between train rows and y_train length.")
   }
+  .dual_lda_check_finite(x_all)
 
   folds <- generate_folds(
     model_spec$crossval,
@@ -1618,6 +1627,7 @@ run_searchlight_dual_lda_sampled_fast <- function(model_spec,
   if (nrow(x_all) != length(y_all)) {
     stop("dual_lda sampled fast path: mismatch between training rows and y_train length.")
   }
+  .dual_lda_check_finite(x_all)
 
   folds <- generate_folds(
     model_spec$crossval,

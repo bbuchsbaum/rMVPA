@@ -35,7 +35,7 @@
   sp <- neuroim2::space(ds$mask)
   x_all <- as.matrix(neuroim2::series(ds$train_data, mask_indices))
   if (!all(is.finite(x_all))) {
-    stop(.aggregate_ineligible("data contain missing or non-finite values"))
+    stop(.engine_ineligible("rsa_fast", "data contain missing or non-finite values"))
   }
   # filter_roi(): keep voxels whose range across observations is non-zero.
   span <- matrixStats::colMaxs(x_all) - matrixStats::colMins(x_all)

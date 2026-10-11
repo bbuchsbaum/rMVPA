@@ -28,12 +28,18 @@ rsa_model(
 
 \item{design}{An instance of an \code{rsa_design} created by \code{rsa_design()}.}
 
-\item{distmethod}{A character string specifying the method used to compute distances between observations. 
-One of: \code{"pearson"}, \code{"spearman"} (default), or
-\code{"crossvalidated_euclidean"} (see below).}
+\item{distmethod}{Controls how the neural RDM is computed: the correlation
+distance \code{1 - r} between each pair of observation patterns, with
+\code{r} Pearson (\code{"pearson"}) or Spearman (\code{"spearman"}, the
+default), or \code{"crossvalidated_euclidean"} (see below). It does not
+choose the comparison with the model RDMs; that is \code{regtype}.}
 
-\item{regtype}{A character string specifying the analysis method. 
-One of: \code{"pearson"}, \code{"spearman"}, \code{"lm"}, or \code{"rfit"} (defaults to "pearson").}
+\item{regtype}{Controls how the neural RDM is compared with each model RDM:
+\code{"pearson"} (Pearson correlation, the default), \code{"spearman"}
+(Spearman correlation, ranks of both vectors), \code{"lm"} or \code{"rfit"}.
+With \code{distmethod = "crossvalidated_euclidean"}, \code{regtype} also
+sets the model fit. Pearson and Spearman results differ when the relation
+between the two RDMs is not linear.}
 
 \item{check_collinearity}{Logical. When \code{regtype = "lm"}, stop if two
 predictor RDMs correlate above 0.99 or the design matrix is rank deficient.
