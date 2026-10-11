@@ -221,9 +221,9 @@ test_that("filter_roi drops a voxel with an infinite test-set value", {
   expect_true(all(!is.infinite(neuroim2::values(filtered$test_roi))))
 })
 
-test_that("filter_roi keeps a voxel whose test-set values are NA (retrieval missing data)", {
-  # Downstream fit_roi handles retrieval NA (pairwise-complete fallback), so
-  # filter_roi must not drop the column on NA alone.
+test_that("filter_roi drops test-set NA by default and keeps it under test_na = 'keep'", {
+  # Only models that handle missing test values (era_rsa_model's
+  # pairwise-complete fallback) opt in to keeping such columns.
   dims <- c(4, 4, 4)
   set.seed(32)
   tr <- array(rnorm(prod(dims) * 10), c(dims, 10))
@@ -231,7 +231,9 @@ test_that("filter_roi keeps a voxel whose test-set values are NA (retrieval miss
   te[1, 1, 1, ] <- NA
   dset <- iter_core_dataset(dims = dims, train_array = tr, test_array = te)
   roi <- as_roi(data_sample(dset, c(1L, 2L, 5L, 9L)), dset)
-  expect_identical(filter_roi(roi, min_voxels = 2), roi)
+  expect_identical(filter_roi(roi, min_voxels = 2, test_na = "keep"), roi)
+  filtered <- filter_roi(roi, min_voxels = 2)
+  expect_setequal(neuroim2::indices(filtered$test_roi), c(2L, 5L, 9L))
 })
 
 test_that("filter_roi does not preserve an all-NA centre voxel", {

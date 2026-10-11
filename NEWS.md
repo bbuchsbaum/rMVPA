@@ -37,6 +37,18 @@
   named by the class levels) from `MGSDA::classifyV()`, since MGSDA gives
   hard class codes only. `MGSDA` is declared in Suggests and checked when the
   model is fitted.
+* ROI feature filtering now drops any feature with a missing value in the
+  test data. Previously only infinite test values were dropped, so an NA in an
+  external test set reached `predict()` and could fail the ROI or produce NA
+  predictions. `era_rsa_model()` declares `handles_missing_test = TRUE` and
+  keeps such features for its pairwise-complete similarity fallback.
+  A searchlight centre voxel is now preserved only when its sole defect is
+  zero variance: a centre with any missing training value, or a test value the
+  policy rejects, is dropped like any other voxel (previously a partly-NA
+  centre was kept). Surface ROIs follow the same rules, and the dedicated ERA
+  engine now drops infinite retrieval values as the general path does.
+  **Results change** for searchlights whose centres have missing values and
+  for analyses with NA in an external test set.
 * RSA regression speed-ups, with one output correction. Semi-partial
   correlations (`semipartial = TRUE`) now come from the cached lm kernel
   instead of an lm() refit per ROI, and `repnet_model` and `repmed_model`

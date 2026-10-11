@@ -624,7 +624,7 @@ internal_crossval <- function(mspec, roi, id, center_global_id = NA, x_all = NUL
 #' @keywords internal
 #' @noRd
 extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2,
-                        filter_features = TRUE) {
+                        filter_features = TRUE, test_na = "drop") {
   r <- as_roi(sample,data)
 
   # Check if as_roi returned an error object (e.g., insufficient voxels after mask filtering)
@@ -640,7 +640,8 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2,
   # Use silent=TRUE to prevent error messages from being displayed on the console
   # Pass center_global_id to preserve it during filtering (for searchlights)
   # filter_roi will throw an error if < 2 valid voxels remain
-  r <- try(filter_roi(r, preserve = center_global_id, min_voxels = min_voxels), silent=TRUE)
+  r <- try(filter_roi(r, preserve = center_global_id, min_voxels = min_voxels,
+                      test_na = test_na), silent=TRUE)
 
   if (inherits(r, "try-error")) {
     .log_debug("Skipping ROI: filter_roi failed (%s)", as.character(r))
@@ -781,7 +782,8 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2,
           dset,
           center_global_id = kept_rnums[[k]],
           min_voxels = min_voxels_required,
-          filter_features = !isTRUE(mod_spec$.preserve_roi_features)
+          filter_features = !isTRUE(mod_spec$.preserve_roi_features),
+          test_na = .model_test_na_policy(mod_spec)
         )
       }
     } else {
@@ -790,7 +792,8 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2,
           sample_list[[k]],
           dset,
           min_voxels = min_voxels_required,
-          filter_features = !isTRUE(mod_spec$.preserve_roi_features)
+          filter_features = !isTRUE(mod_spec$.preserve_roi_features),
+          test_na = .model_test_na_policy(mod_spec)
         )
       }
     }

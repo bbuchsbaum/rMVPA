@@ -126,15 +126,18 @@
 #' @keywords internal
 #' @noRd
 .era_fast_filter_features <- function(Xtr, feature_ids, center_id,
-                                      min_voxels = 1L) {
+                                      min_voxels = 1L, Xte = NULL) {
+  # The filter_roi() rule under era_rsa_model's test_na = "keep" policy:
+  # drop training NA / zero variance and infinite retrieval values; preserve
+  # the centre only when its sole defect is zero variance.
   stats <- .filter_roi_stats(Xtr)
-  keep <- !stats$nas & stats$sdnonzero
+  test_bad <- .filter_roi_test_bad(Xtr, Xte, "keep")
+  keep <- !stats$nas & stats$sdnonzero & !test_bad
 
   if (length(center_id) == 1L && !is.na(center_id)) {
     center_col <- match(center_id, feature_ids)
-    if (!is.na(center_col) && !keep[center_col]) {
-      # This intentionally preserves even an NA or zero-variance center. It is
-      # the established searchlight filter_roi() behavior.
+    if (!is.na(center_col) && !keep[center_col] &&
+        !.filter_roi_centre_unusable(Xtr, Xte, center_col, "keep")) {
       keep[center_col] <- TRUE
     }
   }
@@ -175,11 +178,13 @@
 
     cols <- source$idx_to_col[roi_ids]
     Xtr <- source$train[, cols, drop = FALSE]
+    Xte <- source$test[, cols, drop = FALSE]
     keep <- .era_fast_filter_features(
       Xtr = Xtr,
       feature_ids = roi_ids,
       center_id = id,
-      min_voxels = 1L
+      min_voxels = 1L,
+      Xte = Xte
     )
     if (is.null(keep)) {
       return(fail("ROI filtered out", indices = roi_ids))
@@ -188,7 +193,7 @@
     kept_ids <- roi_ids[keep]
     roi_data <- list(
       train_data = Xtr[, keep, drop = FALSE],
-      test_data = source$test[, cols[keep], drop = FALSE],
+      test_data = Xte[, keep, drop = FALSE],
       indices = kept_ids,
       train_roi = NULL,
       test_roi = NULL

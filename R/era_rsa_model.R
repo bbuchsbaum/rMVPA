@@ -437,6 +437,9 @@ era_rsa_model <- function(dataset,
     "era_rsa_model",
     dataset  = dataset,
     design   = design,
+    # Retrieval NA is handled by fit_roi's pairwise-complete similarity, so
+    # filter_roi() keeps features with missing test values for this model.
+    handles_missing_test = TRUE,
     # store parsed vectors to maintain levels/order
     key      = key_fac,
     key_levels = key_levels,

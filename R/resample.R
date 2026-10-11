@@ -47,21 +47,55 @@ gen_id <- function(n) {
   list(nas = nas, sdnonzero = sdnonzero)
 }
 
+#' Resolve the test-set missing-value policy
+#'
+#' `"drop"` (the default) removes any feature with a missing value in the test
+#' data, so predict() never sees NA. `"keep"` retains such features for models
+#' that declare `handles_missing_test = TRUE` (era_rsa_model, which uses a
+#' pairwise-complete similarity fallback). Infinite test values are always
+#' dropped.
+#' @keywords internal
+#' @noRd
+.filter_roi_test_na <- function(test_na) {
+  match.arg(test_na, c("drop", "keep"))
+}
+
+#' Test-set missing-value policy for a model spec
+#' @keywords internal
+#' @noRd
+.model_test_na_policy <- function(model_spec) {
+  if (isTRUE(model_spec$handles_missing_test)) "keep" else "drop"
+}
+
+#' Per-column test-set badness under a missing-value policy
+#' @keywords internal
+#' @noRd
+.filter_roi_test_bad <- function(trdat, tedat, test_na) {
+  if (is.null(tedat)) return(rep(FALSE, ncol(trdat)))
+  if (ncol(tedat) != ncol(trdat)) {
+    stop("filter_roi: train and test ROI have different numbers of columns")
+  }
+  bad <- if (identical(test_na, "keep")) is.infinite(tedat) else !is.finite(tedat)
+  colSums(bad) > 0L
+}
+
 #' Is a preserved centre column unusable?
 #'
-#' A centre voxel is never preserved when it is all-NA in the training data or
-#' has an infinite value in the test data. A partly-NA training column, or NA
-#' in the test data, is preserved as before (retrieval NA is handled downstream).
+#' A centre voxel is preserved only when its sole defect is zero variance in
+#' the training data. It is never preserved when it has any missing value in
+#' the training data, or a test value that the test-set policy rejects
+#' (infinite always; NA unless `test_na = "keep"`).
 #' `cols` are column positions of the train matrix (one voxel, or the basis
 #' columns of one multibasis voxel group).
 #' @keywords internal
 #' @noRd
-.filter_roi_centre_unusable <- function(trdat, tedat, cols) {
+.filter_roi_centre_unusable <- function(trdat, tedat, cols, test_na = "drop") {
   if (length(cols) == 0L) return(FALSE)
-  all_na_train <- colSums(is.na(trdat[, cols, drop = FALSE])) == nrow(trdat)
-  if (any(all_na_train)) return(TRUE)
+  if (anyNA(trdat[, cols, drop = FALSE])) return(TRUE)
   if (!is.null(tedat)) {
-    return(any(is.infinite(tedat[, cols, drop = FALSE])))
+    te <- tedat[, cols, drop = FALSE]
+    if (identical(test_na, "keep")) return(any(is.infinite(te)))
+    return(!all(is.finite(te)))
   }
   FALSE
 }
@@ -154,27 +188,20 @@ filter_roi.default <- function(roi, preserve = NULL, ...) {
 #' @keywords internal
 #' @export
 #' @importFrom neuroim2 ROIVec space coords values
-filter_roi.ROIVec <- function(roi, preserve = NULL, min_voxels = 2, ...) {
+filter_roi.ROIVec <- function(roi, preserve = NULL, min_voxels = 2,
+                              test_na = c("drop", "keep"), ...) {
+  test_na <- .filter_roi_test_na(test_na)
   # Extract the train data values
   trdat <- values(roi$train_roi)
   stats <- .filter_roi_stats(trdat)
   nas <- stats$nas
   sdnonzero <- stats$sdnonzero
 
-  # Test-set columns reach predict() unchanged. A column with an infinite test
-  # value is dropped (it is never meaningful). NA in the test data is NOT a
-  # drop criterion here: retrieval missing-data semantics are handled downstream
-  # (fit_roi's pairwise-complete similarity fallback; see
-  # test_era_rsa_searchlight_fast.R). Clean data has no such columns.
+  # Test-set columns reach predict() only when finite. NA in the test data
+  # drops the column unless the model handles missing test values itself
+  # (test_na = "keep", e.g. era_rsa_model's pairwise-complete similarity).
   tedat <- if (is.null(roi$test_roi)) NULL else values(roi$test_roi)
-  test_bad <- if (is.null(tedat)) {
-    rep(FALSE, ncol(trdat))
-  } else {
-    if (ncol(tedat) != ncol(trdat)) {
-      stop("filter_roi: train and test ROI have different numbers of columns")
-    }
-    colSums(is.infinite(tedat)) > 0L
-  }
+  test_bad <- .filter_roi_test_bad(trdat, tedat, test_na)
 
   # Read basis_count: NULL for standard datasets, integer for multibasis
 
@@ -210,7 +237,8 @@ filter_roi.ROIVec <- function(roi, preserve = NULL, min_voxels = 2, ...) {
     }
 
     # Preserve specified voxel if requested (e.g., center voxel in searchlight).
-    # An unusable centre (all-NA in train, or infinite in test) is not preserved.
+    # Only a zero-variance centre is preserved; a centre with missing training
+    # values or rejected test values is not.
     if (!is.null(preserve)) {
       gi <- neuroim2::indices(roi$train_roi)
       # First V_phys indices correspond to basis-1 block
@@ -218,13 +246,13 @@ filter_roi.ROIVec <- function(roi, preserve = NULL, min_voxels = 2, ...) {
       preserve_group <- match(preserve, first_block_ids)
       if (!is.na(preserve_group) && !group_keep[preserve_group]) {
         group_cols <- which(group_idx == preserve_group)
-        if (.filter_roi_centre_unusable(trdat, tedat, group_cols)) {
+        if (.filter_roi_centre_unusable(trdat, tedat, group_cols, test_na)) {
           .log_debug(
-            "Not preserving voxel group %s: all-NA in train or infinite in test data",
+            "Not preserving voxel group %s: missing values in train or unusable test data",
             preserve)
         } else {
           .log_debug(
-            "Preserving voxel group %s that would have been filtered (NA or zero variance)",
+            "Preserving zero-variance voxel group %s",
             preserve)
           group_keep[preserve_group] <- TRUE
         }
@@ -261,20 +289,21 @@ filter_roi.ROIVec <- function(roi, preserve = NULL, min_voxels = 2, ...) {
       n_na  <- sum(nas)
       n_zv  <- sum(!sdnonzero & !nas)  # zero-var but not already counted as NA
       .log_debug(
-        "filter_roi: removing %d/%d voxels (NA: %d, zero-variance: %d, infinite test: %d); %d remain.",
+        "filter_roi: removing %d/%d voxels (NA: %d, zero-variance: %d, non-finite test: %d); %d remain.",
         n_removed, length(keep), n_na, n_zv, sum(test_bad & !nas & sdnonzero), sum(keep))
     }
 
     # Preserve specified voxel if requested (e.g., center voxel in searchlight).
-    # An unusable centre (all-NA in train, or infinite in test) is not preserved.
+    # Only a zero-variance centre is preserved; a centre with missing training
+    # values or rejected test values is not.
     if (!is.null(preserve)) {
       gi <- neuroim2::indices(roi$train_roi)
       kp <- match(preserve, gi)
       if (!is.na(kp) && !keep[kp]) {
-        if (.filter_roi_centre_unusable(trdat, tedat, kp)) {
-          .log_debug("Not preserving voxel %s: all-NA in train or infinite in test data", preserve)
+        if (.filter_roi_centre_unusable(trdat, tedat, kp, test_na)) {
+          .log_debug("Not preserving voxel %s: missing values in train or unusable test data", preserve)
         } else {
-          .log_debug("Preserving voxel %s that would have been filtered (NA or zero variance)", preserve)
+          .log_debug("Preserving zero-variance voxel %s", preserve)
           keep[kp] <- TRUE
         }
       }
@@ -367,22 +396,27 @@ filter_roi.list <- function(roi, preserve = NULL, min_voxels = 2, ...) {
 
 #' @keywords internal
 #' @export
-filter_roi.ROISurfaceVector <- function(roi, preserve = NULL, min_voxels = 2, ...) {
+filter_roi.ROISurfaceVector <- function(roi, preserve = NULL, min_voxels = 2,
+                                        test_na = c("drop", "keep"), ...) {
+  test_na <- .filter_roi_test_na(test_na)
   # Extract the train data values
   trdat <- roi$train_roi@data
   stats <- .filter_roi_stats(trdat)
   nas <- stats$nas
   sdnonzero <- stats$sdnonzero
-  
+  tedat <- if (is.null(roi$test_roi)) NULL else roi$test_roi@data
+  test_bad <- .filter_roi_test_bad(trdat, tedat, test_na)
+
   # Determine columns to keep
-  keep <- !nas & sdnonzero
-  
-  # Preserve specified voxel if requested (e.g., center voxel in searchlight)
+  keep <- !nas & sdnonzero & !test_bad
+
+  # Preserve the centre (searchlight) only when its sole defect is zero variance
   if (!is.null(preserve)) {
     gi <- roi$train_roi@indices
     kp <- match(preserve, gi)
-    if (!is.na(kp) && !keep[kp]) {
-      .log_debug("Preserving voxel %s that would have been filtered (NA or zero variance)", preserve)
+    if (!is.na(kp) && !keep[kp] &&
+        !.filter_roi_centre_unusable(trdat, tedat, kp, test_na)) {
+      .log_debug("Preserving zero-variance vertex %s", preserve)
       keep[kp] <- TRUE
     }
   }
@@ -410,7 +444,6 @@ filter_roi.ROISurfaceVector <- function(roi, preserve = NULL, min_voxels = 2, ..
     )
     
     # Filter test ROI data
-    tedat <- roi$test_roi@data
     teroi <- neurosurf::ROISurfaceVector(
       geometry = roi$test_roi@geometry,
       indices = roi$test_roi@indices[keep],
