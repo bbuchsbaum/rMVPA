@@ -352,14 +352,24 @@ test_that("summarize_errors groups identical failures across ROIs into one cause
   )
   expect_identical(sum(res$error %in% TRUE), 3L)
 
+  # Capture on both loggers: futile.logger routes package calls to "ROOT" or
+  # to the "rMVPA" logger depending on how the calling function's environment
+  # resolves (covr's instrumentation changes it), and helper-test-logging.R
+  # sets both to ERROR.
   lines <- character(0)
-  old_app <- futile.logger::flog.appender()
-  old_thr <- futile.logger::flog.threshold()
-  futile.logger::flog.appender(function(line) lines <<- c(lines, line))
-  futile.logger::flog.threshold("INFO")
+  capture <- function(line) lines <<- c(lines, line)
+  loggers <- c("ROOT", "rMVPA")
+  old_app <- lapply(loggers, function(nm) futile.logger::flog.appender(name = nm))
+  old_thr <- lapply(loggers, function(nm) futile.logger::flog.threshold(name = nm))
+  for (nm in loggers) {
+    futile.logger::flog.appender(capture, name = nm)
+    futile.logger::flog.threshold("INFO", name = nm)
+  }
   on.exit({
-    futile.logger::flog.appender(old_app)
-    futile.logger::flog.threshold(old_thr)
+    for (i in seq_along(loggers)) {
+      futile.logger::flog.appender(old_app[[i]], name = loggers[i])
+      futile.logger::flog.threshold(old_thr[[i]], name = loggers[i])
+    }
   }, add = TRUE)
 
   n <- summarize_errors(res, "core")
