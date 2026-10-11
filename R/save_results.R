@@ -677,4 +677,3 @@ save_results.global_mvpa_result <- function(x, dir,
   invisible(paths)
 }
 
-`%||%` <- function(a, b) if (is.null(a)) b else a

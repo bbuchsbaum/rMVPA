@@ -297,13 +297,6 @@ mvpa_design <- function(train_design, test_design=NULL, y_train=NULL, y_test=NUL
     }
   }
 
-  check_split <- function(split_var) {
-    minSplits <- min(table(split_var))
-    if (minSplits < 3) {
-      stop(paste("error: splitting condition results in fewer than 3 observations in at least one set"))
-    }
-  }
-
   if (!is.null(split_by)) {
     des <- if (!is.null(test_design) && nrow(test_design) > 0) test_design else train_design
     split_var <- parse_variable(split_by, des)
@@ -348,44 +341,6 @@ mvpa_design <- function(train_design, test_design=NULL, y_train=NULL, y_test=NUL
 
   class(des) <- c("mvpa_design", "list")
   des
-}
-
-#' @export
-#' @method print rsa_design
-print.rsa_design <- function(x, ...) {
-  use_style <- .use_crayon_styles()
-
-  header_style <- if (use_style) crayon::bold$cyan else identity
-  section_style <- if (use_style) crayon::yellow else identity
-  info_style <- if (use_style) crayon::white else identity
-  formula_style <- if (use_style) crayon::italic$green else identity
-  var_style <- if (use_style) crayon::blue else identity
-  number_style <- if (use_style) crayon::green else identity
-  none_style <- if (use_style) crayon::red else identity
-  
-  # Print header
-  cat("\n", header_style("RSA Design"), "\n\n")
-  
-  # Formula section
-  cat(section_style("- Formula"), "\n")
-  cat(info_style("  - "), formula_style(deparse(x$formula)), "\n")
-  
-  # Variables section
-  cat(section_style("- Variables"), "\n")
-  cat(info_style("  - "), var_style(paste(names(x$data), collapse=", ")), "\n")
-  
-  # Block information
-  cat(section_style("- Structure"), "\n")
-  if (!is.null(x$block_var)) {
-    blocks <- table(x$block_var)
-    cat(info_style("  - Blocking: "), "Present\n")
-    cat(info_style("  - Number of Blocks: "), number_style(length(blocks)), "\n")
-    cat(info_style("  - Block Sizes: "), 
-        number_style(paste0(names(blocks), ": ", blocks, collapse=", ")), "\n")
-  } else {
-    cat(info_style("  - Blocking: "), none_style("None"), "\n")
-  }
-  cat("\n")
 }
 
 #' @export

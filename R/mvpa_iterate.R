@@ -30,27 +30,7 @@ setup_mvpa_logger <- function() {
   invisible(NULL)
 }
 
-#' @keywords internal
-try_warning  <- function(expr) {
-  warn <- err <- NULL
-  value <- withCallingHandlers(
-    tryCatch(expr, error=function(e) {
-      err <<- e
-      NULL
-    }), warning=function(w) {
-      warn <<- paste0(warn, str_trim(as.character(w)))
-      invokeRestart("muffleWarning")
-    })
-  list(value=value, warning=warn, error=err)
-}
 
-
-
-#' @noRd
-#' @keywords internal
-generate_crossval_samples <- function(mspec, roi) {
-  crossval_samples(mspec$crossval, tibble::as_tibble(neuroim2::values(roi$train_roi), .name_repair="minimal"), y_train(mspec))
-}
 
 #' @keywords internal
 #' @noRd
@@ -134,32 +114,6 @@ generate_crossval_samples <- function(mspec, roi) {
   }
 
   cache
-}
-
-#' @noRd
-#' @keywords internal
-handle_model_training_error <- function(result, id, ytest) {
-  futile.logger::flog.warn("Model %s fitting error: %s", 
-                          crayon::blue(id), 
-                          crayon::red(attr(result, "condition")$message))
-  emessage <- if (is.null(attr(result, "condition")$message)) "" else attr(result, "condition")$message
-  tibble::tibble(class=list(NULL), probs=list(NULL), y_true=list(ytest), 
-                 fit=list(NULL), error=TRUE, error_message=emessage)
-}
-
-create_result_tibble <- function(cres, ind, mspec, id, result, compute_performance) {
-  if (compute_performance) {
-    tibble::tibble(result=list(cres), indices=list(ind), 
-                   performance=list(compute_performance(mspec, cres)), id=id, 
-                   error=FALSE, error_message="~", 
-                   warning=!is.null(result$warning), 
-                   warning_message=if (is.null(result$warning)) "~" else result$warning)
-  } else {
-    tibble::tibble(result=list(cres), indices=list(ind), performance=list(NULL), id=id, 
-                   error=FALSE, error_message="~", 
-                   warning=!is.null(result$warning), 
-                   warning_message=if (is.null(result$warning)) "~" else result$warning)
-  }
 }
 
 

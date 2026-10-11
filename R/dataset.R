@@ -1103,39 +1103,6 @@ get_searchlight.mvpa_surface_dataset <- function(obj, type = c("standard", "rand
 
 
 
-#' @keywords internal
-#' @noRd
-#' @importFrom neuroim2 NeuroVol
-wrap_output.mvpa_dataset <- function(obj, vals, indices = NULL, ...) {
-  if (!is.null(indices)) {
-    NeuroVol(vals, space(obj$mask), indices=indices)
-  } else {
-    NeuroVol(vals, space(obj$mask))
-  }
-}
-
-
-#' @keywords internal
-#' @noRd
-wrap_output.mvpa_surface_dataset <- function(obj, vals, indices, ...) {
-  #browser()
-  
-  dvals <- numeric(length(neurosurf::nodes(neurosurf::geometry(obj$train_data))))
-  
-  #if (length(indices) != length(vals)) {
-  #  browser()
-  #}
-  
-  dvals[indices] <- vals[indices]
-  ## bit of a hack
-  ## we fill in with non-zero rather than allow indices to be missing
-  #neurosurf::NeuroSurface(geometry = neurosurf::geometry(obj$train_data), indices = indices, data = dvals)
-  neurosurf::NeuroSurface(
-    geometry = neurosurf::geometry(obj$train_data),
-    indices = seq_len(length(dvals)),
-    data = dvals
-  )
-}
 
 #' @export
 has_test_set.mvpa_dataset <- function(obj) {

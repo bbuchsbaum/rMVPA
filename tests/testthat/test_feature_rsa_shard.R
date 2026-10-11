@@ -4,18 +4,6 @@ library(rMVPA)
 # Skip entire file if shard is not installed
 skip_if_not_installed("shard")
 
-# Muffle environment-specific package version warnings emitted on some workers
-muffle_worker_version_warnings <- function(expr) {
-  withCallingHandlers(
-    expr,
-    warning = function(w) {
-      if (grepl("was built under R version", conditionMessage(w), fixed = TRUE)) {
-        invokeRestart("muffleWarning")
-      }
-    }
-  )
-}
-
 # ---- Regional: shard backend via run_regional(..., backend = "shard") ----
 
 test_that("feature_rsa_model regional with shard backend runs without error (PLS)", {

@@ -82,13 +82,6 @@ rsa_design <- function(formula, data, block_var=NULL, split_by=NULL, keep_intra_
 
   assert_that(all(nr == nr[1]), msg="all elements in 'data' and 'nuisance' must have the same number of rows")
   
-  check_split <- function(split_var) {
-    minSplits <- min(table(split_var))
-    if (minSplits < 3) {
-      stop(paste("error: splitting condition results in fewer than 3 observations in at least one set"))
-    }
-  }
-  
   # Create split groups if split_by is provided
   split_groups <- if (!is.null(split_by)) {
     split_var <- parse_variable(split_by, data)

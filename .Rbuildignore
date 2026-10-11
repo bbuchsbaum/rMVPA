@@ -1,6 +1,5 @@
 ^.*\.Rproj$
 ^\.Rproj\.user($|/)
-^\.travis\.yml$
 ^codecov\.yml$
 ^_pkgdown\.yml$
 ^docs($|/)
@@ -19,7 +18,6 @@
 .*xml
 ^\.claude($|/)
 ^Makefile$
-^README\.html$
 ^diagnose_parallel\.sh$
 ^extract_caret_models\.R$
 ^monitor_parallel\.R$
@@ -30,9 +28,7 @@
 ^adocs($|/)
 ^covr($|/)
 ^data-raw($|/)
-^era_rsa_subject\.R$
 ^README\.rmd$
-^surface_test($|/)
 ^vignettes/Advanced_RSA\.html$
 ^vignettes/Searchlight_Analysis\.html$
 ^vignettes/Temporal_Confounds_in_RSA\.html$

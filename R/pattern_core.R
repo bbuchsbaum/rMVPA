@@ -211,26 +211,6 @@
   val
 }
 
-# A-step. With no penalty the stationarity condition is
-# Psi^{-1}(A T'T - X'T)/n = 0, so Psi cancels and A = X'T (T'T)^{-1} is the
-# exact conditional minimiser for any Psi.
-#
-# A ridge term would make the condition Psi^{-1}(A T'T - X'T)/n + lambda A = 0,
-# a Sylvester equation whose solution is NOT X'T(T'T + n lambda I)^{-1} unless
-# Psi is a multiple of the identity. Rather than converge to a point that does
-# not minimise its own objective, pattern_control() rejects lambda_2 != 0; the
-# penalized solver arrives with the spatial penalties.
-.pattern_step_A <- function(X, Tm) {
-  t(solve(crossprod(Tm), crossprod(Tm, X)))
-}
-
-# C-step: with Yw' Yw = n I the objective in C is const - 2 tr(C' M),
-# M = Yw' X Psi^{-1} A, so the constrained minimiser is the polar factor of M.
-.pattern_step_C <- function(X, Yw, A, noise) {
-  M <- crossprod(Yw, X %*% .noise_apply_precision(noise, A))
-  .polar_factor(M)
-}
-
 .polar_factor <- function(M) {
   sv <- svd(M)
   sv$u %*% t(sv$v)

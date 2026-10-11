@@ -1365,27 +1365,6 @@ feature_rsa_model <- function(dataset,
 }
 
 #' @noRd
-.feature_rsa_offdiag_mean <- function(mat, diag_vals = NULL) {
-  if (!is.matrix(mat) || nrow(mat) < 2L) {
-    return(NA_real_)
-  }
-
-  if (is.null(diag_vals)) {
-    diag_vals <- diag(mat)
-  }
-
-  finite_total <- is.finite(mat)
-  finite_diag <- is.finite(diag_vals)
-  n_off <- sum(finite_total) - sum(finite_diag)
-
-  if (n_off <= 0L) {
-    return(NA_real_)
-  }
-
-  (sum(mat[finite_total], na.rm = TRUE) - sum(diag_vals[finite_diag], na.rm = TRUE)) / n_off
-}
-
-#' @noRd
 .feature_rsa_diag_col_cor <- function(X, Y) {
   X <- as.matrix(X)
   Y <- as.matrix(Y)
@@ -1451,20 +1430,6 @@ feature_rsa_model <- function(dataset,
   }
 
   sum(x_ctr * y_ctr) / denom
-}
-
-#' @noRd
-.feature_rsa_rdm_vector_from_cor <- function(cor_mat, n_obs) {
-  n_pairs <- n_obs * (n_obs - 1L) / 2L
-
-  if (n_pairs < 1L) {
-    return(numeric(0))
-  }
-  if (is.null(cor_mat) || !is.matrix(cor_mat) || !all(dim(cor_mat) == c(n_obs, n_obs))) {
-    return(rep(NA_real_, n_pairs))
-  }
-
-  as.numeric((1 - cor_mat)[lower.tri(cor_mat)])
 }
 
 #' @noRd
@@ -3566,26 +3531,6 @@ evaluate_model.feature_rsa_model <- function(object,
     observed_rdm_vec            = observed_rdm_vec,
     permutation_results         = perm_results
   )
-}
-
-.feature_rsa_predicted_rdm_vector <- function(predicted) {
-  predicted <- as.matrix(predicted)
-  n_obs <- nrow(predicted)
-  n_pairs <- n_obs * (n_obs - 1L) / 2L
-
-  if (n_pairs < 1L) {
-    return(numeric(0))
-  }
-
-  out <- tryCatch(
-    suppressWarnings(.feature_rsa_rdm_vector_blockwise(predicted)),
-    error = function(e) NULL
-  )
-
-  if (is.null(out) || length(out) != n_pairs) {
-    return(rep(NA_real_, n_pairs))
-  }
-  out
 }
 
 

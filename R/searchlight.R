@@ -408,56 +408,6 @@ combine_standard <- function(model_spec, good_results, bad_results) {
   })
 }
 
-#' Combine RSA standard classifier results
-#'
-#' This function combines the RSA standard classifier results from a good results data frame
-#' by binding the performance rows together.
-#'
-#' @keywords internal
-#' @param model_spec A list containing the model specification.
-#' @param good_results A data frame containing the successful classifier results.
-#' @param bad_results A data frame containing the unsuccessful classifier results.
-#' @return A list containing the combined performance matrix along with other information from the dataset.
-combine_rsa_standard <- function(model_spec, good_results, bad_results) {
-  .Deprecated("combine_schema_standard")
-  if (nrow(good_results) == 0) {
-    summarize_errors(bad_results, "combine_rsa_standard")
-    stop("No valid results for RSA searchlight: all ROIs failed to process")
-  }
-  
-  # Check if performance data is available
-  if (length(good_results$performance) == 0 || all(sapply(good_results$performance, is.null))) {
-    futile.logger::flog.error("Performance metrics missing in all results")
-    stop("No valid performance metrics for RSA searchlight")
-  }
-  
-  ind <- unlist(good_results$id)
-  
-  # Extract the performance matrix using safe error handling
-  tryCatch({
-    perf_mat <- good_results %>% dplyr::select(performance) %>% (function(x) do.call(rbind, x[[1]]))
-    if (is.null(colnames(perf_mat)) || any(colnames(perf_mat) == "")) {
-      expected_names <- names(model_spec$design$model_mat)
-      if (length(expected_names) == ncol(perf_mat)) {
-        colnames(perf_mat) <- expected_names
-      }
-    }
-    ret <- wrap_out(perf_mat, model_spec$dataset, ind)
-    return(ret)
-  }, error = function(e) {
-    futile.logger::flog.error("Error combining RSA results: %s", e$message)
-    
-    # Try to provide more specific diagnostic information
-    if (grepl("requires numeric/complex matrix/vector arguments", e$message)) {
-      futile.logger::flog.error("This error often occurs when performance metrics are incompatible across ROIs. Check your performance calculation.")
-    } else if (grepl("subscript out of bounds", e$message)) {
-      futile.logger::flog.error("This may be caused by inconsistent dimensions in your results. Check that all ROIs return the same metrics.")
-    }
-    
-    stop(paste("Failed to combine RSA results:", e$message))
-  })
-}
-
 #' Combine randomized classifier results
 #'
 #' This function combines the randomized classifier results from a good results data frame

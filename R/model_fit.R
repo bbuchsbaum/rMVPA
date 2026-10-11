@@ -1,10 +1,3 @@
-#' @keywords internal
-#' @noRd
-requireNamespaceQuietStop <- function(package) {
-  if (!requireNamespace(package, quietly = TRUE))
-    stop(paste('package',package,'is required'), call. = FALSE)
-}
-
 
 
 
@@ -456,20 +449,6 @@ weighted_model <- function(fits, names=1:length(fits), weights=rep(1/length(fits
   ret
 }
 
-#' a list of model fits
-#' 
-#' @param fits a list of fits
-#' @param names the names of the fits
-#' @noRd
-#' @keywords internal
-list_model <- function(fits, names=1:length(fits)) {
-  stopifnot(is.list(fits))
-  ret <- fits
-  names(ret) <- names
-  class(ret) <- c("list_model", "list")
-  ret
-}
-
 #' @export
 #' @method predict weighted_model
 #' @importFrom stats predict
@@ -480,20 +459,6 @@ predict.weighted_model <- function(object, newdata=NULL, ...) {
 
   preds <- lapply(object, function(fit) predict(fit, newdata, ...))
   merge_predictions(preds[[1]], preds[2:length(preds)], attr(object, "weights"))
-  
-}
-
-#' @export
-#' @method predict list_model
-#' @importFrom stats predict
-predict.list_model <- function(object, newdata=NULL,...) {
-  if (is.null(newdata)) {
-    stop("newdata cannot be null")
-  }
-  
-  res <- lapply(object, function(fit) {
-    predict(fit, newdata,...)
-  })
   
 }
 

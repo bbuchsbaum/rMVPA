@@ -1,12 +1,5 @@
 library(testthat)
 
-# helper-test-logging.R already pins the log threshold; this only hides the
-# iteration banners that the runners print to stdout.
-quiet_run <- function(expr) {
-  utils::capture.output(res <- suppressMessages(expr))
-  res
-}
-
 test_that("pattern_model constructor validates inputs and fixes the penalty API", {
   sim <- sim_pattern_data(n = 45, dims = c(5, 5, 3), K = 3, seed = 11)
   spec <- pattern_model(sim$dataset, sim$design, max_rank = 2)

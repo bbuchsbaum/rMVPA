@@ -1,21 +1,3 @@
-#' @keywords internal
-#' @noRd
-colHuber <- function(x, k=1.5, tol=1e-04) {
-  mu <- matrixStats::colMedians(x)
-  s <- matrixStats::colMads(x)
-  n <- nrow(x)
-  sapply(seq_along(mu), function(i) {
-    repeat {
-      yy <- pmin(pmax(mu[i] - k * s[i], x[, i]), mu[i] + k * s[i])
-      mu1 <- sum(yy)/n
-      if (abs(mu[i] - mu1) < tol * s[i])
-        break
-      mu[i] <- mu1
-    }
-    mu[i]
-  })
-}
-
 
 #' Pre-defined MVPA Classification Models
 #'
