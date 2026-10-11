@@ -843,14 +843,7 @@ do_randomized <- function(model_spec, radius, niter,
     }, error = function(e) {
       futile.logger::flog.error("do_randomized iter %d: mvpa_fun threw error: %s", i, e$message)
       # Return a tibble with all errors to maintain structure
-      tibble::tibble(
-        result = rep(list(NULL), length(slight)),
-        indices = rep(list(NULL), length(slight)),
-        performance = rep(list(NULL), length(slight)),
-        id = seq_along(slight),
-        error = TRUE,
-        error_message = sprintf("Iteration failed: %s", e$message)
-      )
+      .roi_error_rows(seq_along(slight), sprintf("Iteration failed: %s", e$message))
     })
 
     # Defensive check: ensure result is a valid data frame with error column
@@ -866,14 +859,7 @@ do_randomized <- function(model_spec, radius, niter,
       )
       msg <- sprintf("Invalid mvpa_fun result (iter %d): type=%s, has_error_col=%s\nraw:%s",
                      i, class(result)[1], has_err_col, raw_desc)
-      result <- tibble::tibble(
-        result = list(NULL),
-        indices = list(NULL),
-        performance = list(NULL),
-        id = seq_along(cind),
-        error = TRUE,
-        error_message = msg
-      )
+      result <- .roi_error_rows(seq_along(cind), msg)
     }
 
     .log_debug("do_randomized iter %d: mvpa_fun returned %d results", i, nrow(result))
@@ -990,14 +976,7 @@ do_resampled <- function(model_spec, radius, niter,
              drop_probs = drop_probs, fail_fast = fail_fast, ...)
   }, error = function(e) {
     futile.logger::flog.error("do_resampled: mvpa_fun threw error: %s", e$message)
-    tibble::tibble(
-      result = rep(list(NULL), length(slight)),
-      indices = rep(list(NULL), length(slight)),
-      performance = rep(list(NULL), length(slight)),
-      id = seq_along(slight),
-      error = TRUE,
-      error_message = sprintf("Iteration failed: %s", e$message)
-    )
+    .roi_error_rows(seq_along(slight), sprintf("Iteration failed: %s", e$message))
   })
 
   if (is.null(result) || !is.data.frame(result) || !"error" %in% names(result)) {
@@ -1011,14 +990,7 @@ do_resampled <- function(model_spec, radius, niter,
     )
     msg <- sprintf("Invalid mvpa_fun result (resampled): type=%s, has_error_col=%s\nraw:%s",
                    class(result)[1], has_err_col, raw_desc)
-    result <- tibble::tibble(
-      result = rep(list(NULL), length(cind)),
-      indices = rep(list(NULL), length(cind)),
-      performance = rep(list(NULL), length(cind)),
-      id = seq_along(cind),
-      error = TRUE,
-      error_message = msg
-    )
+    result <- .roi_error_rows(seq_along(cind), msg)
   }
 
   split <- split_results(result)

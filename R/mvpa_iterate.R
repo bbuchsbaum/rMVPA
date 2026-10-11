@@ -429,15 +429,10 @@ internal_crossval <- function(mspec, roi, id, center_global_id = NA, x_all = NUL
            # Center voxel was filtered out - return graceful skip instead of crashing
            futile.logger::flog.warn("Center voxel %s not present after filtering for ROI %s - skipping", 
                                    center_global_id, id)
-           return(tibble::tibble(
-             result = list(NULL),
-             indices = list(ind),
-             performance = list(NULL),
-             id = id,
-             error = TRUE,
-             error_message = sprintf("Center voxel %s not present after filter_roi; ROI skipped", 
-                                   center_global_id),
-             warning = TRUE,
+           return(.crossval_error_row(
+             id, ind,
+             error_message = sprintf("Center voxel %s not present after filter_roi; ROI skipped",
+                                     center_global_id),
              warning_message = "Center voxel removed by filter_roi"
            ))
       }
@@ -600,25 +595,13 @@ internal_crossval <- function(mspec, roi, id, center_global_id = NA, x_all = NUL
     
 
 
-#' Standard error row for a cross-validated ROI
-#'
-#' Same columns as the other per-ROI rows (result, indices, performance, id,
-#' error, error_message, warning, warning_message), so failed ROIs from the
-#' internal and external CV paths can be combined and summarised.
+#' Standard error row for a cross-validated ROI (see .roi_error_rows())
 #' @keywords internal
 #' @noRd
 .crossval_error_row <- function(id, indices, error_message,
                                 warning_message = error_message) {
-  tibble::tibble(
-    result = list(NULL),
-    indices = list(indices),
-    performance = list(NULL),
-    id = id,
-    error = TRUE,
-    error_message = error_message,
-    warning = TRUE,
-    warning_message = warning_message
-  )
+  .roi_error_rows(id, error_message, indices = list(indices),
+                  warning_message = warning_message)
 }
 
 #' @keywords internal
@@ -721,18 +704,8 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2,
 # the minimum size. Same columns as the other per-ROI error rows, so the
 # dropped ROIs appear in the results and can be summarised.
 .size_filtered_error_rows <- function(ids, min_voxels_required) {
-  n <- length(ids)
   msg <- sprintf("ROI filtered out (size < %d voxels)", as.integer(min_voxels_required))
-  tibble::tibble(
-    result = rep(list(NULL), n),
-    indices = rep(list(NULL), n),
-    performance = rep(list(NULL), n),
-    id = ids,
-    error = rep(TRUE, n),
-    error_message = rep(msg, n),
-    warning = rep(TRUE, n),
-    warning_message = rep(msg, n)
-  )
+  .roi_error_rows(ids, msg)
 }
 
 #' @keywords internal
@@ -776,25 +749,28 @@ extract_roi <- function(sample, data, center_global_id = NULL, min_voxels = 2,
     roi_list <- vector("list", n_after_size_filter)
     t_extract_roi <- proc.time()[3]
     if (analysis_type == "searchlight") {
+      # `roi_list[k] <- list(...)`: extract_roi() returns NULL for an invalid
+      # ROI, and `roi_list[[k]] <- NULL` would delete the slot, shifting later
+      # ROIs onto the wrong ids (or recycling another ROI's data).
       for (k in seq_len(n_after_size_filter)) {
-        roi_list[[k]] <- extract_roi(
+        roi_list[k] <- list(extract_roi(
           sample_list[[k]],
           dset,
           center_global_id = kept_rnums[[k]],
           min_voxels = min_voxels_required,
           filter_features = !isTRUE(mod_spec$.preserve_roi_features),
           test_na = .model_test_na_policy(mod_spec)
-        )
+        ))
       }
     } else {
       for (k in seq_len(n_after_size_filter)) {
-        roi_list[[k]] <- extract_roi(
+        roi_list[k] <- list(extract_roi(
           sample_list[[k]],
           dset,
           min_voxels = min_voxels_required,
           filter_features = !isTRUE(mod_spec$.preserve_roi_features),
           test_na = .model_test_na_policy(mod_spec)
-        )
+        ))
       }
     }
     extract_elapsed <- proc.time()[3] - t_extract_roi
@@ -1228,17 +1204,7 @@ mvpa_iterate <- function(mod_spec, vox_list, ids = 1:length(vox_list),
       }, error = function(e) {
         futile.logger::flog.error("Batch %d failed: %s", i, e$message)
         skipped_rois <<- skipped_rois + length(batch_positions)
-        err_msg <- paste("Error processing ROI:", e$message)
-        tibble::tibble(
-          result = list(NULL),
-          indices = list(NULL),
-          performance = list(NULL),
-          id = batch_rnums,
-          error = TRUE,
-          error_message = err_msg,
-          warning = TRUE,
-          warning_message = err_msg
-        )
+        .roi_error_rows(batch_rnums, paste("Error processing ROI:", e$message))
       })
 
       if (!is.null(batch_error_result)) {
@@ -1408,6 +1374,29 @@ as_worker_spec <- function(obj) {
 #' A namespace-level factory, so the returned closure captures only its
 #' arguments. Defined inside run_future.default it would capture the whole
 #' batch frame, which future then serializes (and hashes) for every chunk.
+#' Replace per-ROI probability matrices by the observed-class probabilities
+#'
+#' For each row's result, stores prob_observed() in a `prob_observed` list
+#' column and drops `probs`. Rows without probabilities get NULL. Slots are
+#' assigned with `[<- list()` so a NULL never deletes an element and every
+#' value stays aligned with its row.
+#' @keywords internal
+#' @noRd
+.drop_roi_probs <- function(result) {
+  res_list <- result$result
+  prob_vals <- vector("list", length(res_list))
+  for (j in seq_along(res_list)) {
+    res_j <- res_list[[j]]
+    if (is.null(res_j) || is.null(res_j$probs)) next
+    prob_vals[j] <- list(tryCatch(prob_observed(res_j), error = function(e) NULL))
+    res_j$probs <- NULL
+    res_list[j] <- list(res_j)
+  }
+  result$prob_observed <- prob_vals
+  result$result <- res_list
+  result
+}
+
 #' @keywords internal
 #' @noRd
 .run_future_item_fun <- function(obj, processor, analysis_type, drop_probs, fail_fast) {
@@ -1447,16 +1436,7 @@ as_worker_spec <- function(obj) {
         if (fail_fast) {
           rlang::abort(message = sprintf("ROI %s failed validation: <2 voxels or invalid after filtering.", rnum))
         }
-        return(tibble::tibble(
-          result = list(NULL),
-          indices = list(NULL),
-          performance = list(NULL),
-          id = rnum,
-          error = TRUE,
-          error_message = msg,
-          warning = TRUE,
-          warning_message = msg
-        ))
+        return(.roi_error_rows(rnum, msg))
       }
 
       center_global_id_to_pass <- if (analysis_type == "searchlight") rnum else NA
@@ -1466,22 +1446,7 @@ as_worker_spec <- function(obj) {
         result$result <- list(NULL)
       }
 
-      if (drop_probs) {
-        res_list <- result$result
-        prob_vals <- vector("list", length(res_list))
-        for (j in seq_along(res_list)) {
-          res_j <- res_list[[j]]
-          if (is.null(res_j) || is.null(res_j$probs)) {
-            prob_vals[[j]] <- NULL
-            next
-          }
-          prob_vals[[j]] <- tryCatch(prob_observed(res_j), error = function(e) NULL)
-          res_j$probs <- NULL
-          res_list[[j]] <- res_j
-        }
-        result$prob_observed <- prob_vals
-        result$result <- res_list
-      }
+      if (drop_probs) result <- .drop_roi_probs(result)
 
       result
     }, error = function(e) {
@@ -1492,24 +1457,9 @@ as_worker_spec <- function(obj) {
         )
       }
 
-      tb <- tryCatch({
-        raw <- paste(utils::capture.output(rlang::trace_back()), collapse = "\n")
-        if (nchar(raw) > 500L) paste0(substr(raw, 1L, 500L), "\n... [truncated]") else raw
-      }, error = function(...) NA_character_)
       .log_debug("ROI %d: Processing error (%s)", rnum, e$message)
-      # error_message stays free of ids and traces so identical failures can be
-      # grouped; the (truncated) traceback lives in its own column.
-      tibble::tibble(
-        result = list(NULL),
-        indices = list(NULL),
-        performance = list(NULL),
-        id = rnum,
-        error = TRUE,
-        error_message = paste("Error processing ROI:", e$message),
-        error_trace = as.character(tb),
-        warning = TRUE,
-        warning_message = paste("Error processing ROI:", e$message)
-      )
+      .roi_error_rows(rnum, paste("Error processing ROI:", e$message),
+                      error_trace = .roi_error_trace())
     })
   }
 }

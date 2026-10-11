@@ -54,6 +54,23 @@
   within a block but not across blocks; the previous unrestricted shuffle
   mixed run-level structure into the null. **p-values and z-scores change.**
   Designs without repeated block labels are still shuffled freely.
+* Failed ROIs are reported with one row layout everywhere: result, indices,
+  performance, id, error, error_message, error_trace, warning,
+  warning_message. The default and shard backends, internal and external
+  cross-validation, size-dropped ROIs, failed searchlight iterations and the
+  fast engines' `bad_results` all build rows with one constructor. The shard
+  backend no longer appends the traceback to `error_message` (it is in
+  `error_trace`, as in the default backend) or puts the ROI id in its
+  validation message, so identical failures group in the error summary.
+* Fixed: when an ROI in a batch failed extraction (for example voxels outside
+  the data grid), the default backend deleted its slot in the batch, so the
+  whole batch failed with "Tibble columns must have compatible sizes", or, when
+  one valid ROI remained, the failed ROI was analysed with that ROI's data and
+  reported as a success.
+* Fixed: `drop_probs = TRUE` turned every ROI without class probabilities
+  (regression models, or `return_predictions = FALSE`) into an error row, and
+  could misalign `prob_observed` with its ROI. `model_space_connectivity()`
+  keeps a failed anchor map in its own slot instead of shifting later maps.
 * RSA regression speed-ups, with one output correction. Semi-partial
   correlations (`semipartial = TRUE`) now come from the cached lm kernel
   instead of an lm() refit per ROI, and `repnet_model` and `repmed_model`

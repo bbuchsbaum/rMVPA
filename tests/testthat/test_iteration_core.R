@@ -440,7 +440,7 @@ test_that("cv_run_global gives the same results as the pre-change code", {
 test_that("external_crossval failure rows use the standard CV error schema", {
   built <- iter_core_spec()
   std_names <- c("result", "indices", "performance", "id", "error",
-                 "error_message", "warning", "warning_message")
+                 "error_message", "error_trace", "warning", "warning_message")
 
   # One feature: the ncol < 2 guard internal_crossval also has.
   row1 <- external_crossval(

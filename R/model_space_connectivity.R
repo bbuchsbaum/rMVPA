@@ -289,7 +289,8 @@ model_space_connectivity.searchlight_result <- function(result,
   if (isTRUE(build_maps) && !is.null(fp$dataset)) {
     vol_results <- vector("list", ncol(similarity))
     for (j in seq_len(ncol(similarity))) {
-      vol_results[[j]] <- tryCatch(
+      # `[j] <- list()`: a NULL from a failed map must keep its anchor's slot.
+      vol_results[j] <- list(tryCatch(
         build_output_map(fp$dataset, similarity[, j], ids),
         error = function(e) {
           futile.logger::flog.warn(
@@ -297,7 +298,7 @@ model_space_connectivity.searchlight_result <- function(result,
             j, conditionMessage(e))
           NULL
         }
-      )
+      ))
     }
     names(vol_results) <- colnames(similarity)
   }

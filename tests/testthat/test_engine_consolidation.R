@@ -271,7 +271,8 @@ test_that("a failed-centre table has the general path's columns, also when empty
   b <- rMVPA:::.engine_bad_results(integer(0), error_message = character(0))
   expect_identical(nrow(b), 0L)
   expect_identical(names(b), c("result", "indices", "performance", "id", "error",
-                               "error_message", "warning", "warning_message"))
+                               "error_message", "error_trace", "warning",
+                               "warning_message"))
   b2 <- rMVPA:::.engine_bad_results(c(4L, 9L), error_message = "boom")
   expect_identical(b2$error_message, c("boom", "boom"))
   expect_true(all(b2$error))

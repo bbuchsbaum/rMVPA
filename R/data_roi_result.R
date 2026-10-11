@@ -85,15 +85,17 @@ print.roi_result <- function(x, ...) {
 roi_result_to_tibble <- function(res) {
   stopifnot(inherits(res, "roi_result"))
   if (res$error) {
-    tibble::tibble(
-      result = list(res$result),
-      indices = list(res$indices),
-      performance = list(NULL),
-      id = res$id,
-      error = TRUE,
+    .roi_error_rows(
+      id = res$id %||% NA_integer_,
       error_message = res$error_message,
-      warning = res$warning %||% TRUE,
-      warning_message = res$warning_message %||% res$error_message
+      indices = list(res$indices),
+      warning_message = if (is.null(res$warning_message) ||
+                            identical(res$warning_message, "~")) {
+        res$error_message
+      } else {
+        res$warning_message
+      },
+      result = list(res$result)
     )
   } else {
     tibble::tibble(
@@ -109,6 +111,58 @@ roi_result_to_tibble <- function(res) {
   }
 }
 
+#' Per-ROI error rows
+#'
+#' The one constructor for failed-ROI rows, used by both iteration backends,
+#' the cross-validation paths and the size filter, so every failure carries the
+#' same columns: result, indices, performance, id, error, error_message,
+#' error_trace, warning, warning_message. Vectorised over `id`.
+#'
+#' `error_message` must not contain ROI ids or tracebacks, so identical
+#' failures group in [summarize_errors()]; a traceback goes in `error_trace`.
+#' @param id ROI ids (one row each).
+#' @param error_message Error message (recycled).
+#' @param indices `NULL` or a list of index vectors, one per row (recycled).
+#' @param warning_message Warning message (recycled).
+#' @param error_trace Optional traceback text (recycled).
+#' @param result `NULL` or a list of per-row results (recycled).
+#' @keywords internal
+#' @noRd
+.roi_error_rows <- function(id, error_message, indices = NULL,
+                            warning_message = error_message,
+                            error_trace = NA_character_, result = NULL) {
+  n <- length(id)
+  as_list_col <- function(x) {
+    if (is.null(x)) return(rep(list(NULL), n))
+    stopifnot(is.list(x), length(x) %in% c(1L, n))
+    rep_len(x, n)
+  }
+  tibble::tibble(
+    result = as_list_col(result),
+    indices = as_list_col(indices),
+    performance = rep(list(NULL), n),
+    id = id,
+    error = rep(TRUE, n),
+    error_message = rep_len(as.character(error_message), n),
+    error_trace = rep_len(as.character(error_trace), n),
+    warning = rep(TRUE, n),
+    warning_message = rep_len(as.character(warning_message), n)
+  )
+}
+
+#' Truncated traceback text for an error row, or NA when unavailable
+#' @keywords internal
+#' @noRd
+.roi_error_trace <- function(max_chars = 500L) {
+  tryCatch({
+    raw <- paste(utils::capture.output(rlang::trace_back()), collapse = "\n")
+    if (nchar(raw) > max_chars) {
+      paste0(substr(raw, 1L, max_chars), "\n... [truncated]")
+    } else {
+      raw
+    }
+  }, error = function(...) NA_character_)
+}
 
 #' Split an iteration results tibble into good and bad rows
 #'
@@ -122,10 +176,25 @@ split_results <- function(results) {
     empty <- if (is.data.frame(results)) results[0, , drop = FALSE] else tibble::tibble()
     return(list(good = results, bad = empty))
   }
+  failed <- results$error %in% TRUE
   list(
-    good = results[!results$error, , drop = FALSE],
-    bad  = results[results$error, , drop = FALSE]
+    good = results[!failed, , drop = FALSE],
+    bad  = .with_error_trace(results[failed, , drop = FALSE])
   )
+}
+
+# Bad-results tables always carry error_trace (after error_message), also
+# when empty or built only from rows of producers without a trace.
+#' @keywords internal
+#' @noRd
+.with_error_trace <- function(bad) {
+  if ("error_trace" %in% names(bad) || !"error_message" %in% names(bad)) {
+    return(bad)
+  }
+  bad$error_trace <- rep(NA_character_, nrow(bad))
+  pos <- match("error_message", names(bad))
+  bad[, append(setdiff(names(bad), "error_trace"), "error_trace", after = pos),
+      drop = FALSE]
 }
 
 

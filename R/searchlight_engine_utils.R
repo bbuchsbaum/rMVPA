@@ -169,24 +169,14 @@
 
 #' Failed-centre diagnostics in the layout of the general path's bad_results
 #'
-#' Same eight columns, in the same order and types, as the rows the general
-#' iterator writes for a failed centre (the error text, the sphere's indices,
-#' and no result).
+#' The general path's error-row columns (see .roi_error_rows()), so fast
+#' engines and the general iterator report failed centres identically (the
+#' error text, the sphere's indices, and no result).
 #' @keywords internal
 #' @noRd
 .engine_bad_results <- function(ids, error_message, indices = NULL) {
-  n <- length(ids)
-  if (is.null(indices)) indices <- rep(list(integer(0)), n)
-  tibble::tibble(
-    result = rep(list(NULL), n),
-    indices = indices,
-    performance = rep(list(NULL), n),
-    id = as.integer(ids),
-    error = rep(TRUE, n),
-    error_message = rep_len(as.character(error_message), n),
-    warning = rep(FALSE, n),
-    warning_message = rep("~", n)
-  )
+  if (is.null(indices)) indices <- list(integer(0))
+  .roi_error_rows(as.integer(ids), error_message, indices = indices)
 }
 
 #' Wrap a fast engine's per-centre metrics into a searchlight result
