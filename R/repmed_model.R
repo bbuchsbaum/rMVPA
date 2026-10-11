@@ -58,8 +58,52 @@ repmed_model <- function(dataset,
     distfun       = distfun,
     compute_performance = TRUE,
     return_predictions  = FALSE,
+    .fixed_design = .repmed_fixed_design(key_fac, repmed_des$items, repmed_des$X_rdm,
+                                         repmed_des$Y_rdm, repmed_des$confound_rdms),
     ...
   )
+}
+
+
+# Confound RDMs as columns over the lower triangle of the common items.
+#' @keywords internal
+#' @noRd
+.repmed_conf_matrix <- function(confound_rdms, common_items) {
+  if (is.null(confound_rdms) || length(confound_rdms) == 0L) return(NULL)
+  conf_vecs <- lapply(confound_rdms, function(Cr) {
+    Csub <- Cr[common_items, common_items, drop = FALSE]
+    as.numeric(Csub[lower.tri(Csub)])
+  })
+  conf_mat <- do.call(cbind, conf_vecs)
+  colnames(conf_mat) <- names(confound_rdms)
+  conf_mat
+}
+
+# Path a and path c share the design [1, x, confounds] and neither depends on
+# the ROI (path c also has no ROI term), so both are fitted once at
+# construction. fit_roi() reuses them only when the current inputs are identical.
+# NULL when the design cannot be built; fit_roi() then reports as before.
+#' @keywords internal
+#' @noRd
+.repmed_fixed_design <- function(key, items, X_rdm, Y_rdm, confound_rdms) {
+  tryCatch({
+    if (is.null(key)) return(NULL)
+    items_key <- rownames(group_means(matrix(0, nrow = length(key), ncol = 1L),
+                                      margin = 1, group = key))
+    common_items <- sort(Reduce(intersect, list(items, items_key,
+                                                rownames(X_rdm), rownames(Y_rdm))))
+    if (length(common_items) < 3L) return(NULL)
+    Xr <- X_rdm[common_items, common_items, drop = FALSE]
+    Yr <- Y_rdm[common_items, common_items, drop = FALSE]
+    x <- as.numeric(Xr[lower.tri(Xr)])
+    y <- as.numeric(Yr[lower.tri(Yr)])
+    P_xc <- cbind(x = x, .repmed_conf_matrix(confound_rdms, common_items))
+    X_xc <- .rep_X(P_xc)
+    cache_a <- list(X = X_xc, decomp = if (all(is.finite(X_xc))) qr(X_xc) else NULL)
+    fit_c <- .rep_path_fit(y, P_xc, cache_a)
+    c_tot <- if (!is.null(fit_c) && "x" %in% names(fit_c$coef)) unname(fit_c$coef["x"]) else NA_real_
+    list(a = cache_a, c = list(X = X_xc, y = y, c_tot = c_tot))
+  }, error = function(e) NULL)
 }
 
 
@@ -151,67 +195,28 @@ fit_roi.repmed_model <- function(model, roi_data, context, ...) {
   m <- as.numeric(D_M[lower.tri(D_M)])
 
   # Confounds: each as vector over lower tri
-  conf_mat <- NULL
-  if (!is.null(model$confound_rdms) && length(model$confound_rdms) > 0L) {
-    conf_vecs <- lapply(model$confound_rdms, function(Cr) {
-      Csub <- Cr[common_items, common_items, drop = FALSE]
-      as.numeric(Csub[lower.tri(Csub)])
-    })
-    conf_mat <- do.call(cbind, conf_vecs)
-    colnames(conf_mat) <- names(model$confound_rdms)
-  }
+  conf_mat <- .repmed_conf_matrix(model$confound_rdms, common_items)
 
-  # Build data frames for mediation paths
-  df_a <- if (is.null(conf_mat)) {
-    data.frame(m = m, x = x)
+  cache <- model$.fixed_design
+  # Path a: m ~ x (+ confounds). The design is fixed, so its QR is cached.
+  P_xc <- cbind(x = x, conf_mat)
+  path_a <- .rep_path_fit(m, P_xc, cache = cache$a)
+  a <- if (!is.null(path_a) && "x" %in% names(path_a$coef)) unname(path_a$coef["x"]) else NA_real_
+
+  # Path b / c': y ~ m + x (+ confounds). The design contains the ROI's m.
+  P_mxc <- cbind(m = m, x = x, conf_mat)
+  path_b <- .rep_path_fit(y, P_mxc)
+  b <- if (!is.null(path_b) && "m" %in% names(path_b$coef)) unname(path_b$coef["m"]) else NA_real_
+  cprime <- if (!is.null(path_b) && "x" %in% names(path_b$coef)) unname(path_b$coef["x"]) else NA_real_
+
+  # Path c (total effect): y ~ x (+ confounds). Independent of the ROI, so it
+  # is reused from construction when the inputs are unchanged.
+  X_xc <- .rep_X(P_xc)
+  c_tot <- if (!is.null(cache$c) && identical(cache$c$X, X_xc) && identical(cache$c$y, y)) {
+    cache$c$c_tot
   } else {
-    cbind(data.frame(m = m, x = x), as.data.frame(conf_mat))
-  }
-
-  df_b <- if (is.null(conf_mat)) {
-    data.frame(y = y, m = m, x = x)
-  } else {
-    cbind(data.frame(y = y, m = m, x = x), as.data.frame(conf_mat))
-  }
-
-  # Path c (total effect): y ~ x (+ confounds)
-  df_c <- if (is.null(conf_mat)) {
-    data.frame(y = y, x = x)
-  } else {
-    cbind(data.frame(y = y, x = x), as.data.frame(conf_mat))
-  }
-
-  # Path a: m ~ x (+ confounds)
-  a <- NA_real_
-  a_fit <- try(stats::lm(m ~ ., data = df_a), silent = TRUE)
-  if (!inherits(a_fit, "try-error")) {
-    cf_a <- suppressWarnings(stats::coef(summary(a_fit)))
-    if ("x" %in% rownames(cf_a)) {
-      a <- cf_a["x", "Estimate"]
-    }
-  }
-
-  # Path b / c': y ~ m + x (+ confounds)
-  b <- NA_real_
-  cprime <- NA_real_
-  c_tot <- NA_real_
-  b_fit <- try(stats::lm(y ~ ., data = df_b), silent = TRUE)
-  if (!inherits(b_fit, "try-error")) {
-    cf_b <- suppressWarnings(stats::coef(summary(b_fit)))
-    if ("m" %in% rownames(cf_b)) {
-      b <- cf_b["m", "Estimate"]
-    }
-    if ("x" %in% rownames(cf_b)) {
-      cprime <- cf_b["x", "Estimate"]
-    }
-  }
-
-  c_fit <- try(stats::lm(y ~ ., data = df_c), silent = TRUE)
-  if (!inherits(c_fit, "try-error")) {
-    cf_c <- suppressWarnings(stats::coef(summary(c_fit)))
-    if ("x" %in% rownames(cf_c)) {
-      c_tot <- cf_c["x", "Estimate"]
-    }
+    fit_c <- .rep_path_fit(y, P_xc, cache = cache$a)
+    if (!is.null(fit_c) && "x" %in% names(fit_c$coef)) unname(fit_c$coef["x"]) else NA_real_
   }
 
   indirect <- a * b
@@ -219,21 +224,15 @@ fit_roi.repmed_model <- function(model, roi_data, context, ...) {
   # Naive Sobel test (if enough information)
   sobel_z <- NA_real_
   sobel_p <- NA_real_
-  if (!inherits(a_fit, "try-error") &&
-      !inherits(b_fit, "try-error") &&
-      is.finite(a) && is.finite(b)) {
-
-    cf_a <- suppressWarnings(stats::coef(summary(a_fit)))
-    cf_b <- suppressWarnings(stats::coef(summary(b_fit)))
-
-    if ("x" %in% rownames(cf_a) && "m" %in% rownames(cf_b)) {
-      sa <- cf_a["x", "Std. Error"]
-      sb <- cf_b["m", "Std. Error"]
-      se_ind <- sqrt(b^2 * sa^2 + a^2 * sb^2)
-      if (is.finite(se_ind) && se_ind > .Machine$double.eps) {
-        sobel_z <- indirect / se_ind
-        sobel_p <- 2 * stats::pnorm(-abs(sobel_z))
-      }
+  if (is.finite(a) && is.finite(b) &&
+      !is.null(path_a) && !is.null(path_b) &&
+      "x" %in% names(path_a$se) && "m" %in% names(path_b$se)) {
+    sa <- unname(path_a$se["x"])
+    sb <- unname(path_b$se["m"])
+    se_ind <- sqrt(b^2 * sa^2 + a^2 * sb^2)
+    if (is.finite(se_ind) && se_ind > .Machine$double.eps) {
+      sobel_z <- indirect / se_ind
+      sobel_p <- 2 * stats::pnorm(-abs(sobel_z))
     }
   }
 

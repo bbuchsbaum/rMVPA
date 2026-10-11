@@ -14,6 +14,15 @@
 #'   (\code{"pearson"} or \code{"spearman"}).
 #' @param ... Extra fields stored on the model spec.
 #'
+#' @details
+#' Per-ROI metrics: \code{n_items}, \code{n_pairs}, \code{conn_raw} (the
+#' ROI-seed RDM similarity), and from the multiple regression of the ROI RDM on
+#' the seed and confound RDMs, \code{beta_<term>} (regression coefficients) and
+#' \code{sp_<term>} (semi-partial correlations). With confound RDMs,
+#' \code{seed_conf_r2} is the R-squared of the seed RDM regressed on the
+#' confound RDMs: \code{beta_seed} and \code{sp_seed} describe only the
+#' \code{1 - seed_conf_r2} share of the seed that the confounds do not explain.
+#'
 #' @return A model spec of class \code{"repnet_model"} compatible with
 #'   \code{run_regional()} and \code{run_searchlight()}.
 #' @examples
@@ -57,8 +66,133 @@ repnet_model <- function(dataset,
     # We compute per-ROI performance directly in process_roi
     compute_performance = TRUE,
     return_predictions  = FALSE,
+    .fixed_design = .repnet_fixed_design(repnet_des$key, repnet_des$seed_rdm,
+                                         repnet_des$confound_rdms),
     ...
   )
+}
+
+
+# Fixed-design helpers for repnet_model and repmed_model. The seed/confound
+# design does not depend on the ROI, so its QR decomposition is built once on
+# the spec. fit_roi() reuses it only when the current design matrix is
+# identical, so edits to the spec after construction are still honoured.
+
+#' @keywords internal
+#' @noRd
+.rep_X <- function(P) {
+  cbind(`(Intercept)` = 1, P)
+}
+
+#' @keywords internal
+#' @noRd
+.rep_cached_decomp <- function(X, cache) {
+  if (!is.null(cache) && !is.null(cache$X) && identical(cache$X, X)) cache$decomp else NULL
+}
+
+# OLS of y on X (X carries the intercept column) through a QR decomposition.
+# Returns coefficients, standard errors, RSS, residual df and TSS, or NULL when
+# the caller must use lm(): non-finite entries, rank deficiency (lm() reports
+# NA for aliased terms) or a degenerate fit.
+#' @keywords internal
+#' @noRd
+.rep_ols_fit <- function(y, X, decomp = NULL) {
+  y <- as.numeric(y)
+  if (!all(is.finite(X)) || !all(is.finite(y))) return(NULL)
+  p <- ncol(X)
+  n <- nrow(X)
+  if (n <= p) return(NULL)
+  if (is.null(decomp)) decomp <- qr(X)
+  if (decomp$rank < p || !identical(as.integer(decomp$pivot), seq_len(p))) return(NULL)
+
+  coef <- qr.coef(decomp, y)
+  rss <- sum(qr.resid(decomp, y)^2)
+  df <- n - p
+  tss <- sum((y - mean(y))^2)
+  sigma2 <- rss / df
+  if (!is.finite(tss) || tss <= 0 || !is.finite(sigma2) || sigma2 <= 0) return(NULL)
+
+  # diag((X'X)^-1) = rowSums(R^-1 ^ 2) for X = Q R
+  Rinv <- backsolve(qr.R(decomp), diag(p))
+  se <- sqrt(rowSums(Rinv^2) * sigma2)
+  names(coef) <- names(se) <- colnames(X)
+  list(coef = coef, se = se, rss = rss, df = df, tss = tss)
+}
+
+# Coefficients and standard errors for one regression. Falls back to lm() with
+# the same data layout (and NA handling) the reference code used.
+#' @keywords internal
+#' @noRd
+.rep_path_fit <- function(y, P, cache = NULL) {
+  X <- .rep_X(P)
+  fit <- .rep_ols_fit(y, X, .rep_cached_decomp(X, cache))
+  if (!is.null(fit)) {
+    return(list(coef = fit$coef, se = fit$se))
+  }
+  dat <- data.frame(.y = as.numeric(y), P, check.names = FALSE)
+  fit_lm <- try(stats::lm(.y ~ ., data = dat), silent = TRUE)
+  if (inherits(fit_lm, "try-error")) return(NULL)
+  cf <- suppressWarnings(stats::coef(summary(fit_lm)))
+  list(coef = cf[, "Estimate"], se = cf[, "Std. Error"])
+}
+
+# Seed and confound predictors over the lower triangle of the common items.
+#' @keywords internal
+#' @noRd
+.repnet_predictors <- function(seed_sub, confound_rdms, common_items) {
+  mm <- list(seed = as.numeric(seed_sub[lower.tri(seed_sub)]))
+  for (nm in names(confound_rdms)) {
+    M <- confound_rdms[[nm]]
+    # Require labeled RDMs that include all common_items to avoid silent misalignment
+    if (is.null(rownames(M)) || is.null(colnames(M)) ||
+        !all(common_items %in% rownames(M)) || !all(common_items %in% colnames(M))) {
+      return(list(error = sprintf("repnet_model: confound RDM '%s' lacks required item labels for current ROI.", nm)))
+    }
+    M_sub <- M[common_items, common_items, drop = FALSE]
+    mm[[nm]] <- as.numeric(M_sub[lower.tri(M_sub)])
+  }
+  list(mm = mm)
+}
+
+# R^2 of the seed RDM vector regressed on the confound RDM vectors (with an
+# intercept), over pairs where every predictor is finite. It measures how much
+# of the seed is shared with the confounds, i.e. how far beta_seed / sp_seed
+# reflect only the seed's unique part. NA without confounds or when the seed
+# is constant.
+#' @keywords internal
+#' @noRd
+.repnet_seed_conf_r2 <- function(mm) {
+  mm <- as.data.frame(mm, stringsAsFactors = FALSE)
+  if (ncol(mm) < 2L) return(NA_real_)
+  M <- as.matrix(mm)
+  ok <- rowSums(!is.finite(M)) == 0L
+  y <- M[ok, 1L]
+  if (length(y) < 2L) return(NA_real_)
+  tss <- sum((y - mean(y))^2)
+  if (!is.finite(tss) || tss <= 0) return(NA_real_)
+  X <- cbind(1, M[ok, -1L, drop = FALSE])
+  rss <- sum(stats::lm.fit(X, y)$residuals^2)
+  max(0, min(1, 1 - rss / tss))
+}
+
+# Fixed seed + confound design, built at construction. NULL when it cannot be
+# built (fit_roi() then reports the problem as before).
+#' @keywords internal
+#' @noRd
+.repnet_fixed_design <- function(key, seed_rdm, confound_rdms) {
+  tryCatch({
+    if (is.null(key) || is.null(seed_rdm)) return(NULL)
+    items_key <- rownames(group_means(matrix(0, nrow = length(key), ncol = 1L),
+                                      margin = 1, group = key))
+    common_items <- sort(intersect(items_key, rownames(seed_rdm)))
+    if (length(common_items) < 3L) return(NULL)
+    seed_sub <- seed_rdm[common_items, common_items, drop = FALSE]
+    pred <- .repnet_predictors(seed_sub, confound_rdms, common_items)
+    if (!is.null(pred$error)) return(NULL)
+    X <- .rep_X(as.matrix(as.data.frame(pred$mm, stringsAsFactors = FALSE)))
+    list(X = X, decomp = if (all(is.finite(X))) qr(X) else NULL,
+         seed_conf_r2 = .repnet_seed_conf_r2(pred$mm))
+  }, error = function(e) NULL)
 }
 
 
@@ -152,61 +286,45 @@ fit_roi.repnet_model <- function(model, roi_data, context, ...) {
   conn_na <- is.na(conn_raw)
 
   # Build regression predictors (seed + confounds)
-  mm <- list(seed = d_seed)
-  if (!is.null(model$confound_rdms) && length(model$confound_rdms) > 0L) {
-    for (nm in names(model$confound_rdms)) {
-      M <- model$confound_rdms[[nm]]
-      # Require labeled RDMs that include all common_items to avoid silent misalignment
-      if (is.null(rownames(M)) || is.null(colnames(M)) ||
-          !all(common_items %in% rownames(M)) || !all(common_items %in% colnames(M))) {
-        msg <- sprintf("repnet_model: confound RDM '%s' lacks required item labels for current ROI.", nm)
-        return(roi_result(
-          metrics       = NULL,
-          indices       = ind,
-          id            = context$id,
-          error         = TRUE,
-          error_message = msg
-        ))
-      }
-      M_sub <- M[common_items, common_items, drop = FALSE]
-      mm[[nm]] <- as.numeric(M_sub[lower.tri(M_sub)])
-    }
+  pred <- .repnet_predictors(seed_sub, model$confound_rdms, common_items)
+  if (!is.null(pred$error)) {
+    return(roi_result(
+      metrics       = NULL,
+      indices       = ind,
+      id            = context$id,
+      error         = TRUE,
+      error_message = pred$error
+    ))
   }
+  mm <- pred$mm
 
   beta_vec <- numeric(0)
   sp_vec   <- numeric(0)
 
-  # Multiple regression + semipartials (if available)
+  # Multiple regression on the seed + confound design. beta_<term> are the
+  # regression coefficients; sp_<term> the semipartial correlations
+  # t * sqrt(RSS / (TSS * df)). Both come from one QR of the fixed design.
   df <- as.data.frame(mm, stringsAsFactors = FALSE)
-  fit <- try(stats::lm(d_roi ~ ., data = df), silent = TRUE)
-  if (!inherits(fit, "try-error")) {
-    cf <- stats::coef(summary(fit))
-    if (nrow(cf) > 1L) {
-      keep <- rownames(cf) != "(Intercept)"
-      beta <- cf[keep, "Estimate"]
-      names(beta) <- rownames(cf)[keep]
-
-      # If confounds are present, compute a partial (residual-residual) effect for seed
-      if ("seed" %in% names(mm) && length(mm) > 1L) {
-        conf_df <- as.data.frame(mm[names(mm) != "seed"], stringsAsFactors = FALSE)
-        resid_seed <- try(stats::lm(mm$seed ~ ., data = conf_df)$residuals, silent = TRUE)
-        if (!inherits(resid_seed, "try-error")) {
-          pc <- suppressWarnings(stats::cor(resid_seed, d_roi,
-                                            method = model$simfun,
-                                            use = "complete.obs"))
-          if (is.finite(pc)) {
-            beta["seed"] <- pc
-          }
-        }
+  X_fix <- .rep_X(as.matrix(df))
+  fit <- .rep_ols_fit(d_roi, X_fix, .rep_cached_decomp(X_fix, model$.fixed_design))
+  if (!is.null(fit)) {
+    term <- names(fit$coef) != "(Intercept)"
+    beta_vec <- fit$coef[term]
+    sp_vec <- (fit$coef[term] / fit$se[term]) * sqrt(fit$rss / (fit$tss * fit$df))
+    names(sp_vec) <- paste0("sp_", names(beta_vec))
+  } else {
+    # Reference path (non-finite rows, rank deficiency): lm() drops incomplete rows
+    fit_lm <- try(stats::lm(d_roi ~ ., data = df), silent = TRUE)
+    if (!inherits(fit_lm, "try-error")) {
+      cf <- stats::coef(summary(fit_lm))
+      if (nrow(cf) > 1L) {
+        keep <- rownames(cf) != "(Intercept)"
+        beta_vec <- cf[keep, "Estimate"]
+        names(beta_vec) <- rownames(cf)[keep]
       }
-
-      beta_vec <- beta
-    }
-
-    # Semi-partial correlations via run_lm_semipartial (if available)
-    if (exists("run_lm_semipartial", mode = "function")) {
-      tmp_obj <- list(design = list(model_mat = as.data.frame(mm, stringsAsFactors = FALSE)))
-      sp <- try(run_lm_semipartial(dvec = d_roi, obj = tmp_obj), silent = TRUE)
+      sp <- try(run_lm_semipartial(dvec = d_roi,
+                                   obj = list(design = list(model_mat = df))),
+                silent = TRUE)
       if (!inherits(sp, "try-error") && is.numeric(sp)) {
         names(sp) <- paste0("sp_", names(sp))
         sp_vec <- sp
@@ -225,6 +343,15 @@ fit_roi.repnet_model <- function(model, roi_data, context, ...) {
   }
   if (length(sp_vec)) {
     perf <- c(perf, sp_vec)
+  }
+  if (length(model$confound_rdms)) {
+    cache <- model$.fixed_design
+    seed_conf_r2 <- if (!is.null(cache) && identical(cache$X, X_fix)) {
+      cache$seed_conf_r2
+    } else {
+      .repnet_seed_conf_r2(mm)
+    }
+    perf <- c(perf, seed_conf_r2 = seed_conf_r2)
   }
 
   roi_result(

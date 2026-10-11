@@ -76,7 +76,9 @@ vector_rsa_model_mat <- function(design) {
 #' @param distfun A \code{distfun} (distance function) for computing pairwise dissimilarities among image rows.
 #' @param rsa_simfun A character string specifying the similarity function to use for RSA, 
 #'                   one of \code{"pearson"} or \code{"spearman"}.
-#' @param nperm Integer, number of permutations for statistical testing (default: 0).
+#' @param nperm Integer, number of permutations for statistical testing
+#'   (default: 0). Trials are permuted within blocks of the design's
+#'   \code{block_var}, since scores only compare trials across blocks.
 #' @param save_distributions Logical, whether to save full permutation distributions (default: FALSE).
 #' @param return_predictions Logical, whether to return per-observation similarity scores (default: FALSE).
 #'
@@ -167,10 +169,26 @@ compute_trial_scores <- function(obj, X) {
     return(rep(NA_real_, nrow(X)))
   }
 
-  # Retrieve relevant design expansions
-  precomputed <- obj$design$model_mat
-  dissimilarity_matrix <- precomputed$Dexpanded
-  #cross_block_data     <- precomputed$cross_block_data
+  .vector_rsa_check_inputs(obj, X)
+  dissimilarity_matrix <- obj$design$model_mat$Dexpanded
+
+  # This function computes second-order similarity:
+  #   second_order_similarity(distfun, X, D, block_var, rsa_simfun)
+  # 'distfun' can compute distances on X, 'D' is the reference matrix
+  # 'block_var' is in obj$design$block, and 'rsa_simfun' is the correlation method.
+  second_order_similarity(
+    distfun   = obj$distfun,
+    X         = X,
+    Dref      = dissimilarity_matrix,
+    block_var = obj$design$block,
+    method    = obj$rsa_simfun
+  )
+}
+
+# Dimension checks shared by compute_trial_scores() and the permutation loop.
+#' @noRd
+.vector_rsa_check_inputs <- function(obj, X) {
+  dissimilarity_matrix <- obj$design$model_mat$Dexpanded
 
   # Basic dimensionality checks
   if (nrow(X) != nrow(dissimilarity_matrix)) {
@@ -185,18 +203,7 @@ compute_trial_scores <- function(obj, X) {
       ") must match nrow(X) (", nrow(X), ")"
     )
   }
-  
-  # This function computes second-order similarity:
-  #   second_order_similarity(distfun, X, D, block_var, rsa_simfun)
-  # 'distfun' can compute distances on X, 'D' is the reference matrix
-  # 'block_var' is in obj$design$block, and 'rsa_simfun' is the correlation method.
-  second_order_similarity(
-    distfun   = obj$distfun,
-    X         = X,
-    Dref      = dissimilarity_matrix,
-    block_var = obj$design$block,
-    method    = obj$rsa_simfun
-  )
+  invisible(TRUE)
 }
 
 
@@ -240,11 +247,20 @@ second_order_similarity <- function(distfun, X, Dref, block_var, method=c("pears
   
   # 1) Compute a full NxN distance matrix from X
   distance_matrix <- pairwise_dist(distfun, X)
-  
-  n <- nrow(X)
-  scores <- numeric(n)
-  
+
   # 2) For each row i, exclude same-block comparisons
+  .second_order_scores_from_distance(distance_matrix, Dref, block_var, method)
+}
+
+# Second-order scores given an already computed NxN distance matrix. Split out
+# so permutation nulls can reuse one distance matrix: permuting the rows of X
+# permutes the rows and columns of its distance matrix.
+#' @noRd
+.second_order_scores_from_distance <- function(distance_matrix, Dref, block_var, method) {
+  method <- match.arg(method, c("pearson", "spearman"))
+  n <- nrow(distance_matrix)
+  scores <- numeric(n)
+
   for (i in seq_len(n)) {
     valid_indices <- which(block_var != block_var[i])
     if (length(valid_indices) > 0) {
@@ -259,7 +275,7 @@ second_order_similarity <- function(distfun, X, Dref, block_var, method=c("pears
       scores[i] <- NA
     }
   }
-  
+
   scores
 }
 
@@ -387,6 +403,23 @@ print.vector_rsa_design <- function(x, ...) {
   cat("\n", border, "\n")
 }
 
+# Row permutation for the vector RSA null. Rows are shuffled within their
+# block, so every row keeps its block and the across-block comparison structure
+# of the scores is preserved. Without usable block structure (no block
+# variable, or every block a single row) rows are shuffled freely.
+#' @keywords internal
+#' @noRd
+.vector_rsa_block_perm <- function(block, n) {
+  if (is.null(block) || length(block) != n || !anyDuplicated(block)) {
+    return(sample.int(n))
+  }
+  perm <- seq_len(n)
+  for (g in split(seq_len(n), block, drop = TRUE)) {
+    if (length(g) > 1L) perm[g] <- g[sample.int(length(g))]
+  }
+  perm
+}
+
 #' Evaluate model performance for vector RSA
 #'
 #' Computes the mean second-order similarity score and handles permutation testing.
@@ -439,21 +472,36 @@ evaluate_model.vector_rsa_model <- function(object,
     X_roi_matrix <- roi_data_for_perm # This is now the ROI's data matrix
 
     perm_means <- numeric(nperm)
+
+    # The distance matrix is computed once. Permuting the rows of X permutes
+    # the rows and columns of its distance matrix, so each permutation
+    # reindexes D instead of recomputing pairwise distances.
+    D_roi <- NULL
+    if (nrow(X_roi_matrix) >= 2) {
+      .vector_rsa_check_inputs(object, X_roi_matrix)
+      D_roi <- pairwise_dist(object$distfun, X_roi_matrix)
+    }
+
     # Permutation loop
     for (p in seq_len(nperm)) {
       if (nrow(X_roi_matrix) < 2) { # Safety for very small ROIs
          # This case should ideally lead to NA/NaN for the perm_mean if it makes sense statistically
          # or be caught earlier if an ROI is too small for any meaningful analysis.
          # For now, setting to NaN to indicate impossibility.
-         perm_means[p] <- NaN 
+         perm_means[p] <- NaN
          next
       }
-      # Permute the rows of the ROI's data matrix
-      perm_indices <- sample(nrow(X_roi_matrix))
-      X_perm_matrix <- X_roi_matrix[perm_indices, , drop = FALSE]
-      
-      # Recompute trial scores under the null
-      scores_perm <- compute_trial_scores(object, X_perm_matrix) # 'object' has design, Dref, block_var
+      # Permute rows within blocks: scores only compare rows across blocks,
+      # so exchangeability holds within a block, not across blocks.
+      perm_indices <- .vector_rsa_block_perm(object$design$block, nrow(X_roi_matrix))
+
+      # Recompute trial scores under the null from the reindexed distances
+      scores_perm <- .second_order_scores_from_distance(
+        D_roi[perm_indices, perm_indices, drop = FALSE],
+        Dref = object$design$model_mat$Dexpanded,
+        block_var = object$design$block,
+        method = object$rsa_simfun
+      )
       
       # Store the mean RSA score for this permutation
       perm_means[p] <- mean(scores_perm, na.rm = TRUE)

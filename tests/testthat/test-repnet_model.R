@@ -266,10 +266,17 @@ test_that("repnet_model: confound block RDM is factored out (A2)", {
   conn_raw_w1 <- unname(perf_w1_raw["conn_raw"])
   beta_seed_w1_raw <- unname(perf_w1_raw["beta_seed"])
   beta_seed_w1_adj <- unname(perf_w1_adj["beta_seed"])
+  sp_seed_w1_adj <- unname(perf_w1_adj["sp_seed"])
 
   expect_gt(conn_raw_w1, 0.5)
   expect_gt(beta_seed_w1_raw, 0.1)
-  expect_lt(abs(beta_seed_w1_adj), 0.3)
+  # beta_seed is the regression coefficient on the seed's own scale. Here the
+  # seed is almost a function of the block, so its residual after the block is
+  # tiny and that coefficient is ill-conditioned (about -10.8 for some draws).
+  # The unique-contribution bound belongs to the semipartial correlation, which
+  # is what the former residual-correlation beta_seed measured.
+  expect_lt(abs(sp_seed_w1_adj), 0.3)
+  expect_true(is.finite(beta_seed_w1_adj))
 
   ## World 2: seed independent of block (permute items before building RDM)
   perm_items <- sample(items)

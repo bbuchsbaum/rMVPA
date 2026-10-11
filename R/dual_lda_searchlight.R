@@ -21,20 +21,10 @@
 
 #' @keywords internal
 #' @noRd
-.dual_lda_rank_update_preference <- function() {
-  NULL
-}
-
-#' @keywords internal
-#' @noRd
+# Rank updates are chosen per run by .dual_lda_rank_update_benchmark(); a
+# direct caller that does not benchmark gets the plain update.
 .dual_lda_use_rank_update <- function() {
-  isTRUE(.dual_lda_rank_update_preference())
-}
-
-#' @keywords internal
-#' @noRd
-.dual_lda_rank_chunk_size <- function() {
-  4L
+  FALSE
 }
 
 #' @keywords internal
@@ -130,11 +120,6 @@
 .dual_lda_rank_update_benchmark <- function(state, fold, out_cols, in_cols,
                                             radius = NA_real_, chunk_size = 1L,
                                             trials = 8L, verbose = FALSE) {
-  pref <- .dual_lda_rank_update_preference()
-  if (!is.null(pref)) {
-    return(isTRUE(pref))
-  }
-
   boundary_size <- length(out_cols) + length(in_cols)
   if (boundary_size == 0L) {
     return(FALSE)
@@ -1243,39 +1228,34 @@ run_searchlight_dual_lda_fast <- function(model_spec, radius, incremental = TRUE
     .init_dual_lda_state(fold, ord_coords[1, ], offsets, dims, mask_active, col_lookup)
   })
 
-  rank_chunk <- if (is.null(scan_chunk)) .dual_lda_rank_chunk_size() else as.integer(scan_chunk)[1]
+  rank_chunk <- if (is.null(scan_chunk)) 4L else as.integer(scan_chunk)[1]
   if (!is.finite(rank_chunk) || rank_chunk < 1L) {
     rank_chunk <- 1L
   }
   has_chunk_native <- .dual_lda_native_symbol_loaded("rmvpa_dual_lda_chunk_update_predict")
 
-  rank_pref <- .dual_lda_rank_update_preference()
-  if (!is.null(rank_pref)) {
-    use_rank_update <- isTRUE(rank_pref)
-  } else {
-    probe_step <- .dual_lda_first_step_cols(
-      ord_coords = ord_coords,
-      ord_ids = ord_ids,
-      boundary_tables = boundary_tables,
-      dims = dims,
-      mask_active = mask_active,
-      col_lookup = col_lookup
-    )
+  probe_step <- .dual_lda_first_step_cols(
+    ord_coords = ord_coords,
+    ord_ids = ord_ids,
+    boundary_tables = boundary_tables,
+    dims = dims,
+    mask_active = mask_active,
+    col_lookup = col_lookup
+  )
 
-    if (is.null(probe_step)) {
-      use_rank_update <- FALSE
-    } else {
-      use_rank_update <- .dual_lda_rank_update_benchmark(
-        state = states[[1]],
-        fold = fold_list[[1]],
-        out_cols = probe_step$out_cols,
-        in_cols = probe_step$in_cols,
-        radius = radius,
-        chunk_size = rank_chunk,
-        trials = 8L,
-        verbose = verbose
-      )
-    }
+  if (is.null(probe_step)) {
+    use_rank_update <- FALSE
+  } else {
+    use_rank_update <- .dual_lda_rank_update_benchmark(
+      state = states[[1]],
+      fold = fold_list[[1]],
+      out_cols = probe_step$out_cols,
+      in_cols = probe_step$in_cols,
+      radius = radius,
+      chunk_size = rank_chunk,
+      trials = 8L,
+      verbose = verbose
+    )
   }
 
   use_rank_chunk <- isTRUE(incremental) &&
@@ -1525,14 +1505,6 @@ run_searchlight_dual_lda_fast <- function(model_spec, radius, incremental = TRUE
 
 #' @keywords internal
 #' @noRd
-.dual_lda_extract_roi_indices <- .engine_extract_roi_indices
-
-#' @keywords internal
-#' @noRd
-.dual_lda_extract_roi_ids <- .engine_extract_roi_ids
-
-#' @keywords internal
-#' @noRd
 .init_dual_lda_state_cols <- function(fold, cols) {
   n <- nrow(fold$R)
   k <- ncol(fold$M)
@@ -1701,8 +1673,8 @@ run_searchlight_dual_lda_sampled_fast <- function(model_spec,
       next
     }
 
-    roi_indices <- .dual_lda_extract_roi_indices(slight)
-    roi_ids <- .dual_lda_extract_roi_ids(slight)
+    roi_indices <- .engine_extract_roi_indices(slight)
+    roi_ids <- .engine_extract_roi_ids(slight)
     roi_cols <- lapply(roi_indices, function(ids) {
       cols <- col_lookup[ids]
       unique(cols[cols > 0L])

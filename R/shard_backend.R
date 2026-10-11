@@ -364,11 +364,12 @@ shard_prepare_dataset.default <- function(dataset, ...) {
 #' @noRd
 shard_extract_roi <- function(vox, shard_data,
                                center_global_id = NULL,
-                               min_voxels = 2, filter_features = TRUE) {
+                               min_voxels = 2, filter_features = TRUE,
+                               test_na = "drop") {
   switch(shard_data$roi_type,
-    volumetric = shard_extract_roi_volumetric(vox, shard_data, center_global_id, min_voxels, filter_features),
-    surface    = shard_extract_roi_surface(vox, shard_data, center_global_id, min_voxels, filter_features),
-    clustered  = shard_extract_roi_clustered(vox, shard_data, center_global_id, min_voxels, filter_features),
+    volumetric = shard_extract_roi_volumetric(vox, shard_data, center_global_id, min_voxels, filter_features, test_na),
+    surface    = shard_extract_roi_surface(vox, shard_data, center_global_id, min_voxels, filter_features, test_na),
+    clustered  = shard_extract_roi_clustered(vox, shard_data, center_global_id, min_voxels, filter_features, test_na),
     stop("shard_extract_roi: unknown roi_type '", shard_data$roi_type, "'")
   )
 }
@@ -389,7 +390,8 @@ sanitize_shard_indices <- function(vox, max_idx) {
 #' @noRd
 shard_extract_roi_volumetric <- function(vox, shard_data,
                                           center_global_id = NULL,
-                                          min_voxels = 2, filter_features = TRUE) {
+                                          min_voxels = 2, filter_features = TRUE,
+                                         test_na = "drop") {
   vox <- sanitize_shard_indices(vox, length(shard_data$idx_to_col))
   had_invalid <- isTRUE(attr(vox, "had_invalid"))
   if (length(vox) < 1L) return(NULL)
@@ -430,7 +432,8 @@ shard_extract_roi_volumetric <- function(vox, shard_data,
   roi <- list(train_roi = train_roi, test_roi = test_roi)
   if (!isTRUE(filter_features)) return(roi)
   roi <- try(filter_roi(roi, preserve = center_global_id,
-                         min_voxels = min_voxels), silent = TRUE)
+                         min_voxels = min_voxels, test_na = test_na),
+             silent = TRUE)
   if (inherits(roi, "try-error")) return(NULL)
   roi
 }
@@ -440,7 +443,8 @@ shard_extract_roi_volumetric <- function(vox, shard_data,
 #' @noRd
 shard_extract_roi_surface <- function(vox, shard_data,
                                        center_global_id = NULL,
-                                       min_voxels = 2, filter_features = TRUE) {
+                                       min_voxels = 2, filter_features = TRUE,
+                                         test_na = "drop") {
   vox <- sanitize_shard_indices(vox, length(shard_data$idx_to_col))
   had_invalid <- isTRUE(attr(vox, "had_invalid"))
   if (length(vox) < 1L) return(NULL)
@@ -479,7 +483,8 @@ shard_extract_roi_surface <- function(vox, shard_data,
   roi <- list(train_roi = train_roi, test_roi = test_roi)
   if (!isTRUE(filter_features)) return(roi)
   roi <- try(filter_roi(roi, preserve = center_global_id,
-                         min_voxels = min_voxels), silent = TRUE)
+                         min_voxels = min_voxels, test_na = test_na),
+             silent = TRUE)
   if (inherits(roi, "try-error")) return(NULL)
   roi
 }
@@ -489,7 +494,8 @@ shard_extract_roi_surface <- function(vox, shard_data,
 #' @noRd
 shard_extract_roi_clustered <- function(vox, shard_data,
                                          center_global_id = NULL,
-                                         min_voxels = 2, filter_features = TRUE) {
+                                         min_voxels = 2, filter_features = TRUE,
+                                         test_na = "drop") {
   vox <- sanitize_shard_indices(vox, length(shard_data$idx_to_col))
   had_invalid <- isTRUE(attr(vox, "had_invalid"))
   if (length(vox) < 1L) return(NULL)
@@ -529,7 +535,8 @@ shard_extract_roi_clustered <- function(vox, shard_data,
   roi <- list(train_roi = train_roi, test_roi = test_roi)
   if (!isTRUE(filter_features)) return(roi)
   roi <- try(filter_roi(roi, preserve = center_global_id,
-                         min_voxels = min_voxels), silent = TRUE)
+                         min_voxels = min_voxels, test_na = test_na),
+             silent = TRUE)
   if (inherits(roi, "try-error")) return(NULL)
   roi
 }
@@ -559,16 +566,17 @@ shard_extract_roi_clustered <- function(vox, shard_data,
     roi <- shard_extract_roi(vox, shard_data,
                               center_global_id = center_global_id,
                               min_voxels = min_voxels,
-                              filter_features = !isTRUE(obj$.preserve_roi_features))
+                              filter_features = !isTRUE(obj$.preserve_roi_features),
+                              test_na = .model_test_na_policy(obj))
 
     if (is.null(roi)) {
-      msg <- sprintf("ROI %s failed validation (shard extract)", rnum)
-      if (fail_fast) rlang::abort(msg)
-      return(roi_result_to_tibble(roi_result(
-        metrics = NULL, indices = integer(), id = rnum,
-        error = TRUE, error_message = msg,
-        warning = TRUE, warning_message = msg
-      )))
+      if (fail_fast) {
+        rlang::abort(sprintf("ROI %s failed validation: <2 voxels or invalid after filtering.", rnum))
+      }
+      # Same message as the default backend; the id is a column of the row.
+      return(.roi_error_rows(
+        rnum, "ROI failed validation (e.g., <2 voxels after filtering or other extract_roi issue)"
+      ))
     }
 
     center_id <- if (analysis_type == "searchlight") rnum else NA
@@ -589,22 +597,7 @@ shard_extract_roi_clustered <- function(vox, shard_data,
       result$result <- list(NULL)
     }
 
-    if (drop_probs) {
-      res_list <- result$result
-      prob_vals <- vector("list", length(res_list))
-      for (j in seq_along(res_list)) {
-        res_j <- res_list[[j]]
-        if (is.null(res_j) || is.null(res_j$probs)) {
-          prob_vals[[j]] <- NULL
-          next
-        }
-        prob_vals[[j]] <- tryCatch(prob_observed(res_j), error = function(e) NULL)
-        res_j$probs <- NULL
-        res_list[[j]] <- res_j
-      }
-      result$prob_observed <- prob_vals
-      result$result <- res_list
-    }
+    if (drop_probs) result <- .drop_roi_probs(result)
 
     result
   }, error = function(e) {
@@ -614,22 +607,9 @@ shard_extract_roi_clustered <- function(vox, shard_data,
         parent = e
       )
     }
-    tb <- tryCatch({
-      raw <- paste(utils::capture.output(rlang::trace_back()), collapse = "\n")
-      if (nchar(raw) > 500L) {
-        paste0(substr(raw, 1L, 500L), "\n... [truncated]")
-      } else {
-        raw
-      }
-    }, error = function(...) NA_character_)
     futile.logger::flog.warn("ROI %d: Processing error (%s)", rnum, e$message)
-    err_msg <- paste0("Error processing ROI: ", e$message,
-                      if (!is.na(tb)) paste0("\ntrace:\n", tb) else "")
-    roi_result_to_tibble(roi_result(
-      metrics = NULL, indices = integer(), id = rnum,
-      error = TRUE, error_message = err_msg,
-      warning = TRUE, warning_message = paste("Error processing ROI:", e$message)
-    ))
+    .roi_error_rows(rnum, paste("Error processing ROI:", e$message),
+                    error_trace = .roi_error_trace())
   })
 }
 

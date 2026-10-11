@@ -84,8 +84,10 @@ cv_run_global <- function(mspec, X, y, crossval, feature_ids,
                           return_fits = FALSE, extract_weights_fn = TRUE,
                           compute_importance = FALSE, summary_fun = NULL) {
   P <- ncol(X)
-  X_df <- as.data.frame(X)
-  cv_samples <- crossval_samples(crossval, X_df, y)
+  # Folds only need the observation count and row indices, so build them from
+  # a one-column index frame rather than copying the full T x P matrix.
+  index_frame <- tibble::tibble(.row = seq_len(nrow(X)))
+  cv_samples <- crossval_samples(crossval, index_frame, y)
   nfolds <- nrow(cv_samples)
 
   fold_fits       <- vector("list", nfolds)

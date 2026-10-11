@@ -768,9 +768,15 @@ prep_regional <- function(model_spec, region_mask) {
   # are included.  Voxels that are in a region but outside the data mask
   # (e.g. no valid fMRI signal) are silently dropped here.
   mask_vec <- as.vector(model_spec$dataset$mask)
-  roi_lens  <- sapply(region_set, function(rnum) sum(region_vec == rnum))
-  vox_iter  <- lapply(region_set, function(rnum) which(region_vec == rnum & mask_vec > 0))
-  lens      <- sapply(vox_iter, length)
+  # One pass over the volume: map each voxel to its region's position in
+  # region_set (NA when it is not a region), then group by position. Equivalent
+  # to scanning the volume once per region with `region_vec == rnum`.
+  region_pos <- match(region_vec, region_set)
+  roi_lens   <- tabulate(region_pos[!is.na(region_pos)], nbins = length(region_set))
+  in_both    <- which(!is.na(region_pos) & mask_vec > 0)
+  vox_iter   <- unname(split(in_both,
+                             factor(region_pos[in_both], levels = seq_along(region_set))))
+  lens       <- lengths(vox_iter)
 
   # Report voxels lost to data-mask exclusion
   lost <- roi_lens - lens

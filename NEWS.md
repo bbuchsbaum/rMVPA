@@ -37,6 +37,55 @@
   named by the class levels) from `MGSDA::classifyV()`, since MGSDA gives
   hard class codes only. `MGSDA` is declared in Suggests and checked when the
   model is fitted.
+* ROI feature filtering now drops any feature with a missing value in the
+  test data. Previously only infinite test values were dropped, so an NA in an
+  external test set reached `predict()` and could fail the ROI or produce NA
+  predictions. `era_rsa_model()` declares `handles_missing_test = TRUE` and
+  keeps such features for its pairwise-complete similarity fallback.
+  A searchlight centre voxel is now preserved only when its sole defect is
+  zero variance: a centre with any missing training value, or a test value the
+  policy rejects, is dropped like any other voxel (previously a partly-NA
+  centre was kept). Surface ROIs follow the same rules, and the dedicated ERA
+  engine now drops infinite retrieval values as the general path does.
+  **Results change** for searchlights whose centres have missing values and
+  for analyses with NA in an external test set.
+* `vector_rsa_model()` permutation tests now shuffle trials within blocks.
+  Trial scores only compare trials across blocks, so trials are exchangeable
+  within a block but not across blocks; the previous unrestricted shuffle
+  mixed run-level structure into the null. **p-values and z-scores change.**
+  Designs without repeated block labels are still shuffled freely.
+* Failed ROIs are reported with one row layout everywhere: result, indices,
+  performance, id, error, error_message, error_trace, warning,
+  warning_message. The default and shard backends, internal and external
+  cross-validation, size-dropped ROIs, failed searchlight iterations and the
+  fast engines' `bad_results` all build rows with one constructor. The shard
+  backend no longer appends the traceback to `error_message` (it is in
+  `error_trace`, as in the default backend) or puts the ROI id in its
+  validation message, so identical failures group in the error summary.
+* Fixed: when an ROI in a batch failed extraction (for example voxels outside
+  the data grid), the default backend deleted its slot in the batch, so the
+  whole batch failed with "Tibble columns must have compatible sizes", or, when
+  one valid ROI remained, the failed ROI was analysed with that ROI's data and
+  reported as a success.
+* Fixed: `drop_probs = TRUE` turned every ROI without class probabilities
+  (regression models, or `return_predictions = FALSE`) into an error row, and
+  could misalign `prob_observed` with its ROI. `model_space_connectivity()`
+  keeps a failed anchor map in its own slot instead of shifting later maps.
+* RSA regression speed-ups, with one output correction. Semi-partial
+  correlations (`semipartial = TRUE`) now come from the cached lm kernel
+  instead of an lm() refit per ROI, and `repnet_model` and `repmed_model`
+  fit their fixed seed/confound (and repmed path c) designs from a cached QR
+  decomposition; `table_to_rdm()` fills the matrix by vectorised lookup rather
+  than an O(n^4) loop. Results match the previous lm() paths to 1e-12 (semi-partial)
+  and 1e-10 (repnet, repmed). Correction: with confound RDMs, `repnet_model`
+  reported `beta_seed` as the semi-partial correlation, which duplicated
+  `sp_seed` and was on a different scale from the other `beta_*` terms. It now
+  reports the seed's regression coefficient, like every other `beta_*` term.
+  Repnet ROIs with incomplete confound entries no longer fail on mismatched
+  residual lengths.
+  With confound RDMs, `repnet_model` also reports `seed_conf_r2`, the
+  R-squared of the seed RDM on the confound RDMs, so the share of the seed that
+  `beta_seed` and `sp_seed` cannot speak to is visible per ROI.
 
 * Parallel searchlights under the default (non-shard) backend no longer run
   slower than sequential ones. Three causes, all in `run_future()` dispatch:

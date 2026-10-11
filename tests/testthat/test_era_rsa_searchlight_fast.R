@@ -277,3 +277,37 @@ test_that("parallel shard execution is numerically identical", {
 
   .expect_searchlight_maps_equal(parallel, reference)
 })
+
+test_that("dedicated engine applies filter_roi's centre and infinite-retrieval rules", {
+  fx <- .make_era_fast_fixture(K = 9L, dims = c(3L, 3L, 3L), seed = 523L,
+                               training_na = TRUE)
+  ret <- neuroim2::as.array(fx$dataset$test_data)
+  ret[2L, 2L, 2L, 4L] <- Inf
+  fx$dataset$test_data <- neuroim2::NeuroVec(ret,
+                                             neuroim2::space(fx$dataset$test_data))
+  model <- .make_era_fast_model(fx, simfun = "pearson")
+
+  legacy <- run_searchlight(
+    model, radius = 1, method = "standard",
+    engine = "legacy", backend = "default", preflight = "off"
+  )
+  fast <- run_searchlight(
+    model, radius = 1, method = "standard",
+    engine = "era_rsa_fast", backend = "default", preflight = "off"
+  )
+  .expect_searchlight_maps_equal(fast, legacy)
+
+  # Feature 2 is partly NA in training: it is never preserved as a centre.
+  feature_ids <- seq_len(27L)
+  Xtr <- matrix(rnorm(9L * 27L), 9L)
+  Xtr[3L, 2L] <- NA_real_
+  Xtr[, 5L] <- 1
+  expect_false(rMVPA:::.era_fast_filter_features(Xtr, feature_ids, 2L)[2L])
+  expect_true(rMVPA:::.era_fast_filter_features(Xtr, feature_ids, 5L)[5L])
+  Xte <- matrix(rnorm(9L * 27L), 9L)
+  Xte[1L, 5L] <- -Inf
+  Xte[1L, 7L] <- NA_real_
+  keep <- rMVPA:::.era_fast_filter_features(Xtr, feature_ids, 5L, Xte = Xte)
+  expect_false(keep[5L])
+  expect_true(keep[7L])
+})

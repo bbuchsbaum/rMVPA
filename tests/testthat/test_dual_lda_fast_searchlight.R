@@ -81,7 +81,8 @@ test_that("dual_lda rank-update preference is deterministic", {
 
   options(rMVPA.dual_lda_rank_update = TRUE)
   Sys.setenv(RMVPA_DUAL_LDA_RANK_UPDATE = "true")
-  expect_null(rMVPA:::.dual_lda_rank_update_preference())
+  # The options and variable have no effect: the default is the plain update.
+  expect_false(rMVPA:::.dual_lda_use_rank_update())
 })
 
 test_that("dual_lda rank-update heuristic cache keys by shape/radius/boundary size", {

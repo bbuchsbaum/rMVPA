@@ -437,6 +437,9 @@ era_rsa_model <- function(dataset,
     "era_rsa_model",
     dataset  = dataset,
     design   = design,
+    # Retrieval NA is handled by fit_roi's pairwise-complete similarity, so
+    # filter_roi() keeps features with missing test values for this model.
+    handles_missing_test = TRUE,
     # store parsed vectors to maintain levels/order
     key      = key_fac,
     key_levels = key_levels,
@@ -462,6 +465,14 @@ era_rsa_model <- function(dataset,
     rsa_simfun     = rsa_simfun,
     confound_rdms  = confound_rdms,
     partial_against = partial_against,
+    era_geometry_cache = .era_geometry_cache(
+      confound_rdms = confound_rdms,
+      item_run_enc = item_run_enc,
+      item_run_ret = item_run_ret,
+      partial_against = partial_against,
+      keys = pairing_info$common_keys,
+      key_levels = key_levels
+    ),
     include_diag   = include_diag,
     item_block     = item_block,
     item_lag       = item_lag,
@@ -684,29 +695,42 @@ fit_roi.era_rsa_model <- function(model, roi_data, context, ...) {
   }
 
   # Optional geometry regression with confounds
+  # Confound regressions use the fixed confound design cached on the model
+  # (see .era_geometry_cache()). Any case the cache cannot reproduce exactly
+  # (non-finite pairs, rank deficiency, non-syntactic names, cache mismatch)
+  # falls through to the original lm() path below.
+  geom_cache <- if (need_geometry) .era_geometry_cache_for(model, common_keys) else NULL
+
   beta_vec <- c(); sp_vec <- c()
   if (need_geometry && !is.null(model$confound_rdms) && K >= 3L) {
-    mm <- list(enc_geom = dE)
-    for (nm in names(model$confound_rdms)) {
-      M <- .era_align_item_matrix(model$confound_rdms[[nm]], common_keys,
-                                  model$key_levels, label = nm)
-      mm[[nm]] <- as.numeric(M[lower.tri(M)])
-    }
-    df  <- as.data.frame(mm)
-    fit <- try(stats::lm(dR ~ ., data = df), silent = TRUE)
-    if (!inherits(fit, "try-error")) {
-      cf <- stats::coef(summary(fit))
-      if (nrow(cf) > 1L) {
-        keep     <- rownames(cf) != "(Intercept)"
-        beta_vec <- cf[keep, "Estimate"]
-        names(beta_vec) <- paste0("beta_", rownames(cf)[keep])
+    fast_fit <- .era_geometry_fast_confound_fit(geom_cache, dE, dR)
+    if (!is.null(fast_fit)) {
+      beta_vec <- fast_fit$beta
+      sp_vec   <- fast_fit$sp
+    } else {
+      conf_vecs <- .era_geometry_step1_confounds(
+        model$confound_rdms, common_keys, model$key_levels
+      )
+      mm <- list(enc_geom = dE)
+      for (nm in names(conf_vecs)) {
+        mm[[nm]] <- conf_vecs[[nm]]
       }
-      if (exists("run_lm_semipartial", mode = "function")) {
-        tmp <- list(design = list(model_mat = mm))
-        sr  <- try(run_lm_semipartial(dvec = dR, obj = tmp), silent = TRUE)
-        if (!inherits(sr, "try-error") && is.numeric(sr)) {
-          names(sr) <- paste0("sp_", names(sr))
-          sp_vec <- sr
+      df  <- as.data.frame(mm)
+      fit <- try(stats::lm(dR ~ ., data = df), silent = TRUE)
+      if (!inherits(fit, "try-error")) {
+        cf <- stats::coef(summary(fit))
+        if (nrow(cf) > 1L) {
+          keep     <- rownames(cf) != "(Intercept)"
+          beta_vec <- cf[keep, "Estimate"]
+          names(beta_vec) <- paste0("beta_", rownames(cf)[keep])
+        }
+        if (exists("run_lm_semipartial", mode = "function")) {
+          tmp <- list(design = list(model_mat = mm))
+          sr  <- try(run_lm_semipartial(dvec = dR, obj = tmp), silent = TRUE)
+          if (!inherits(sr, "try-error") && is.numeric(sr)) {
+            names(sr) <- paste0("sp_", names(sr))
+            sp_vec <- sr
+          }
         }
       }
     }
@@ -721,21 +745,23 @@ fit_roi.era_rsa_model <- function(model, roi_data, context, ...) {
       keys = common_keys,
       key_levels = model$key_levels
     )
-    geom_cor_partial <- .era_partial_geometry_cor(
+    geom_cor_partial <- .era_geometry_partial_cor_cached(
+      cache = geom_cache,
+      partial_against = model$partial_against %||% "run",
       dE = dE,
       dR = dR,
       confound_rdms = all_confounds,
       keys = common_keys,
-      partial_against = model$partial_against %||% "run",
       method = model$rsa_simfun,
       key_levels = model$key_levels
     )
-    geom_cor_run_partial <- .era_partial_geometry_cor(
+    geom_cor_run_partial <- .era_geometry_partial_cor_cached(
+      cache = geom_cache,
+      partial_against = "run",
       dE = dE,
       dR = dR,
       confound_rdms = all_confounds,
       keys = common_keys,
-      partial_against = "run",
       method = model$rsa_simfun,
       key_levels = model$key_levels
     )
@@ -872,6 +898,210 @@ roi_result(metrics = perf, indices = ind, id = id)
   list(run_enc = Renc, run_ret = Rret)
 }
 
+#' Vectorise the step-1 confound RDMs (named, lower triangle, aligned to keys).
+#' Uses the same aligned helper as the lm() fallback so both paths agree.
+#' @noRd
+.era_geometry_step1_confounds <- function(confound_rdms, keys, key_levels = keys) {
+  out <- list()
+  for (nm in names(confound_rdms)) {
+    M <- .era_align_item_matrix(confound_rdms[[nm]], keys, key_levels, label = nm)
+    out[[nm]] <- as.numeric(M[lower.tri(M)])
+  }
+  out
+}
+
+#' Fixed design [1, Z] with precomputed QR, for repeated residualisation.
+#'
+#' Returns NULL unless every column is finite, the design is full rank with
+#' the identity pivot (matching lm()'s default tolerance) and there are more
+#' observations than parameters. NULL means "use the lm() path".
+#' @noRd
+.era_fixed_design <- function(Z, n) {
+  if (!length(Z) || is.null(names(Z))) return(NULL)
+  bad <- vapply(Z, function(x) length(x) != n || !all(is.finite(x)), logical(1L))
+  if (any(bad)) return(NULL)
+  X <- cbind(1, do.call(cbind, unname(Z)))
+  colnames(X) <- c("(Intercept)", names(Z))
+  p <- ncol(X)
+  if (n <= p) return(NULL)
+  Q <- qr(X)
+  if (Q$rank < p || !identical(as.integer(Q$pivot), seq_len(p))) return(NULL)
+  # diag((X'X)^-1) = rowSums(R^-1 ^ 2) for X = QR
+  Rinv <- backsolve(qr.R(Q), diag(p))
+  list(qr = Q, n = n, p = p, names = names(Z), diag_inv = rowSums(Rinv^2))
+}
+
+#' Regress dR on [dE, Z] through a fixed design [1, Z] (Frisch-Waugh-Lovell).
+#'
+#' Equals lm(dR ~ dE + Z) for betas, t-values and semi-partial correlations
+#' (sign(t) * sqrt(t^2 * MSE / TSS), as in run_lm_semipartial()). Returns NULL
+#' when the result cannot be reproduced reliably (collinear dE, perfect fit,
+#' no residual degrees of freedom), so the caller can use lm().
+#' @noRd
+.era_geometry_fast_regression <- function(dE, dR, FD) {
+  Q <- FD$qr
+  eE <- qr.resid(Q, dE)
+  eR <- qr.resid(Q, dR)
+  cE <- qr.coef(Q, dE)
+  cR <- qr.coef(Q, dR)
+
+  Ee <- sum(eE^2)
+  if (!is.finite(Ee) || Ee <= 1e-10 * sum(dE^2)) return(NULL)
+  df <- FD$n - FD$p - 1L
+  if (df <= 0L) return(NULL)
+
+  bE <- sum(eE * eR) / Ee
+  rss <- sum((eR - bE * eE)^2)
+  sigma2 <- rss / df
+  tss <- sum((dR - mean(dR))^2)
+  if (!is.finite(tss) || tss <= 0 || !is.finite(sigma2) || sigma2 <= 1e-12 * tss) {
+    return(NULL)
+  }
+
+  b_conf  <- cR[-1L] - bE * cE[-1L]
+  se_conf <- sqrt(sigma2 * (FD$diag_inv[-1L] + cE[-1L]^2 / Ee))
+  beta <- c(enc_geom = bE, stats::setNames(b_conf, FD$names))
+  se   <- c(enc_geom = sqrt(sigma2 / Ee), stats::setNames(se_conf, FD$names))
+  tv   <- beta / se
+  sp   <- sign(tv) * sqrt(tv^2 * sigma2 / tss)
+  list(beta = beta, sp = sp)
+}
+
+#' Build the per-model cache for the ERA geometry confound regressions.
+#'
+#' The confound design depends only on the model's confound RDMs, run vectors
+#' and the item key set, so it is built once (in era_rsa_model()) and reused
+#' for every ROI. Entries that the fast path cannot reproduce are recorded as
+#' "fallback" and handled by the original lm() code.
+#' @noRd
+.era_geometry_cache <- function(confound_rdms, item_run_enc, item_run_ret,
+                                partial_against, keys, key_levels = keys) {
+  if (length(keys) < 3L) return(NULL)
+  # Alignment errors (e.g. a labelled RDM missing an item key) are left to the
+  # fit-time lm() path, which raises them exactly as before.
+  tryCatch(
+    .era_geometry_cache_build(confound_rdms, item_run_enc, item_run_ret,
+                              partial_against, keys, key_levels),
+    error = function(e) NULL
+  )
+}
+
+#' @noRd
+.era_geometry_cache_build <- function(confound_rdms, item_run_enc, item_run_ret,
+                                      partial_against, keys, key_levels) {
+  K <- length(keys)
+  n <- K * (K - 1L) / 2L
+
+  step1_vecs <- if (length(confound_rdms)) {
+    .era_geometry_step1_confounds(confound_rdms, keys, key_levels)
+  } else {
+    list()
+  }
+  step1_names <- c("enc_geom", names(step1_vecs))
+  step1_ok <- length(step1_vecs) > 0L && !is.null(names(step1_vecs)) &&
+    !anyDuplicated(step1_names) &&
+    identical(make.names(step1_names), step1_names)
+  step1 <- if (step1_ok) .era_fixed_design(step1_vecs, n) else NULL
+
+  all_confounds <- .era_geometry_confound_rdms(
+    confound_rdms = confound_rdms,
+    item_run_enc = item_run_enc,
+    item_run_ret = item_run_ret,
+    keys = keys,
+    key_levels = key_levels
+  )
+  vecs <- lapply(all_confounds, .era_vectorize_geometry_confound,
+                 keys = keys, key_levels = key_levels)
+
+  entry_for <- function(selected) {
+    if (!length(selected)) return(list(status = "na"))
+    conf <- vecs[selected]
+    if (any(vapply(conf, length, integer(1L)) != n)) return(list(status = "fallback"))
+    if (any(!vapply(conf, function(x) all(is.finite(x)), logical(1L)))) {
+      return(list(status = "fallback"))
+    }
+    nonconstant <- vapply(conf, function(x) stats::sd(x) > 0, logical(1L))
+    conf <- conf[nonconstant]
+    if (!length(conf)) return(list(status = "na"))
+    FD <- .era_fixed_design(conf, n)
+    if (is.null(FD)) return(list(status = "fallback"))
+    list(status = "fast", design = FD)
+  }
+
+  partial <- list()
+  for (pa in unique(list(partial_against %||% "run", "run"))) {
+    key <- paste(pa, collapse = "\r")
+    selected <- .era_select_confound_names(names(all_confounds), pa)
+    partial[[key]] <- entry_for(selected)
+  }
+
+  list(keys = keys, key_levels = key_levels, step1 = step1, partial = partial)
+}
+
+#' @noRd
+.era_geometry_cache_for <- function(model, keys) {
+  key_levels <- model$key_levels %||% keys
+  cache <- model$era_geometry_cache
+  if (is.null(cache)) {
+    cache <- .era_geometry_cache(
+      confound_rdms = model$confound_rdms,
+      item_run_enc = model$item_run_enc,
+      item_run_ret = model$item_run_ret,
+      partial_against = model$partial_against %||% "run",
+      keys = keys,
+      key_levels = key_levels
+    )
+  }
+  if (is.null(cache) || !identical(cache$keys, keys) ||
+      !identical(cache$key_levels, key_levels)) {
+    return(NULL)
+  }
+  cache
+}
+
+#' Step-1 fast path: betas and semi-partials for dR ~ enc_geom + confounds.
+#' @noRd
+.era_geometry_fast_confound_fit <- function(cache, dE, dR) {
+  if (is.null(cache) || is.null(cache$step1)) return(NULL)
+  if (!all(is.finite(dE)) || !all(is.finite(dR))) return(NULL)
+  res <- .era_geometry_fast_regression(dE, dR, cache$step1)
+  if (is.null(res)) return(NULL)
+  list(
+    beta = stats::setNames(res$beta, paste0("beta_", names(res$beta))),
+    sp   = stats::setNames(res$sp, paste0("sp_", names(res$sp)))
+  )
+}
+
+#' Partial geometry correlation using the cached confound design when exact.
+#' Falls back to .era_partial_geometry_cor() otherwise.
+#' @noRd
+.era_geometry_partial_cor_cached <- function(cache, partial_against, dE, dR,
+                                             confound_rdms, keys, method,
+                                             key_levels = keys) {
+  entry <- if (!is.null(cache)) {
+    cache$partial[[paste(partial_against, collapse = "\r")]]
+  } else {
+    NULL
+  }
+  if (!is.null(entry) && identical(entry$status, "na")) return(NA_real_)
+
+  if (is.null(entry) || !identical(entry$status, "fast") ||
+      !all(is.finite(dE)) || !all(is.finite(dR)) ||
+      length(dE) != entry$design$n) {
+    return(.era_partial_geometry_cor(
+      dE = dE, dR = dR, confound_rdms = confound_rdms, keys = keys,
+      partial_against = partial_against, method = method,
+      key_levels = key_levels
+    ))
+  }
+
+  if (length(dE) < 3L || stats::sd(dE) == 0 || stats::sd(dR) == 0) return(NA_real_)
+  Q <- entry$design$qr
+  suppressWarnings(stats::cor(
+    qr.resid(Q, dE), qr.resid(Q, dR), method = method, use = "complete.obs"
+  ))
+}
+
 #' @noRd
 .era_partial_geometry_cor <- function(dE,
                                       dR,
@@ -902,7 +1132,7 @@ roi_result(metrics = perf, indices = ind, id = id)
   dat <- data.frame(.dE = as.numeric(dE), .dR = as.numeric(dR), as.data.frame(conf, optional = TRUE))
   names(dat) <- c(".dE", ".dR", make.names(names(conf), unique = TRUE))
   keep <- stats::complete.cases(dat)
-  keep <- keep & apply(dat, 1L, function(row) all(is.finite(row)))
+  keep <- keep & rowSums(!is.finite(as.matrix(dat))) == 0L
   dat <- dat[keep, , drop = FALSE]
   if (nrow(dat) < 3L || stats::sd(dat$.dE) == 0 || stats::sd(dat$.dR) == 0) {
     return(NA_real_)
