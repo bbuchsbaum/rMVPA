@@ -108,9 +108,10 @@ mod_spec <- list(process_roi = function(mod_spec, roi, rnum, ...) {
 run_future(mod_spec, frame, NULL)
 #> Warning: process_roi legacy dispatch is deprecated. Implement a fit_roi.* method for your model class.
 #> Warning: process_roi legacy dispatch is deprecated. Implement a fit_roi.* method for your model class.
-#> # A tibble: 2 × 8
-#>   result indices performance id    error error_message   warning warning_message
-#>   <list> <list>  <list>      <chr> <lgl> <chr>           <lgl>   <chr>          
-#> 1 <NULL> <NULL>  <NULL>      roi1  TRUE  "Error process… TRUE    Error processi…
-#> 2 <NULL> <NULL>  <NULL>      roi2  TRUE  "Error process… TRUE    Error processi…
+#> # A tibble: 2 × 9
+#>   result indices performance id    error error_message       error_trace warning
+#>   <list> <list>  <list>      <chr> <lgl> <chr>               <chr>       <lgl>  
+#> 1 <NULL> <NULL>  <NULL>      roi1  TRUE  Error processing R… "\u001b[90… TRUE   
+#> 2 <NULL> <NULL>  <NULL>      roi2  TRUE  Error processing R… "\u001b[90… TRUE   
+#> # ℹ 1 more variable: warning_message <chr>
 ```

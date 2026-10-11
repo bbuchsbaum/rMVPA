@@ -52,6 +52,16 @@ A model spec of class `"repnet_model"` compatible with
 and
 [`run_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md).
 
+## Details
+
+Per-ROI metrics: `n_items`, `n_pairs`, `conn_raw` (the ROI-seed RDM
+similarity), and from the multiple regression of the ROI RDM on the seed
+and confound RDMs, `beta_<term>` (regression coefficients) and
+`sp_<term>` (semi-partial correlations). With confound RDMs,
+`seed_conf_r2` is the R-squared of the seed RDM regressed on the
+confound RDMs: `beta_seed` and `sp_seed` describe only the
+`1 - seed_conf_r2` share of the seed that the confounds do not explain.
+
 ## Examples
 
 ``` r

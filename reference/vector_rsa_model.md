@@ -40,6 +40,8 @@ vector_rsa_model(
 - nperm:
 
   Integer, number of permutations for statistical testing (default: 0).
+  Trials are permuted within blocks of the design's `block_var`, since
+  scores only compare trials across blocks.
 
 - save_distributions:
 

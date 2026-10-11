@@ -158,6 +158,7 @@ era_ms
 #>   - Has Test Set:  TRUE 
 #>   - Basis Count:  1 
 #> - Parameters 
+#>   - handles_missing_test: TRUE
 #>   - key_var: ~item
 #>   - encoding_level: encoding
 #>   - retrieval_level: retrieval

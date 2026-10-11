@@ -91,6 +91,16 @@ lag, behavior, etc.).</p>
     <p>A model spec of class <code>"repnet_model"</code> compatible with
   <code><a href="run_regional-methods.html">run_regional()</a></code> and <code><a href="run_searchlight.html">run_searchlight()</a></code>.</p>
     </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>Per-ROI metrics: <code>n_items</code>, <code>n_pairs</code>, <code>conn_raw</code> (the
+ROI-seed RDM similarity), and from the multiple regression of the ROI RDM on
+the seed and confound RDMs, <code>beta_&lt;term&gt;</code> (regression coefficients) and
+<code>sp_&lt;term&gt;</code> (semi-partial correlations). With confound RDMs,
+<code>seed_conf_r2</code> is the R-squared of the seed RDM regressed on the
+confound RDMs: <code>beta_seed</code> and <code>sp_seed</code> describe only the
+<code>1 - seed_conf_r2</code> share of the seed that the confounds do not explain.</p>
+    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>

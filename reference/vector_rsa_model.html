@@ -74,7 +74,9 @@ one of <code>"pearson"</code> or <code>"spearman"</code>.</p></dd>
 
 
 <dt id="arg-nperm">nperm<a class="anchor" aria-label="anchor" href="#arg-nperm"></a></dt>
-<dd><p>Integer, number of permutations for statistical testing (default: 0).</p></dd>
+<dd><p>Integer, number of permutations for statistical testing
+(default: 0). Trials are permuted within blocks of the design's
+<code>block_var</code>, since scores only compare trials across blocks.</p></dd>
 
 
 <dt id="arg-save-distributions">save_distributions<a class="anchor" aria-label="anchor" href="#arg-save-distributions"></a></dt>
