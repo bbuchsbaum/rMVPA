@@ -66,10 +66,10 @@ dat  <- as.data.frame(matrix(rnorm(20 * 2), 20, 2))
 y    <- factor(rep(letters[1:4], 5))
 crossval_samples(cval, dat, y)
 #> # A tibble: 4 × 5
-#>   ytrain       ytest        train               test               .id  
-#>   <named list> <named list> <named list>        <named list>       <chr>
-#> 1 <fct [15]>   <fct [5]>    <resample [15 x 2]> <resample [5 x 2]> 01   
-#> 2 <fct [15]>   <fct [5]>    <resample [15 x 2]> <resample [5 x 2]> 02   
-#> 3 <fct [15]>   <fct [5]>    <resample [15 x 2]> <resample [5 x 2]> 03   
-#> 4 <fct [15]>   <fct [5]>    <resample [15 x 2]> <resample [5 x 2]> 04   
+#>   ytrain     ytest     train               test               .id  
+#>   <list>     <list>    <list>              <list>             <chr>
+#> 1 <fct [15]> <fct [5]> <resample [15 x 2]> <resample [5 x 2]> 01   
+#> 2 <fct [15]> <fct [5]> <resample [15 x 2]> <resample [5 x 2]> 02   
+#> 3 <fct [15]> <fct [5]> <resample [15 x 2]> <resample [5 x 2]> 03   
+#> 4 <fct [15]> <fct [5]> <resample [15 x 2]> <resample [5 x 2]> 04   
 ```

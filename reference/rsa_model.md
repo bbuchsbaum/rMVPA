@@ -39,15 +39,20 @@ rsa_model(
 
 - distmethod:
 
-  A character string specifying the method used to compute distances
-  between observations. One of: `"pearson"`, `"spearman"` (default), or
-  `"crossvalidated_euclidean"` (see below).
+  Controls how the neural RDM is computed: the correlation distance
+  `1 - r` between each pair of observation patterns, with `r` Pearson
+  (`"pearson"`) or Spearman (`"spearman"`, the default), or
+  `"crossvalidated_euclidean"` (see below). It does not choose the
+  comparison with the model RDMs; that is `regtype`.
 
 - regtype:
 
-  A character string specifying the analysis method. One of:
-  `"pearson"`, `"spearman"`, `"lm"`, or `"rfit"` (defaults to
-  "pearson").
+  Controls how the neural RDM is compared with each model RDM:
+  `"pearson"` (Pearson correlation, the default), `"spearman"` (Spearman
+  correlation, ranks of both vectors), `"lm"` or `"rfit"`. With
+  `distmethod = "crossvalidated_euclidean"`, `regtype` also sets the
+  model fit. Pearson and Spearman results differ when the relation
+  between the two RDMs is not linear.
 
 - check_collinearity:
 

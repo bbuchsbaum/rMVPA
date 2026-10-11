@@ -32,6 +32,6 @@ The test response variable.
 ``` r
 ds <- gen_sample_dataset(D = c(4, 4, 4), nobs = 10, external_test = TRUE)
 y_test(ds$design)
-#>  [1] e d b b a d e c c a
+#>  [1] e a a e b c c d d b
 #> Levels: a b c d e
 ```

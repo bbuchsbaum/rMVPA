@@ -59,7 +59,7 @@
                         <h4 data-toc-skip class="author">Bradley
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-10-08</h4>
+            <h4 data-toc-skip class="date">2026-10-11</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/rMVPA/blob/master/vignettes/articles/Vector_RSA.Rmd" class="external-link"><code>vignettes/articles/Vector_RSA.Rmd</code></a></small>
       <div class="d-none name"><code>Vector_RSA.Rmd</code></div>
@@ -294,9 +294,9 @@ The output adds <code>p_rsa_score</code> and
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 4</span></span></span>
 <span><span class="co">#&gt;   roinum rsa_score p_rsa_score z_rsa_score</span></span>
 <span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>      1 -<span style="color: #BB0000;">0.006</span><span style="color: #BB0000; text-decoration: underline;">47</span>        0.510     -<span style="color: #BB0000;">0.206</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>      2 -<span style="color: #BB0000;">0.012</span><span style="color: #BB0000; text-decoration: underline;">1</span>         0.608     -<span style="color: #BB0000;">0.334</span> </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>      3 -<span style="color: #BB0000;">0.000</span><span style="color: #BB0000; text-decoration: underline;">355</span>       0.510      0.014<span style="text-decoration: underline;">9</span></span></span></code></pre></div>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>      1 -<span style="color: #BB0000;">0.006</span><span style="color: #BB0000; text-decoration: underline;">47</span>        0.569     -<span style="color: #BB0000;">0.337</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>      2 -<span style="color: #BB0000;">0.012</span><span style="color: #BB0000; text-decoration: underline;">1</span>         0.667     -<span style="color: #BB0000;">0.600</span> </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>      3 -<span style="color: #BB0000;">0.000</span><span style="color: #BB0000; text-decoration: underline;">355</span>       0.471      0.079<span style="text-decoration: underline;">0</span></span></span></code></pre></div>
 <p>Permutation is done <em>within each ROI</em> — it shuffles which
 neural row goes with which reference row, holding the block structure of
 the reference fixed. With <code>save_distributions = TRUE</code> the

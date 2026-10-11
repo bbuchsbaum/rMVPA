@@ -183,9 +183,9 @@ res_perm$performance_table
 #> # A tibble: 3 × 4
 #>   roinum rsa_score p_rsa_score z_rsa_score
 #>    <int>     <dbl>       <dbl>       <dbl>
-#> 1      1 -0.00647        0.510     -0.206 
-#> 2      2 -0.0121         0.608     -0.334 
-#> 3      3 -0.000355       0.510      0.0149
+#> 1      1 -0.00647        0.569     -0.337 
+#> 2      2 -0.0121         0.667     -0.600 
+#> 3      3 -0.000355       0.471      0.0790
 ```
 
 Permutation is done *within each ROI* — it shuffles which neural row

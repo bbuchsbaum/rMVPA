@@ -42,6 +42,6 @@ regression).
 ``` r
 ds <- gen_sample_dataset(D = c(4, 4, 4), nobs = 10)
 y_train(ds$design)
-#>  [1] a e a b e c d d b c
+#>  [1] b b d a e a e c c d
 #> Levels: a b c d e
 ```

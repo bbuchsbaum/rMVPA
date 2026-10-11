@@ -89,37 +89,37 @@ feat_mat <- matrix(rnorm(20), nrow = 4,
 # Use raw features (first 3)
 C_raw <- make_feature_contrasts(feat_mat[, 1:3], use_pca = FALSE, prefix="RawFeat_")
 print(C_raw)
-#>       RawFeat_F1 RawFeat_F2 RawFeat_F3
-#> Cond1 -0.2392778  1.1288804  0.9073228
-#> Cond2  0.6911381  1.7116207  0.5359473
-#> Cond3  1.0736168 -1.7690945  1.4313724
-#> Cond4  0.8185904 -0.4231769 -1.1689419
+#>       RawFeat_F1  RawFeat_F2 RawFeat_F3
+#> Cond1  0.3086674 -0.04861722 -1.1759318
+#> Cond2  0.8762341 -0.82246850 -0.4999254
+#> Cond3  0.7508515  0.22205129  0.9361275
+#> Cond4 -1.4500817 -0.59866746  0.1118074
 
 # Use PCA, selecting top 2 PCs
 C_pca <- make_feature_contrasts(feat_mat, use_pca = TRUE, n_pcs = 2, prefix="PCA_")
 print(C_pca)
-#>          PCA_PC1    PCA_PC2
-#> Cond1  0.2873227  1.2383453
-#> Cond2  1.8757505  0.7446504
-#> Cond3 -3.3997310 -0.1509157
-#> Cond4  1.2366578 -1.8320799
+#>          PCA_PC1     PCA_PC2
+#> Cond1  1.9290561 -0.01709156
+#> Cond2  0.8164187  0.52812653
+#> Cond3 -1.8101078  1.00167627
+#> Cond4 -0.9353670 -1.51271124
 
 # Use PCA, selecting >= 80% variance explained
 C_pca_pve <- make_feature_contrasts(feat_mat, use_pca = TRUE, pve = 0.8, prefix="PCA_")
 print(C_pca_pve)
-#>          PCA_PC1    PCA_PC2
-#> Cond1  0.2873227  1.2383453
-#> Cond2  1.8757505  0.7446504
-#> Cond3 -3.3997310 -0.1509157
-#> Cond4  1.2366578 -1.8320799
+#>          PCA_PC1     PCA_PC2
+#> Cond1  1.9290561 -0.01709156
+#> Cond2  0.8164187  0.52812653
+#> Cond3 -1.8101078  1.00167627
+#> Cond4 -0.9353670 -1.51271124
 
 # Reorder based on labels
 C_pca_reorder <- make_feature_contrasts(feat_mat, labels=c("Cond3", "Cond1", "Cond4", "Cond2"),
                                       use_pca = TRUE, n_pcs = 2, prefix="PCA_")
 print(C_pca_reorder)
-#>          PCA_PC1    PCA_PC2
-#> Cond3  3.3997310 -0.1509157
-#> Cond1 -0.2873227  1.2383453
-#> Cond4 -1.2366578 -1.8320799
-#> Cond2 -1.8757505  0.7446504
+#>          PCA_PC1     PCA_PC2
+#> Cond3  1.8101078 -1.00167627
+#> Cond1 -1.9290561  0.01709156
+#> Cond4  0.9353670  1.51271124
+#> Cond2 -0.8164187 -0.52812653
 ```

@@ -55,17 +55,9 @@ roi_data <- matrix(rnorm(100*3), 100, 3)
 ROI <- neuroim2::ROIVec(space, coords=coords, roi_data)
 Y <- factor(rep(c("a", "b"), each=50))
 featureMask <- select_features(fsel, neuroim2::values(ROI), Y)
-#> selecting features via FTest
-#> cutoff type top_k
-#> cutoff value 2
-#> retaining 2 features in matrix with 3 columns
 sum(featureMask) == 2
 #> [1] TRUE
 
 fsel2 <- feature_selector("FTest", "top_p", .1)
 featureMask <- select_features(fsel2, neuroim2::values(ROI), Y)
-#> selecting features via FTest
-#> cutoff type top_p
-#> cutoff value 0.1
-#> retaining 1 features in matrix with 3 columns
 ```

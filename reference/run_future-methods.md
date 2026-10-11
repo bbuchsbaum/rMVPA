@@ -16,6 +16,7 @@ run_future(
   analysis_type = "searchlight",
   drop_probs = FALSE,
   fail_fast = FALSE,
+  item_seeds = NULL,
   ...
 )
 
@@ -28,6 +29,7 @@ run_future(
   analysis_type = "searchlight",
   drop_probs = FALSE,
   fail_fast = FALSE,
+  item_seeds = NULL,
   ...
 )
 ```
@@ -57,6 +59,24 @@ run_future(
 - analysis_type:
 
   The type of analysis (e.g., "searchlight").
+
+- drop_probs:
+
+  Logical; if `TRUE`, drop per-observation class probabilities from
+  returned results and keep only the observed-class probability.
+
+- fail_fast:
+
+  Logical; if `TRUE`, stop on the first ROI error.
+
+- item_seeds:
+
+  Optional list with one L'Ecuyer-CMRG RNG stream (`.Random.seed`
+  vector) per row of `frame`.
+  [`mvpa_iterate()`](https://bbuchsbaum.github.io/rMVPA/reference/mvpa_iterate.md)
+  supplies the streams it drew for the whole iteration, so a ROI's
+  random numbers do not depend on batching or the future plan. When
+  `NULL`, streams are drawn here.
 
 ## Value
 

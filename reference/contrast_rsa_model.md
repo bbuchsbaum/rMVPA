@@ -361,7 +361,6 @@ define training sets for each fold iterated by
       mvpa_design = mvpa_des, # Use mvpa_des here
       contrast_matrix = C_mat_ortho
   )
-#> Warning: Contrast matrix has no rownames and mvpa_design$conditions is NULL. Assuming row order matches sorted unique condition labels from Y for block mapping.
   print(paste("Is contrast matrix orthonormal:", attr(msreve_des_ortho, "is_orthonormal")))
 #> [1] "Is contrast matrix orthonormal: TRUE"
 

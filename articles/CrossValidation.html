@@ -59,7 +59,7 @@
                         <h4 data-toc-skip class="author">Bradley
 Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2026-10-08</h4>
+            <h4 data-toc-skip class="date">2026-10-11</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/rMVPA/blob/master/vignettes/CrossValidation.Rmd" class="external-link"><code>vignettes/CrossValidation.Rmd</code></a></small>
       <div class="d-none name"><code>CrossValidation.Rmd</code></div>
@@ -467,11 +467,11 @@ cross-validation strategies:</p>
 <span><span class="co">#&gt; Bootstrap CV Performance:</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">results_boot</span><span class="op">$</span><span class="va">performance_table</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 3 × 3</span></span></span>
-<span><span class="co">#&gt;   roinum Accuracy     AUC</span></span>
-<span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>      1    0.562  0.176 </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>      2    0.575  0.281 </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>      3    0.475 -<span style="color: #BB0000;">0.098</span><span style="color: #BB0000; text-decoration: underline;">8</span></span></span></code></pre></div>
+<span><span class="co">#&gt;   roinum Accuracy    AUC</span></span>
+<span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>      1    0.562  0.188</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>      2    0.562  0.251</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>      3    0.462 -<span style="color: #BB0000;">0.105</span></span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="searchlight-analysis-example">Searchlight Analysis Example<a class="anchor" aria-label="anchor" href="#searchlight-analysis-example"></a>
@@ -546,17 +546,17 @@ average over repetitions to summarize performance.</p>
 <span><span class="va">all_performance</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">rbind</span>, <span class="va">performance_comparison</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">all_performance</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 9 × 4</span></span></span>
-<span><span class="co">#&gt;   roinum Accuracy     AUC cv_scheme</span></span>
-<span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>      1    0.562  0.191  blocked  </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>      2    0.6    0.305  blocked  </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>      3    0.462 -<span style="color: #BB0000;">0.135</span>  blocked  </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span>      1    0.562  0.231  bootstrap</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span>      2    0.55   0.206  bootstrap</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">6</span>      3    0.538 -<span style="color: #BB0000;">0.040</span><span style="color: #BB0000; text-decoration: underline;">0</span> bootstrap</span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">7</span>      1    0.562  0.114  twofold  </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">8</span>      2    0.562  0.288  twofold  </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">9</span>      3    0.462 -<span style="color: #BB0000;">0.15</span>   twofold</span></span></code></pre></div>
+<span><span class="co">#&gt;   roinum Accuracy    AUC cv_scheme</span></span>
+<span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>      1    0.562  0.191 blocked  </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>      2    0.6    0.305 blocked  </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>      3    0.462 -<span style="color: #BB0000;">0.135</span> blocked  </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span>      1    0.55   0.174 bootstrap</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span>      2    0.612  0.337 bootstrap</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">6</span>      3    0.475 -<span style="color: #BB0000;">0.125</span> bootstrap</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">7</span>      1    0.538  0.211 twofold  </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">8</span>      2    0.612  0.295 twofold  </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">9</span>      3    0.412 -<span style="color: #BB0000;">0.229</span> twofold</span></span></code></pre></div>
 <p>This integration demonstrates how different cross-validation
 strategies can be easily incorporated into the broader MVPA analysis
 framework, allowing researchers to choose the most appropriate

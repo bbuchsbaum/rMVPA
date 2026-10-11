@@ -74,14 +74,20 @@
 
 
 <dt id="arg-distmethod">distmethod<a class="anchor" aria-label="anchor" href="#arg-distmethod"></a></dt>
-<dd><p>A character string specifying the method used to compute distances between observations.
-One of: <code>"pearson"</code>, <code>"spearman"</code> (default), or
-<code>"crossvalidated_euclidean"</code> (see below).</p></dd>
+<dd><p>Controls how the neural RDM is computed: the correlation
+distance <code>1 - r</code> between each pair of observation patterns, with
+<code>r</code> Pearson (<code>"pearson"</code>) or Spearman (<code>"spearman"</code>, the
+default), or <code>"crossvalidated_euclidean"</code> (see below). It does not
+choose the comparison with the model RDMs; that is <code>regtype</code>.</p></dd>
 
 
 <dt id="arg-regtype">regtype<a class="anchor" aria-label="anchor" href="#arg-regtype"></a></dt>
-<dd><p>A character string specifying the analysis method.
-One of: <code>"pearson"</code>, <code>"spearman"</code>, <code>"lm"</code>, or <code>"rfit"</code> (defaults to "pearson").</p></dd>
+<dd><p>Controls how the neural RDM is compared with each model RDM:
+<code>"pearson"</code> (Pearson correlation, the default), <code>"spearman"</code>
+(Spearman correlation, ranks of both vectors), <code>"lm"</code> or <code>"rfit"</code>.
+With <code>distmethod = "crossvalidated_euclidean"</code>, <code>regtype</code> also
+sets the model fit. Pearson and Spearman results differ when the relation
+between the two RDMs is not linear.</p></dd>
 
 
 <dt id="arg-check-collinearity">check_collinearity<a class="anchor" aria-label="anchor" href="#arg-check-collinearity"></a></dt>

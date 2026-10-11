@@ -399,11 +399,11 @@ cat("\nBootstrap CV Performance:\n")
 #> Bootstrap CV Performance:
 print(results_boot$performance_table)
 #> # A tibble: 3 × 3
-#>   roinum Accuracy     AUC
-#>    <int>    <dbl>   <dbl>
-#> 1      1    0.562  0.176 
-#> 2      2    0.575  0.281 
-#> 3      3    0.475 -0.0988
+#>   roinum Accuracy    AUC
+#>    <int>    <dbl>  <dbl>
+#> 1      1    0.562  0.188
+#> 2      2    0.562  0.251
+#> 3      3    0.462 -0.105
 ```
 
 ### Searchlight Analysis Example
@@ -481,17 +481,17 @@ performance_comparison <- lapply(names(results), function(name) {
 all_performance <- do.call(rbind, performance_comparison)
 print(all_performance)
 #> # A tibble: 9 × 4
-#>   roinum Accuracy     AUC cv_scheme
-#>    <int>    <dbl>   <dbl> <chr>    
-#> 1      1    0.562  0.191  blocked  
-#> 2      2    0.6    0.305  blocked  
-#> 3      3    0.462 -0.135  blocked  
-#> 4      1    0.562  0.231  bootstrap
-#> 5      2    0.55   0.206  bootstrap
-#> 6      3    0.538 -0.0400 bootstrap
-#> 7      1    0.562  0.114  twofold  
-#> 8      2    0.562  0.288  twofold  
-#> 9      3    0.462 -0.15   twofold
+#>   roinum Accuracy    AUC cv_scheme
+#>    <int>    <dbl>  <dbl> <chr>    
+#> 1      1    0.562  0.191 blocked  
+#> 2      2    0.6    0.305 blocked  
+#> 3      3    0.462 -0.135 blocked  
+#> 4      1    0.55   0.174 bootstrap
+#> 5      2    0.612  0.337 bootstrap
+#> 6      3    0.475 -0.125 bootstrap
+#> 7      1    0.538  0.211 twofold  
+#> 8      2    0.612  0.295 twofold  
+#> 9      3    0.412 -0.229 twofold
 ```
 
 This integration demonstrates how different cross-validation strategies
