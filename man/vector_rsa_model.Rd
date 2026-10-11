@@ -24,7 +24,9 @@ vector_rsa_model(
 \item{rsa_simfun}{A character string specifying the similarity function to use for RSA, 
 one of \code{"pearson"} or \code{"spearman"}.}
 
-\item{nperm}{Integer, number of permutations for statistical testing (default: 0).}
+\item{nperm}{Integer, number of permutations for statistical testing
+(default: 0). Trials are permuted within blocks of the design's
+\code{block_var}, since scores only compare trials across blocks.}
 
 \item{save_distributions}{Logical, whether to save full permutation distributions (default: FALSE).}
 

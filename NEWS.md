@@ -49,6 +49,11 @@
   engine now drops infinite retrieval values as the general path does.
   **Results change** for searchlights whose centres have missing values and
   for analyses with NA in an external test set.
+* `vector_rsa_model()` permutation tests now shuffle trials within blocks.
+  Trial scores only compare trials across blocks, so trials are exchangeable
+  within a block but not across blocks; the previous unrestricted shuffle
+  mixed run-level structure into the null. **p-values and z-scores change.**
+  Designs without repeated block labels are still shuffled freely.
 * RSA regression speed-ups, with one output correction. Semi-partial
   correlations (`semipartial = TRUE`) now come from the cached lm kernel
   instead of an lm() refit per ROI, and `repnet_model` and `repmed_model`

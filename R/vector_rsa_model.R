@@ -76,7 +76,9 @@ vector_rsa_model_mat <- function(design) {
 #' @param distfun A \code{distfun} (distance function) for computing pairwise dissimilarities among image rows.
 #' @param rsa_simfun A character string specifying the similarity function to use for RSA, 
 #'                   one of \code{"pearson"} or \code{"spearman"}.
-#' @param nperm Integer, number of permutations for statistical testing (default: 0).
+#' @param nperm Integer, number of permutations for statistical testing
+#'   (default: 0). Trials are permuted within blocks of the design's
+#'   \code{block_var}, since scores only compare trials across blocks.
 #' @param save_distributions Logical, whether to save full permutation distributions (default: FALSE).
 #' @param return_predictions Logical, whether to return per-observation similarity scores (default: FALSE).
 #'
@@ -401,6 +403,23 @@ print.vector_rsa_design <- function(x, ...) {
   cat("\n", border, "\n")
 }
 
+# Row permutation for the vector RSA null. Rows are shuffled within their
+# block, so every row keeps its block and the across-block comparison structure
+# of the scores is preserved. Without usable block structure (no block
+# variable, or every block a single row) rows are shuffled freely.
+#' @keywords internal
+#' @noRd
+.vector_rsa_block_perm <- function(block, n) {
+  if (is.null(block) || length(block) != n || !anyDuplicated(block)) {
+    return(sample.int(n))
+  }
+  perm <- seq_len(n)
+  for (g in split(seq_len(n), block, drop = TRUE)) {
+    if (length(g) > 1L) perm[g] <- g[sample.int(length(g))]
+  }
+  perm
+}
+
 #' Evaluate model performance for vector RSA
 #'
 #' Computes the mean second-order similarity score and handles permutation testing.
@@ -456,8 +475,7 @@ evaluate_model.vector_rsa_model <- function(object,
 
     # The distance matrix is computed once. Permuting the rows of X permutes
     # the rows and columns of its distance matrix, so each permutation
-    # reindexes D instead of recomputing pairwise distances. The RNG is
-    # consumed exactly as before (one sample() call per permutation).
+    # reindexes D instead of recomputing pairwise distances.
     D_roi <- NULL
     if (nrow(X_roi_matrix) >= 2) {
       .vector_rsa_check_inputs(object, X_roi_matrix)
@@ -473,8 +491,9 @@ evaluate_model.vector_rsa_model <- function(object,
          perm_means[p] <- NaN
          next
       }
-      # Permute the rows of the ROI's data matrix
-      perm_indices <- sample(nrow(X_roi_matrix))
+      # Permute rows within blocks: scores only compare rows across blocks,
+      # so exchangeability holds within a block, not across blocks.
+      perm_indices <- .vector_rsa_block_perm(object$design$block, nrow(X_roi_matrix))
 
       # Recompute trial scores under the null from the reindexed distances
       scores_perm <- .second_order_scores_from_distance(

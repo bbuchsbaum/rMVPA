@@ -212,8 +212,8 @@ perf_golden_outputs <- function() {
   )
 
   vfx <- perf_vector_fixture()
-  out$vector$cor_perm <- perf_vector_run(vfx, cordist(), "pearson", 40L, 2024L)
-  out$vector$euc_perm <- perf_vector_run(vfx, euclidean(), "spearman", 25L, 7L)
+  # Permutation nulls are checked against a recomputing oracle instead: the
+  # null is now drawn within blocks (it was drawn across blocks before).
   out$vector$second_order <- second_order_similarity(
     distfun = cordist(), X = vfx$X, Dref = vfx$D, block_var = vfx$block,
     method = "spearman"
@@ -472,20 +472,28 @@ test_that("reindexed permutation distances equal recomputed distances", {
   }
 })
 
-test_that("vector RSA permutation nulls equal the pre-change implementation under the same seed", {
-  golden <- readRDS(perf_golden_path())
+test_that("vector RSA permutation nulls equal recomputed within-block nulls", {
+  # Oracle: draw each permutation with the same RNG stream, permute the rows
+  # of X and recompute the scores from scratch with second_order_similarity().
   vfx <- perf_vector_fixture()
-
-  got <- perf_vector_run(vfx, cordist(), "pearson", 40L, 2024L)
-  expect_equal(got$scores, golden$vector$cor_perm$scores, tolerance = 1e-12)
-  expect_equal(got$perm, golden$vector$cor_perm$perm, tolerance = 1e-12)
-  # Same RNG draws in the same order: the stream afterwards is identical.
-  expect_identical(got$rng_after, golden$vector$cor_perm$rng_after)
-
-  got_e <- perf_vector_run(vfx, euclidean(), "spearman", 25L, 7L)
-  expect_equal(got_e$scores, golden$vector$euc_perm$scores, tolerance = 1e-12)
-  expect_equal(got_e$perm, golden$vector$euc_perm$perm, tolerance = 1e-12)
-  expect_identical(got_e$rng_after, golden$vector$euc_perm$rng_after)
+  for (cfg in list(list(cordist(), "pearson", 40L, 2024L),
+                   list(euclidean(), "spearman", 25L, 7L))) {
+    got <- perf_vector_run(vfx, cfg[[1]], cfg[[2]], cfg[[3]], cfg[[4]])
+    set.seed(cfg[[4]])
+    scores <- second_order_similarity(cfg[[1]], vfx$X, vfx$D, vfx$block, cfg[[2]])
+    null <- vapply(seq_len(cfg[[3]]), function(i) {
+      perm <- rMVPA:::.vector_rsa_block_perm(vfx$block, nrow(vfx$X))
+      expect_identical(vfx$block[perm], vfx$block)
+      mean(second_order_similarity(cfg[[1]], vfx$X[perm, , drop = FALSE],
+                                   vfx$D, vfx$block, cfg[[2]]), na.rm = TRUE)
+    }, numeric(1))
+    expect_equal(got$scores, scores, tolerance = 1e-12)
+    expect_equal(unname(got$perm$permutation_distributions$rsa_score),
+                 null, tolerance = 1e-12)
+    expect_equal(unname(got$perm$p_values[["rsa_score"]]),
+                 (sum(null >= mean(scores)) + 1) / (cfg[[3]] + 1))
+    expect_identical(got$rng_after, .Random.seed)
+  }
 })
 
 test_that("second_order_similarity output equals the pre-change implementation", {
