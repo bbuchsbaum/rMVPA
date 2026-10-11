@@ -1,3 +1,4 @@
+library(rMVPA) # Ensure rMVPA generics are in scope
 
 # Mock cv_spec object with S3 methods
 mock_cv_spec_s3 <- function(mvpa_design) {
