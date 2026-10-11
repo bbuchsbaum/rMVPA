@@ -186,6 +186,7 @@ Suggests:
     shard (>= 0.2.1),
     sparsediscrim,
     spls,
+    stringr,
     systemfonts,
     testthat,
     neurosurf,
