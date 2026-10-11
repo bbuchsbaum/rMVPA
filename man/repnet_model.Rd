@@ -36,6 +36,15 @@ For each ROI or searchlight, computes representational connectivity between
 the ROI RDM and a seed RDM, optionally controlling for confound RDMs (block,
 lag, behavior, etc.).
 }
+\details{
+Per-ROI metrics: \code{n_items}, \code{n_pairs}, \code{conn_raw} (the
+ROI-seed RDM similarity), and from the multiple regression of the ROI RDM on
+the seed and confound RDMs, \code{beta_<term>} (regression coefficients) and
+\code{sp_<term>} (semi-partial correlations). With confound RDMs,
+\code{seed_conf_r2} is the R-squared of the seed RDM regressed on the
+confound RDMs: \code{beta_seed} and \code{sp_seed} describe only the
+\code{1 - seed_conf_r2} share of the seed that the confounds do not explain.
+}
 \examples{
 ds <- gen_sample_dataset(D = c(4, 4, 4), nobs = 16, blocks = 4, nlevels = 2)
 # Seed RDM over trials (e.g. from a seed region or a behavioural model)

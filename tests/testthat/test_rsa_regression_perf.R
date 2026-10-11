@@ -407,6 +407,66 @@ test_that("repnet with NA confound entries drops incomplete pairs without errori
   expect_equal(unname(perf[["sp_seed"]]), unname(oracle$sp[["seed"]]), tolerance = 1e-10)
 })
 
+test_that("repnet seed_conf_r2 equals the lm() R-squared of seed on confounds", {
+  sc <- rp_seed_conf(405L, K = 13L, conf_names = c("conf1", "conf2"))
+  # Make the seed partly a confound so the shared share is substantial.
+  sc$D_seed <- sc$D_seed + 0.8 * sc$confs$conf1
+  env <- rp_roi_fixture(sc$E, sc$items)
+  rn_des <- repnet_design(design = env$mvdes, key_var = ~ .rownum,
+                          seed_rdm = sc$D_seed, confound_rdms = sc$confs)
+  mspec <- repnet_model(dataset = env$ds$dataset, design = env$mvdes, repnet_des = rn_des,
+                        distfun = cordist("pearson"), simfun = "pearson")
+  tl <- lower.tri(sc$D_seed)
+  oracle <- summary(stats::lm(sc$D_seed[tl] ~ sc$confs$conf1[tl] + sc$confs$conf2[tl]))$r.squared
+  expect_gt(oracle, 0.2)
+
+  perf <- process_roi(mspec, env$roi, rnum = 1L, center_global_id = NA)$performance[[1]]
+  expect_equal(unname(perf[["seed_conf_r2"]]), oracle, tolerance = 1e-10)
+  # beta_seed stays the regression coefficient (not the semi-partial)
+  D_roi <- 1 - cor(t(sc$E))
+  X <- data.frame(seed = sc$D_seed[tl], conf1 = sc$confs$conf1[tl], conf2 = sc$confs$conf2[tl])
+  expect_equal(unname(perf[["beta_seed"]]),
+               unname(lm_terms_oracle(D_roi[tl], X)$beta[["seed"]]), tolerance = 1e-10)
+
+  # The uncached path (no fixed design) gives the same value.
+  mspec$.fixed_design <- NULL
+  perf2 <- process_roi(mspec, env$roi, rnum = 1L, center_global_id = NA)$performance[[1]]
+  expect_equal(unname(perf2[["seed_conf_r2"]]), oracle, tolerance = 1e-10)
+})
+
+test_that("repnet seed_conf_r2 is absent without confounds and 1 for a collinear seed", {
+  sc <- rp_seed_conf(406L, K = 12L, conf_names = character(0))
+  env <- rp_roi_fixture(sc$E, sc$items)
+  rn_des <- repnet_design(design = env$mvdes, key_var = ~ .rownum, seed_rdm = sc$D_seed)
+  mspec <- repnet_model(dataset = env$ds$dataset, design = env$mvdes, repnet_des = rn_des)
+  perf <- process_roi(mspec, env$roi, rnum = 1L, center_global_id = NA)$performance[[1]]
+  expect_false("seed_conf_r2" %in% names(perf))
+
+  sc <- rp_seed_conf(407L, K = 12L, conf_names = "conf1")
+  sc$confs$conf1 <- 2 * sc$D_seed + 1
+  rownames(sc$confs$conf1) <- colnames(sc$confs$conf1) <- sc$items
+  env <- rp_roi_fixture(sc$E, sc$items)
+  rn_des <- repnet_design(design = env$mvdes, key_var = ~ .rownum,
+                          seed_rdm = sc$D_seed, confound_rdms = sc$confs)
+  mspec <- repnet_model(dataset = env$ds$dataset, design = env$mvdes, repnet_des = rn_des)
+  perf <- process_roi(mspec, env$roi, rnum = 1L, center_global_id = NA)$performance[[1]]
+  expect_equal(unname(perf[["seed_conf_r2"]]), 1, tolerance = 1e-10)
+})
+
+test_that("repnet seed_conf_r2 uses only pairs with complete confounds", {
+  sc <- rp_seed_conf(408L, K = 12L, conf_names = "conf1")
+  sc$confs$conf1[2, 5] <- NA
+  sc$confs$conf1[5, 2] <- NA
+  env <- rp_roi_fixture(sc$E, sc$items)
+  rn_des <- repnet_design(design = env$mvdes, key_var = ~ .rownum,
+                          seed_rdm = sc$D_seed, confound_rdms = sc$confs)
+  mspec <- repnet_model(dataset = env$ds$dataset, design = env$mvdes, repnet_des = rn_des)
+  perf <- process_roi(mspec, env$roi, rnum = 1L, center_global_id = NA)$performance[[1]]
+  tl <- lower.tri(sc$D_seed)
+  oracle <- summary(stats::lm(sc$D_seed[tl] ~ sc$confs$conf1[tl]))$r.squared
+  expect_equal(unname(perf[["seed_conf_r2"]]), oracle, tolerance = 1e-10)
+})
+
 # repmed oracle: paths a, b, c' and c by lm(), Sobel test with lm() standard errors
 repmed_oracle <- function(m, x, y, conf = NULL) {
   X_a <- data.frame(x = x)

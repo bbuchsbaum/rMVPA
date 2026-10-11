@@ -14,6 +14,15 @@
 #'   (\code{"pearson"} or \code{"spearman"}).
 #' @param ... Extra fields stored on the model spec.
 #'
+#' @details
+#' Per-ROI metrics: \code{n_items}, \code{n_pairs}, \code{conn_raw} (the
+#' ROI-seed RDM similarity), and from the multiple regression of the ROI RDM on
+#' the seed and confound RDMs, \code{beta_<term>} (regression coefficients) and
+#' \code{sp_<term>} (semi-partial correlations). With confound RDMs,
+#' \code{seed_conf_r2} is the R-squared of the seed RDM regressed on the
+#' confound RDMs: \code{beta_seed} and \code{sp_seed} describe only the
+#' \code{1 - seed_conf_r2} share of the seed that the confounds do not explain.
+#'
 #' @return A model spec of class \code{"repnet_model"} compatible with
 #'   \code{run_regional()} and \code{run_searchlight()}.
 #' @examples
@@ -145,6 +154,27 @@ repnet_model <- function(dataset,
   list(mm = mm)
 }
 
+# R^2 of the seed RDM vector regressed on the confound RDM vectors (with an
+# intercept), over pairs where every predictor is finite. It measures how much
+# of the seed is shared with the confounds, i.e. how far beta_seed / sp_seed
+# reflect only the seed's unique part. NA without confounds or when the seed
+# is constant.
+#' @keywords internal
+#' @noRd
+.repnet_seed_conf_r2 <- function(mm) {
+  mm <- as.data.frame(mm, stringsAsFactors = FALSE)
+  if (ncol(mm) < 2L) return(NA_real_)
+  M <- as.matrix(mm)
+  ok <- rowSums(!is.finite(M)) == 0L
+  y <- M[ok, 1L]
+  if (length(y) < 2L) return(NA_real_)
+  tss <- sum((y - mean(y))^2)
+  if (!is.finite(tss) || tss <= 0) return(NA_real_)
+  X <- cbind(1, M[ok, -1L, drop = FALSE])
+  rss <- sum(stats::lm.fit(X, y)$residuals^2)
+  max(0, min(1, 1 - rss / tss))
+}
+
 # Fixed seed + confound design, built at construction. NULL when it cannot be
 # built (fit_roi() then reports the problem as before).
 #' @keywords internal
@@ -160,7 +190,8 @@ repnet_model <- function(dataset,
     pred <- .repnet_predictors(seed_sub, confound_rdms, common_items)
     if (!is.null(pred$error)) return(NULL)
     X <- .rep_X(as.matrix(as.data.frame(pred$mm, stringsAsFactors = FALSE)))
-    list(X = X, decomp = if (all(is.finite(X))) qr(X) else NULL)
+    list(X = X, decomp = if (all(is.finite(X))) qr(X) else NULL,
+         seed_conf_r2 = .repnet_seed_conf_r2(pred$mm))
   }, error = function(e) NULL)
 }
 
@@ -312,6 +343,15 @@ fit_roi.repnet_model <- function(model, roi_data, context, ...) {
   }
   if (length(sp_vec)) {
     perf <- c(perf, sp_vec)
+  }
+  if (length(model$confound_rdms)) {
+    cache <- model$.fixed_design
+    seed_conf_r2 <- if (!is.null(cache) && identical(cache$X, X_fix)) {
+      cache$seed_conf_r2
+    } else {
+      .repnet_seed_conf_r2(mm)
+    }
+    perf <- c(perf, seed_conf_r2 = seed_conf_r2)
   }
 
   roi_result(

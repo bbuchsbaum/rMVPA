@@ -61,6 +61,9 @@
   reports the seed's regression coefficient, like every other `beta_*` term.
   Repnet ROIs with incomplete confound entries no longer fail on mismatched
   residual lengths.
+  With confound RDMs, `repnet_model` also reports `seed_conf_r2`, the
+  R-squared of the seed RDM on the confound RDMs, so the share of the seed that
+  `beta_seed` and `sp_seed` cannot speak to is visible per ROI.
 
 * Parallel searchlights under the default (non-shard) backend no longer run
   slower than sequential ones. Three causes, all in `run_future()` dispatch:
