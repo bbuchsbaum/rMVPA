@@ -100,10 +100,10 @@ auc_maps <- lapply(1:6, function(i) {
 # For AUC-0.5 maps (chance-centered)
 prepped <- nmf_preprocess_maps(auc_maps, method = "auc")
 result <- spatial_nmf_maps(prepped$maps, mask = mask, k = 2)
-#> INFO [2026-10-11 01:16:58] spatial_nmf_maps: fitting NMF (n=6, p=50, k=2, lambda=0)
+#> INFO [2026-10-11 03:25:15] spatial_nmf_maps: fitting NMF (n=6, p=50, k=2, lambda=0)
 #> Warning: did not converge--results might be invalid!; try increasing maxit or work
-#> INFO [2026-10-11 01:16:58] spatial_nmf_maps: NMF fit complete (converged=TRUE, iterations=47)
-#> INFO [2026-10-11 01:16:58] spatial_nmf_maps: parallel=FALSE (explicit=FALSE)
+#> INFO [2026-10-11 03:25:16] spatial_nmf_maps: NMF fit complete (converged=TRUE, iterations=47)
+#> INFO [2026-10-11 03:25:16] spatial_nmf_maps: parallel=FALSE (explicit=FALSE)
 
 # For raw AUC maps
 raw_auc_maps <- lapply(auc_maps, function(m) m + 0.5)

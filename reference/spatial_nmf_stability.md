@@ -140,8 +140,8 @@ set.seed(1)
 X <- matrix(runif(20 * 30), 20, 30)
 fit <- spatial_nmf(X, k = 2)$fit
 stab <- spatial_nmf_stability(X = X, fit = fit, n_boot = 5, seed = 1)
-#> INFO [2026-10-11 01:17:16] Spatial NMF stability: 5 bootstrap samples (serial)
-#> INFO [2026-10-11 01:17:16] Spatial NMF stability: bootstrap complete.
+#> INFO [2026-10-11 03:25:39] Spatial NMF stability: 5 bootstrap samples (serial)
+#> INFO [2026-10-11 03:25:39] Spatial NMF stability: bootstrap complete.
 dim(stab$mean)
 #> [1]  2 30
 ```

@@ -163,17 +163,17 @@ association <- function(sl_data, sl_info) {
 # Run the custom searchlight (standard method)
 custom_sl_results <- run_custom_searchlight(dataset_obj, my_sl_stats,
                                             radius = 2, method = "standard")
-#> INFO [2026-10-11 01:17:09] Starting custom searchlight analysis (method: standard, radius: 2 mm)...
-#> INFO [2026-10-11 01:17:09] Preparing 216 standard searchlight spheres...
-#> INFO [2026-10-11 01:17:09] Using automatic searchlight batch size 216 for 216 centers (memory budget 512.0 MiB).
-#> INFO [2026-10-11 01:17:10] 
+#> INFO [2026-10-11 03:25:31] Starting custom searchlight analysis (method: standard, radius: 2 mm)...
+#> INFO [2026-10-11 03:25:31] Preparing 216 standard searchlight spheres...
+#> INFO [2026-10-11 03:25:31] Using automatic searchlight batch size 216 for 216 centers (memory budget 512.0 MiB).
+#> INFO [2026-10-11 03:25:31] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 216
 #> - Processed: 216
 #> - Skipped: 0
-#> INFO [2026-10-11 01:17:10] Combining results from standard searchlight...
-#> INFO [2026-10-11 01:17:10] combine_custom_standard: 216 ROIs processed (success=216, errors=0)
-#> INFO [2026-10-11 01:17:10] Finished custom searchlight analysis.
+#> INFO [2026-10-11 03:25:31] Combining results from standard searchlight...
+#> INFO [2026-10-11 03:25:31] combine_custom_standard: 216 ROIs processed (success=216, errors=0)
+#> INFO [2026-10-11 03:25:31] Finished custom searchlight analysis.
 print(custom_sl_results)
 #> 
 #>  Searchlight Analysis Results 
@@ -191,26 +191,26 @@ print(custom_sl_results)
 custom_sl_rand <- run_custom_searchlight(dataset_obj, my_sl_stats,
                                          radius = 2, method = "randomized",
                                          niter = 2)
-#> INFO [2026-10-11 01:17:10] Starting custom searchlight analysis (method: randomized, radius: 2 mm)...
-#> INFO [2026-10-11 01:17:10] Running 2 randomized searchlight iterations...
-#> INFO [2026-10-11 01:17:10] Using automatic searchlight batch size 20 for 20 centers (memory budget 512.0 MiB).
-#> INFO [2026-10-11 01:17:10] 
+#> INFO [2026-10-11 03:25:31] Starting custom searchlight analysis (method: randomized, radius: 2 mm)...
+#> INFO [2026-10-11 03:25:31] Running 2 randomized searchlight iterations...
+#> INFO [2026-10-11 03:25:31] Using automatic searchlight batch size 20 for 20 centers (memory budget 512.0 MiB).
+#> INFO [2026-10-11 03:25:31] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 20
 #> - Processed: 20
 #> - Skipped: 0
-#> INFO [2026-10-11 01:17:10] Using automatic searchlight batch size 19 for 19 centers (memory budget 512.0 MiB).
-#> INFO [2026-10-11 01:17:10] 
+#> INFO [2026-10-11 03:25:31] Using automatic searchlight batch size 19 for 19 centers (memory budget 512.0 MiB).
+#> INFO [2026-10-11 03:25:32] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 19
 #> - Processed: 19
 #> - Skipped: 0
-#> INFO [2026-10-11 01:17:10] Combining results from randomized searchlight (39 total spheres processed)...
-#> INFO [2026-10-11 01:17:10] combine_custom_randomized: 39 ROIs processed (success=39, errors=0)
-#> WARN [2026-10-11 01:17:10] No overlapping indices found for normalization for metric 'mean_signal'.
-#> WARN [2026-10-11 01:17:10] No overlapping indices found for normalization for metric 'sd_signal'.
-#> WARN [2026-10-11 01:17:10] No overlapping indices found for normalization for metric 'n_vox_in_sphere'.
-#> INFO [2026-10-11 01:17:10] Finished custom searchlight analysis.
+#> INFO [2026-10-11 03:25:32] Combining results from randomized searchlight (39 total spheres processed)...
+#> INFO [2026-10-11 03:25:32] combine_custom_randomized: 39 ROIs processed (success=39, errors=0)
+#> WARN [2026-10-11 03:25:32] No overlapping indices found for normalization for metric 'mean_signal'.
+#> WARN [2026-10-11 03:25:32] No overlapping indices found for normalization for metric 'sd_signal'.
+#> WARN [2026-10-11 03:25:32] No overlapping indices found for normalization for metric 'n_vox_in_sphere'.
+#> INFO [2026-10-11 03:25:32] Finished custom searchlight analysis.
 print(custom_sl_rand)
 #> 
 #>  Searchlight Analysis Results 
