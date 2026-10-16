@@ -166,3 +166,53 @@ test_that("searchlight n_voxels counts in-mask voxels, not the grid (#131)", {
   expect_true(any(grepl("in Mask:\\s+64\\b", txt)))
   expect_false(any(grepl("216", txt)))
 })
+
+test_that("surface regional p_/z_ maps are NeuroSurfaces, NA off-region (#130)", {
+  skip_if_not_installed("neurosurf")
+  futile.logger::flog.threshold(futile.logger::ERROR)
+  set.seed(5)
+  d <- gen_sample_dataset(c(5, 5, 4), nobs = 20, blocks = 2, nlevels = 2,
+                          data_mode = "surface")
+  geom <- d$dataset$train_data@geometry
+  nodes <- neurosurf::nodes(geom)
+  lab <- integer(length(nodes))
+  lab[1:30] <- 1L
+  lab[31:60] <- 2L
+  region_mask <- neurosurf::NeuroSurface(geom, indices = nodes, data = lab)
+
+  labs <- paste0("L", seq_len(20))
+  D <- as.matrix(stats::dist(matrix(stats::rnorm(20 * 20), 20)))
+  dimnames(D) <- list(labs, labs)
+  rdes <- vector_rsa_design(D = D, labels = labs, block_var = d$design$block_var)
+  vs <- vector_rsa_model(d$dataset, rdes, distfun = cordist(), nperm = 5)
+  rr <- suppressWarnings(run_regional(vs, region_mask))
+
+  pt <- rr$performance_table
+  for (nm in c("p_rsa_score", "z_rsa_score")) {
+    s <- rr$vol_results[[nm]]
+    expect_s4_class(s, "NeuroSurface")
+    expect_identical(s@indices, region_mask@indices)
+    v <- s@data
+    expect_true(all(is.na(v[lab == 0])), info = nm)
+    expect_equal(sum(v[lab == 0] < 0.05, na.rm = TRUE), 0, info = nm)
+    for (r in 1:2) {
+      expect_true(all(v[lab == r] == pt[[nm]][pt$roinum == r]), info = nm)
+    }
+  }
+  # Performance maps keep the zero fill off-region.
+  expect_true(all(rr$vol_results$rsa_score@data[lab == 0] == 0))
+})
+
+test_that("region map helper handles NeuroSurface region masks (#130)", {
+  skip_if_not_installed("neurosurf")
+  d <- suppressMessages(gen_sample_dataset(c(5, 5, 4), nobs = 10, data_mode = "surface"))
+  geom <- d$dataset$train_data@geometry
+  idx <- neurosurf::nodes(geom)[1:6]
+  rm <- neurosurf::NeuroSurface(geom, indices = idx, data = c(0, 1, 1, 2, 0, 3))
+  out <- .map_region_values(rm, c(1, 2, 3), c(0.01, NA, 0.5), fill = NA_real_)
+  expect_s4_class(out, "NeuroSurface")
+  expect_identical(out@indices, idx)
+  expect_equal(out@data, c(NA, 0.01, 0.01, NA, NA, 0.5))
+  out0 <- .map_region_values(rm, c(1, 2, 3), c(0.7, 0.8, 0.9))
+  expect_equal(out0@data, c(0, 0.7, 0.7, 0.8, 0, 0.9))
+})

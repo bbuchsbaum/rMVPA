@@ -185,16 +185,26 @@ build_volume_map <- function(dataset, metric_vector, ids, fill = 0) {
   perf_mat
 }
 
-# Map per-region values onto a region-label volume. Unlike
-# neuroim2::map_values(), voxels outside every listed region receive `fill`
-# and NA region values stay NA (map_values() turns both into 0, which reads as
-# p = 0 for p-value maps; #130).
+# Map per-region values onto a region-label map (a NeuroVol, or a
+# NeuroSurface for surface analyses). Unlike neuroim2::map_values(), voxels or
+# vertices outside every listed region receive `fill` and NA region values stay
+# NA (map_values() turns both into 0, which reads as p = 0 for p-value maps;
+# #130). A surface result keeps the region mask's geometry and indices, as
+# map_values() did.
 .map_region_values <- function(region_mask, ids, values, fill = 0) {
-  labels <- as.vector(region_mask)
-  m <- match(labels, as.numeric(ids))
+  is_surface <- inherits(region_mask, "NeuroSurface")
+  labels <- if (is_surface) region_mask@data else as.vector(region_mask)
+  m <- match(as.numeric(labels), as.numeric(ids))
   out <- rep(as.numeric(fill), length(labels))
   hit <- !is.na(m)
   out[hit] <- as.numeric(values)[m[hit]]
+  if (is_surface) {
+    return(neurosurf::NeuroSurface(
+      geometry = region_mask@geometry,
+      indices = region_mask@indices,
+      data = out
+    ))
+  }
   neuroim2::NeuroVol(array(out, dim(region_mask)), neuroim2::space(region_mask))
 }
 
