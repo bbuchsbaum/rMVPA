@@ -29,6 +29,21 @@
   Mask”. It previously reported the size of the whole grid
   ([\#131](https://github.com/bbuchsbaum/rMVPA/issues/131)).
 
+- Documentation and NAMESPACE are back in sync with the roxygen sources,
+  so
+  [`devtools::document()`](https://devtools.r-lib.org/reference/document.html)
+  no longer changes anything
+  ([\#132](https://github.com/bbuchsbaum/rMVPA/issues/132)). Two unused
+  imports were removed
+  ([`neuroim2::vectors`](https://bbuchsbaum.github.io/neuroim2/reference/vectors-methods.html),
+  [`stats::cov`](https://rdrr.io/r/stats/cor.html)), and a misplaced
+  roxygen block no longer creates a help page for the internal
+  `.str_squish()` helper. The help pages for
+  [`msreve_design()`](https://bbuchsbaum.github.io/rMVPA/reference/msreve_design.md)
+  and the package overview, which were out of date, were regenerated.
+  The overview now points to
+  [`vignette("rMVPA")`](https://bbuchsbaum.github.io/rMVPA/articles/rMVPA.md).
+
 - [`rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md)
   now uses `regtype` for the comparison of the neural RDM with each
   model RDM, as documented. Previously the comparison used `distmethod`,

@@ -51,67 +51,67 @@ is unset. Byte budgets are plain numbers of bytes.</p>
 
 <dl><dt><code>rMVPA.regional_mem_budget</code></dt>
 <dd><p>Default <code>2e9</code> (2 GB). Peak
-extraction-memory budget, in bytes, for one batch of regional ROIs. The
-batch size is reduced when the estimated per-batch memory exceeds it.</p></dd>
+    extraction-memory budget, in bytes, for one batch of regional ROIs. The
+    batch size is reduced when the estimated per-batch memory exceeds it.</p></dd>
 
-<dt><code>rMVPA.searchlight_mem_budget</code></dt>
+  <dt><code>rMVPA.searchlight_mem_budget</code></dt>
 <dd><p>Default <code>512 * 1024^2</code>
-(512 MiB). Memory budget, in bytes, used to pick the automatic batch size
-for searchlight centers.</p></dd>
+    (512 MiB). Memory budget, in bytes, used to pick the automatic batch size
+    for searchlight centers.</p></dd>
 
-<dt><code>rMVPA.searchlight_min_chunk</code></dt>
+  <dt><code>rMVPA.searchlight_min_chunk</code></dt>
 <dd><p>Default <code>16L</code>. Lower bound,
-in centers, on the chunk size used when searchlight centers are split
-across workers. A chunk is still capped by the centers per worker.</p></dd>
+    in centers, on the chunk size used when searchlight centers are split
+    across workers. A chunk is still capped by the centers per worker.</p></dd>
 
-<dt><code>rMVPA.gc_each_batch</code></dt>
+  <dt><code>rMVPA.gc_each_batch</code></dt>
 <dd><p>Default <code>FALSE</code>. When <code>TRUE</code>,
-the iterator calls <code><a href="https://rdrr.io/r/base/gc.html" class="external-link">gc()</a></code> after every batch. Off by default because
-a full collection is costly; use it to lower peak memory in long runs.</p></dd>
+    the iterator calls <code><a href="https://rdrr.io/r/base/gc.html" class="external-link">gc()</a></code> after every batch. Off by default because
+    a full collection is costly; use it to lower peak memory in long runs.</p></dd>
 
-<dt><code>rMVPA.shard_gc_each_batch</code></dt>
+  <dt><code>rMVPA.shard_gc_each_batch</code></dt>
 <dd><p>Default <code>FALSE</code>. Older alias
-of <code>rMVPA.gc_each_batch</code>, honoured by the iterator and the shard
-backend.</p></dd>
+    of <code>rMVPA.gc_each_batch</code>, honoured by the iterator and the shard
+    backend.</p></dd>
 
-<dt><code>rMVPA.profile_searchlight</code></dt>
+  <dt><code>rMVPA.profile_searchlight</code></dt>
 <dd><p>Default <code>FALSE</code>. When
-<code>TRUE</code>, searchlight runs record setup and timing information in the
-<code>"timing"</code> attribute of the result.</p></dd>
+    <code>TRUE</code>, searchlight runs record setup and timing information in the
+    <code>"timing"</code> attribute of the result.</p></dd>
 
-<dt><code>rMVPA.debug</code></dt>
+  <dt><code>rMVPA.debug</code></dt>
 <dd><p>Default <code>FALSE</code>. When <code>TRUE</code>, the
-searchlight combiner resolution reports extra diagnostic information.</p></dd>
+    searchlight combiner resolution reports extra diagnostic information.</p></dd>
 
-<dt><code>rMVPA.rsa_perm_cache_bytes</code></dt>
+  <dt><code>rMVPA.rsa_perm_cache_bytes</code></dt>
 <dd><p>Default <code>512 * 1024^2</code>
-(512 MiB). Maximum size, in bytes, of the RSA permutation cache. When the
-cache for a run would exceed this, it is not used.</p></dd>
+    (512 MiB). Maximum size, in bytes, of the RSA permutation cache. When the
+    cache for a run would exceed this, it is not used.</p></dd>
 
-<dt><code>rMVPA.rsa_fast_parallel</code></dt>
+  <dt><code>rMVPA.rsa_fast_parallel</code></dt>
 <dd><p>Default <code>TRUE</code>. Allows the fast
-RSA searchlight engine to run its chunks in parallel when more than one
-worker is available and there are at least 256 centers. Set to
-<code>FALSE</code> to force serial execution.</p></dd>
+    RSA searchlight engine to run its chunks in parallel when more than one
+    worker is available and there are at least 256 centers. Set to
+    <code>FALSE</code> to force serial execution.</p></dd>
 
-<dt><code>rMVPA.feature_rsa_block_target_bytes</code></dt>
+  <dt><code>rMVPA.feature_rsa_block_target_bytes</code></dt>
 <dd><p>Default
-<code>128 * 1024^2</code> (128 MiB). Target size, in bytes, of one feature-RSA
-block. Non-finite or non-positive values fall back to the default.</p></dd>
+    <code>128 * 1024^2</code> (128 MiB). Target size, in bytes, of one feature-RSA
+    block. Non-finite or non-positive values fall back to the default.</p></dd>
 
-<dt><code>rMVPA.feature_rsa_block_max_cols</code></dt>
+  <dt><code>rMVPA.feature_rsa_block_max_cols</code></dt>
 <dd><p>Default <code>64L</code>. Upper
-bound on the number of columns in one feature-RSA block.</p></dd>
+    bound on the number of columns in one feature-RSA block.</p></dd>
 
-<dt><code>rMVPA.feature_rsa_metric_block_rows</code></dt>
+  <dt><code>rMVPA.feature_rsa_metric_block_rows</code></dt>
 <dd><p>Default <code>128L</code>. Number
-of rows processed per block when computing feature-RSA metrics. It is
-clamped to the number of observations.</p></dd>
+    of rows processed per block when computing feature-RSA metrics. It is
+    clamped to the number of observations.</p></dd>
 
-<dt><code>rMVPA.feature_rsa_component_target_bytes</code></dt>
+  <dt><code>rMVPA.feature_rsa_component_target_bytes</code></dt>
 <dd><p>Default
-<code>32 * 1024^2</code> (32 MiB). Target size, in bytes, of one block of
-components when predicting feature-RSA models with a PLS/PCR fit.</p></dd>
+    <code>32 * 1024^2</code> (32 MiB). Target size, in bytes, of one block of
+    components when predicting feature-RSA models with a PLS/PCR fit.</p></dd>
 
 
 </dl><p>Options that are not listed here are not read by rMVPA.</p>

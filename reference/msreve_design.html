@@ -69,7 +69,11 @@ information about conditions, blocks, and cross-validation.</p></dd>
 <dd><p>A numeric matrix (<code>K x Q</code>) where <code>K</code> is
 the number of conditions and <code>Q</code> is the number of contrasts.
 Each column represents a contrast vector. It is highly recommended
-that columns are named to identify the contrasts.</p></dd>
+that columns are named to identify the contrasts. Rows should be named
+by the condition labels: named rows must match the condition levels
+exactly, and are reordered to level order (factor levels of the
+condition labels, or first appearance for non-factor labels). Unnamed
+rows must number <code>K</code> and are taken in that level order.</p></dd>
 
 
 <dt id="arg-name">name<a class="anchor" aria-label="anchor" href="#arg-name"></a></dt>
@@ -84,7 +88,9 @@ that columns are named to identify the contrasts.</p></dd>
 <dd><p>Optional named list of K x K matrices or <code>dist</code> objects representing
 nuisance RDMs to be included as additional predictors in the MS-ReVE regression.
 These are typically temporal or spatial nuisance patterns that should be accounted
-for but are not of primary interest.</p></dd>
+for but are not of primary interest. Labelled RDMs (dimnames or dist
+<code>Labels</code>) must use exactly the condition labels and are stored in level
+order; unlabelled K x K RDMs are taken in level order.</p></dd>
 
 </dl></div>
     <div class="section level2">

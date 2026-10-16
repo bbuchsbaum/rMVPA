@@ -40,8 +40,8 @@ Useful functions:
   for different RSA approaches
 
 For a detailed introduction and examples, see the package vignette:
-`vignette("rMVPA_introduction", package = "rMVPA")` (You may need to
-build vignettes first if installing from source).
+[`vignette("rMVPA", package = "rMVPA")`](https://bbuchsbaum.github.io/rMVPA/articles/rMVPA.md)
+(You may need to build vignettes first if installing from source).
 
 ## Author
 

@@ -83,12 +83,12 @@ custom_fun <- function(result) {
 }
 model2 <- naive_xdec_model(ds$dataset, ds$design, performance = custom_fun)
 res <- run_regional(model2, ds$dataset$mask)
-#> INFO [2026-10-16 10:58:38] 
+#> INFO [2026-10-16 11:46:29] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 1
 #> - Processed: 1
 #> - Skipped: 0
-#> INFO [2026-10-16 10:58:38] run_regional: 1 ROIs processed (success=1, errors=0)
+#> INFO [2026-10-16 11:46:29] run_regional: 1 ROIs processed (success=1, errors=0)
 res$performance_table
 #> # A tibble: 1 × 2
 #>   roinum mean_true_prob

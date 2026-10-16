@@ -360,7 +360,7 @@ does not accept nonuniform weights.
 
 view <- rotate_patterns(result$refit)
 view$reconstruction_error
-#> [1] 7.198298e-16
+#> [1] 1.272449e-15
 result$component_stability[, c("fold1", "fold2", "rank1", "rank2",
                                "n_common", "overlap")]
 #>   fold1 fold2 rank1 rank2 n_common   overlap

@@ -28,7 +28,11 @@ msreve_design(
   A numeric matrix (`K x Q`) where `K` is the number of conditions and
   `Q` is the number of contrasts. Each column represents a contrast
   vector. It is highly recommended that columns are named to identify
-  the contrasts.
+  the contrasts. Rows should be named by the condition labels: named
+  rows must match the condition levels exactly, and are reordered to
+  level order (factor levels of the condition labels, or first
+  appearance for non-factor labels). Unnamed rows must number `K` and
+  are taken in that level order.
 
 - name:
 
@@ -45,7 +49,10 @@ msreve_design(
   Optional named list of K x K matrices or `dist` objects representing
   nuisance RDMs to be included as additional predictors in the MS-ReVE
   regression. These are typically temporal or spatial nuisance patterns
-  that should be accounted for but are not of primary interest.
+  that should be accounted for but are not of primary interest. Labelled
+  RDMs (dimnames or dist `Labels`) must use exactly the condition labels
+  and are stored in level order; unlabelled K x K RDMs are taken in
+  level order.
 
 ## Value
 
