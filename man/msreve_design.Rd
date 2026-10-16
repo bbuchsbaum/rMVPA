@@ -19,7 +19,11 @@ information about conditions, blocks, and cross-validation.}
 \item{contrast_matrix}{A numeric matrix (\code{K x Q}) where \code{K} is
 the number of conditions and \code{Q} is the number of contrasts.
 Each column represents a contrast vector. It is highly recommended
-that columns are named to identify the contrasts.}
+that columns are named to identify the contrasts. Rows should be named
+by the condition labels: named rows must match the condition levels
+exactly, and are reordered to level order (factor levels of the
+condition labels, or first appearance for non-factor labels). Unnamed
+rows must number \code{K} and are taken in that level order.}
 
 \item{name}{An optional character string to name the design.}
 
@@ -28,7 +32,9 @@ that columns are named to identify the contrasts.}
 \item{nuisance_rdms}{Optional named list of K x K matrices or \code{dist} objects representing
 nuisance RDMs to be included as additional predictors in the MS-ReVE regression.
 These are typically temporal or spatial nuisance patterns that should be accounted
-for but are not of primary interest.}
+for but are not of primary interest. Labelled RDMs (dimnames or dist
+\code{Labels}) must use exactly the condition labels and are stored in level
+order; unlabelled K x K RDMs are taken in level order.}
 }
 \value{
 An object of class \code{msreve_design}, which is a list containing:

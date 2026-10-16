@@ -1,17 +1,3 @@
-#' Parse Mini-Formula Specification to Metadata Tibble
-#'
-#' Internal helper function to convert the mini-formula syntax within
-#' `contrasts(spec=...)` into a structured metadata tibble suitable for
-#' `model.matrix`.
-#'
-#' @param labels Character vector of all unique category labels in the desired order.
-#' @param spec A formula object containing the mini-DSL (e.g.,
-#'   `~ factor1(levelA + levelB ~ levelC + .) + factor2(...)`).
-#'
-#' @return A tibble with the first column `label` (matching input `labels` order)
-#'   and subsequent columns representing the binary factors derived from the spec.
-#'   Coding is typically +1 for the left side, -1 for the right side (or `.`), 0 otherwise.
-#'
 # Base-R stand-ins for the stringr calls the spec parser used to make.
 # .str_squish(): trim and collapse runs of whitespace to one space
 # (stringr::str_squish()).
@@ -27,6 +13,20 @@
   substring(x, c(1L, ends + 1L), c(starts - 1L, nchar(x)))
 }
 
+#' Parse Mini-Formula Specification to Metadata Tibble
+#'
+#' Internal helper function to convert the mini-formula syntax within
+#' `contrasts(spec=...)` into a structured metadata tibble suitable for
+#' `model.matrix`.
+#'
+#' @param labels Character vector of all unique category labels in the desired order.
+#' @param spec A formula object containing the mini-DSL (e.g.,
+#'   `~ factor1(levelA + levelB ~ levelC + .) + factor2(...)`).
+#'
+#' @return A tibble with the first column `label` (matching input `labels` order)
+#'   and subsequent columns representing the binary factors derived from the spec.
+#'   Coding is typically +1 for the left side, -1 for the right side (or `.`), 0 otherwise.
+#'
 #' @keywords internal
 #' @noRd
 #' @importFrom tibble tibble

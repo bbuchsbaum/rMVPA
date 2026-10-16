@@ -18,6 +18,13 @@
 * `print()` of a searchlight result now reports the number of voxels in the
   mask under "Voxels/Vertices in Mask". It previously reported the size of
   the whole grid (#131).
+* Documentation and NAMESPACE are back in sync with the roxygen sources, so
+  `devtools::document()` no longer changes anything (#132). Two unused
+  imports were removed (`neuroim2::vectors`, `stats::cov`), and a misplaced
+  roxygen block no longer creates a help page for the internal
+  `.str_squish()` helper. The help pages for `msreve_design()` and the
+  package overview, which were out of date, were regenerated. The overview
+  now points to `vignette("rMVPA")`.
 * `rsa_model()` now uses `regtype` for the comparison of the neural RDM with
   each model RDM, as documented. Previously the comparison used `distmethod`,
   so `regtype = "pearson"` and `regtype = "spearman"` gave the same result

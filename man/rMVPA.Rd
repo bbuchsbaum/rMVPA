@@ -29,7 +29,7 @@ Useful functions:
   \item \code{\link{rsa_model}}, \code{\link{contrast_rsa_model}}, \code{\link{vector_rsa_model}} for different RSA approaches
 }
 For a detailed introduction and examples, see the package vignette:
-\code{vignette("rMVPA_introduction", package = "rMVPA")} 
+\code{vignette("rMVPA", package = "rMVPA")} 
 (You may need to build vignettes first if installing from source).
 }
 \author{
