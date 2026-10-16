@@ -247,12 +247,14 @@ build_maps_from_schema <- function(schema, perf_mat, dataset, ids) {
   for (nm in names(schema_specs)) {
     spec <- schema_specs[[nm]]
     if (identical(spec$type, "scalar")) {
-      maps[[nm]] <- build_output_map(dataset, perf_mat[, col_idx], ids)
+      maps[[nm]] <- build_output_map(dataset, perf_mat[, col_idx], ids,
+                                     fill = .metric_map_fill(nm))
       col_idx <- col_idx + 1L
     } else if (identical(spec$type, "vector")) {
       for (k in seq_len(spec$size)) {
         sub_name <- paste0(nm, ".", k)
-        maps[[sub_name]] <- build_output_map(dataset, perf_mat[, col_idx], ids)
+        maps[[sub_name]] <- build_output_map(dataset, perf_mat[, col_idx], ids,
+                                             fill = .metric_map_fill(sub_name))
         col_idx <- col_idx + 1L
       }
     } else {

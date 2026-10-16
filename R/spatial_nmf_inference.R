@@ -601,6 +601,16 @@ spatial_nmf_stability <- function(x = NULL,
   out
 }
 
+# Dense NeuroVol in the space of `ref`, holding `vals` at linear indices `idx`
+# and NA everywhere else.
+.nmf_na_filled_vol <- function(vals, idx, ref) {
+  sp <- neuroim2::space(ref)
+  dims <- dim(sp)[seq_len(3L)]
+  full <- rep(NA_real_, prod(dims))
+  full[idx] <- vals
+  neuroim2::NeuroVol(array(full, dims), sp)
+}
+
 #' Voxelwise Statistics from Spatial NMF Stability
 #'
 #' Convenience function that converts stability summaries into voxelwise z- and
@@ -615,7 +625,10 @@ spatial_nmf_stability <- function(x = NULL,
 #' @param full_length Optional full map length for surface/vectorized outputs.
 #' @param ref_map Optional reference map to copy metadata from.
 #'
-#' @return A list with `z` and `p` component maps.
+#' @return A list with `z` and `p` component maps. Volumetric maps are dense
+#'   `NeuroVol`s; when the mask is known (`mask_indices`, or a sparse map's
+#'   stored voxels) voxels outside it are `NA`, so thresholding
+#'   `p < alpha` selects only tested voxels.
 #' @examples
 #' set.seed(1)
 #' X <- matrix(runif(20 * 50), 20, 50)
@@ -701,12 +714,11 @@ spatial_nmf_voxelwise_stats <- function(x = NULL,
       } else {
         as.integer(ref@data@i)
       }
-      z_maps[[i]] <- neuroim2::SparseNeuroVol(
-        data = as.numeric(z_vals)[idx], space = neuroim2::space(ref),
-        indices = idx)
-      p_maps[[i]] <- neuroim2::SparseNeuroVol(
-        data = as.numeric(p_vals)[idx], space = neuroim2::space(ref),
-        indices = idx)
+      # A SparseNeuroVol reads 0 at every unstored voxel, and 0 is a
+      # maximally significant p-value. Return dense maps that are NA outside
+      # the mask so a threshold such as p < 0.05 cannot select them (#130).
+      z_maps[[i]] <- .nmf_na_filled_vol(as.numeric(z_vals)[idx], idx, ref)
+      p_maps[[i]] <- .nmf_na_filled_vol(as.numeric(p_vals)[idx], idx, ref)
     } else if (inherits(ref, "NeuroSurface")) {
       z_maps[[i]] <- neurosurf::NeuroSurface(
         geometry = neurosurf::geometry(ref),
@@ -714,6 +726,10 @@ spatial_nmf_voxelwise_stats <- function(x = NULL,
       p_maps[[i]] <- neurosurf::NeuroSurface(
         geometry = neurosurf::geometry(ref),
         indices = ref@indices, data = as.numeric(p_vals))
+    } else if (!is.null(mask_indices)) {
+      idx <- as.integer(mask_indices)
+      z_maps[[i]] <- .nmf_na_filled_vol(as.numeric(z_vals)[idx], idx, ref)
+      p_maps[[i]] <- .nmf_na_filled_vol(as.numeric(p_vals)[idx], idx, ref)
     } else {
       z_maps[[i]] <- neuroim2::NeuroVol(as.numeric(z_vals), neuroim2::space(ref))
       p_maps[[i]] <- neuroim2::NeuroVol(as.numeric(p_vals), neuroim2::space(ref))

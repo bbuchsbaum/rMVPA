@@ -13,7 +13,11 @@ build_output_map(dataset, metric_vector, ids, ...)
 
 \item{ids}{Integer vector of center IDs corresponding to \code{metric_vector}.}
 
-\item{...}{Additional arguments.}
+\item{...}{Additional arguments. Volumetric and clustered methods accept
+\code{fill}, the value given to voxels without a result (default
+\code{0}). Statistical maps (p-values, z-scores) are built with
+\code{fill = NA} so that untested voxels cannot pass a threshold such as
+\code{p < 0.05}. Surface maps are sparse and ignore \code{fill}.}
 }
 \value{
 A spatial object (\code{NeuroVol}, \code{NeuroSurface}, etc.)

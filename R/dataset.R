@@ -1141,16 +1141,16 @@ get_center_ids.mvpa_surface_dataset <- function(dataset, ...) {
 }
 
 #' @export
-build_output_map.mvpa_image_dataset <- function(dataset, metric_vector, ids, ...) {
-  build_volume_map(dataset, metric_vector, ids)
+build_output_map.mvpa_image_dataset <- function(dataset, metric_vector, ids, fill = 0, ...) {
+  build_volume_map(dataset, metric_vector, ids, fill = fill)
 }
 
 #' @export
-build_output_map.mvpa_multibasis_image_dataset <- function(dataset, metric_vector, ids, aggregation = c("mean", "sum", "maxabs"), ...) {
+build_output_map.mvpa_multibasis_image_dataset <- function(dataset, metric_vector, ids, aggregation = c("mean", "sum", "maxabs"), fill = 0, ...) {
   aggregation <- match.arg(aggregation)
 
   if (is.null(ids)) {
-    return(build_volume_map(dataset, metric_vector, ids))
+    return(build_volume_map(dataset, metric_vector, ids, fill = fill))
   }
 
   if (length(metric_vector) != length(ids)) {
@@ -1158,7 +1158,7 @@ build_output_map.mvpa_multibasis_image_dataset <- function(dataset, metric_vecto
   }
 
   if (!anyDuplicated(ids)) {
-    return(build_volume_map(dataset, metric_vector, ids))
+    return(build_volume_map(dataset, metric_vector, ids, fill = fill))
   }
 
   split_vals <- split(metric_vector, ids)
@@ -1173,11 +1173,13 @@ build_output_map.mvpa_multibasis_image_dataset <- function(dataset, metric_vecto
   vals_u <- vapply(split_vals, agg_fun, numeric(1))
   ord <- order(ids_u)
 
-  build_volume_map(dataset, vals_u[ord], ids_u[ord])
+  build_volume_map(dataset, vals_u[ord], ids_u[ord], fill = fill)
 }
 
 #' @export
-build_output_map.mvpa_surface_dataset <- function(dataset, metric_vector, ids, ...) {
+build_output_map.mvpa_surface_dataset <- function(dataset, metric_vector, ids, fill = 0, ...) {
+  # NeuroSurface is sparse: vertices without a result are simply absent from
+  # `indices`, so there is nothing to fill.
   build_surface_map(dataset, metric_vector, ids)
 }
 

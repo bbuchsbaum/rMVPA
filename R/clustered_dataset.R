@@ -95,9 +95,8 @@ get_center_ids.mvpa_clustered_dataset <- function(dataset, ...) {
 }
 
 #' @export
-build_output_map.mvpa_clustered_dataset <- function(dataset, metric_vector, ids, ...) {
-  lookup <- cbind(as.numeric(ids), as.numeric(metric_vector))
-  neuroim2::map_values(dataset$region_mask, lookup)
+build_output_map.mvpa_clustered_dataset <- function(dataset, metric_vector, ids, fill = 0, ...) {
+  .map_region_values(dataset$region_mask, ids, metric_vector, fill = fill)
 }
 
 #' @export

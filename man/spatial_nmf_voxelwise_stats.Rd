@@ -33,7 +33,10 @@ spatial_nmf_voxelwise_stats(
 \item{ref_map}{Optional reference map to copy metadata from.}
 }
 \value{
-A list with `z` and `p` component maps.
+A list with `z` and `p` component maps. Volumetric maps are dense
+  `NeuroVol`s; when the mask is known (`mask_indices`, or a sparse map's
+  stored voxels) voxels outside it are `NA`, so thresholding
+  `p < alpha` selects only tested voxels.
 }
 \description{
 Convenience function that converts stability summaries into voxelwise z- and

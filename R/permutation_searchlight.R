@@ -1617,10 +1617,11 @@ run_permutation_searchlight <- function(
     p_values
   }
 
-  # Step 11: build spatial maps
+  # Step 11: build spatial maps. Voxels without a p-value are NA, not 0:
+  # a 0 fill would read as p = 0 and pass every threshold (#130).
   futile.logger::flog.info("Building p-value spatial maps ...")
   p_map <- tryCatch(
-    build_output_map(model_spec$dataset, p_values, all_ids),
+    build_output_map(model_spec$dataset, p_values, all_ids, fill = NA_real_),
     error = function(e) {
       futile.logger::flog.warn("build_output_map for p_map failed: %s", e$message)
       NULL
@@ -1629,7 +1630,7 @@ run_permutation_searchlight <- function(
 
   p_adj_map <- if (perm_ctrl$correction != "none") {
     tryCatch(
-      build_output_map(model_spec$dataset, p_adjusted, all_ids),
+      build_output_map(model_spec$dataset, p_adjusted, all_ids, fill = NA_real_),
       error = function(e) {
         futile.logger::flog.warn("build_output_map for p_adj_map failed: %s", e$message)
         NULL

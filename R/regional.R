@@ -901,7 +901,10 @@ comp_perf <- function(results, region_mask, model_spec = NULL) {
     if (length(id_vec) == 0L) {
       return(NULL)
     }
-    map_values(region_mask, cbind(id_vec, perf_tbl[[i]]))
+    # Not neuroim2::map_values(): it zero-fills unlisted voxels and NA
+    # values, which reads as p = 0 in p-value maps (#130).
+    .map_region_values(region_mask, id_vec, perf_tbl[[i]],
+                       fill = .metric_map_fill(names(perf_tbl)[i]))
   })
   names(vols) <- names(perf_tbl)
   

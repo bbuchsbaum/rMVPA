@@ -1346,7 +1346,11 @@ get_center_ids <- function(dataset, ...) UseMethod("get_center_ids")
 #' @param dataset The dataset object.
 #' @param metric_vector Numeric vector of metric values (one per center).
 #' @param ids Integer vector of center IDs corresponding to \code{metric_vector}.
-#' @param ... Additional arguments.
+#' @param ... Additional arguments. Volumetric and clustered methods accept
+#'   \code{fill}, the value given to voxels without a result (default
+#'   \code{0}). Statistical maps (p-values, z-scores) are built with
+#'   \code{fill = NA} so that untested voxels cannot pass a threshold such as
+#'   \code{p < 0.05}. Surface maps are sparse and ignore \code{fill}.
 #' @return A spatial object (\code{NeuroVol}, \code{NeuroSurface}, etc.)
 #' @keywords internal
 build_output_map <- function(dataset, metric_vector, ids, ...) UseMethod("build_output_map")

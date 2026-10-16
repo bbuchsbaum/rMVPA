@@ -12,7 +12,8 @@
 #' @return A `searchlight_result` object containing
 #'   \itemize{
 #'     \item `results`: Named spatial maps for each metric.
-#'     \item `n_voxels`: Total number of voxels/vertices defined by the mask.
+#'     \item `n_voxels`: Number of voxels/vertices inside the mask (nonzero
+#'       mask entries), not the size of the enclosing grid.
 #'     \item `active_voxels`: Number of voxels/vertices with results.
 #'     \item `metrics`: Character vector of metric names.
 #'   }
@@ -37,7 +38,10 @@ wrap_out <- function(perf_mat, dataset, ids = NULL) {
 
   for (idx in seq_along(metric_names)) {
     metric_vector <- perf_mat[, idx]
-    output_maps[[idx]] <- build_output_map(dataset, metric_vector, ids)
+    output_maps[[idx]] <- build_output_map(
+      dataset, metric_vector, ids,
+      fill = .metric_map_fill(metric_names[idx])
+    )
   }
   names(output_maps) <- metric_names
 
@@ -116,23 +120,82 @@ resolve_surface_ids <- function(dataset, ids, vec_len) {
   candidate
 }
 
-build_volume_map <- function(dataset, metric_vector, ids) {
+# Value written to voxels/vertices that carry no result for a metric.
+#
+# Performance maps (accuracy, AUC, RSA scores, ...) keep the historical fill
+# of 0. Statistical maps -- permutation p-values (`p_*`) and z-scores (`z_*`),
+# as emitted by models with `nperm > 0` -- are filled with NA instead: a 0
+# outside the mask would read as p = 0 (maximally significant), so any
+# `map < alpha` threshold would select every untested voxel (#130).
+.metric_map_fill <- function(metric_name) {
+  if (length(metric_name) == 1L && !is.na(metric_name) &&
+      grepl("^[pz]_", metric_name)) {
+    NA_real_
+  } else {
+    0
+  }
+}
+
+build_volume_map <- function(dataset, metric_vector, ids, fill = 0) {
   space_obj <- resolve_volume_space(dataset)
+  vol_dims <- spatial_dim_shape(space_obj)
   if (is.null(ids)) {
     expected_len <- spatial_dim_product(space_obj)
     if (length(metric_vector) != expected_len) {
       stop(sprintf("Length of metric_vector (%s) does not match total voxels in mask space (%s) for dense volumetric map when ids is NULL.",
                    length(metric_vector), expected_len))
     }
-    vol_dims <- spatial_dim_shape(space_obj)
+    if (!identical(fill, 0)) {
+      # A dense vector carries placeholder values outside the mask; replace
+      # them with `fill` so they cannot be mistaken for results.
+      in_mask <- resolve_volume_mask(dataset$mask, expected_len)
+      if (length(in_mask) == expected_len) {
+        metric_vector <- as.numeric(metric_vector)
+        metric_vector[!in_mask] <- fill
+      }
+    }
     vol_array <- array(metric_vector, dim = vol_dims)
     return(neuroim2::NeuroVol(vol_array, space_obj))
+  }
+  if (!identical(fill, 0)) {
+    # NeuroVol(data, space, indices) zero-fills unindexed voxels; build the
+    # full array ourselves so untested voxels hold `fill`.
+    full <- rep(as.numeric(fill), prod(vol_dims))
+    full[ids] <- metric_vector
+    return(neuroim2::NeuroVol(array(full, dim = vol_dims), space_obj))
   }
   neuroim2::NeuroVol(
     data = metric_vector,
     space = space_obj,
     indices = ids
   )
+}
+
+# Set rows without a result to NA in statistical (p_*/z_*) columns of a dense
+# performance matrix. `covered(j)` returns a logical row vector for column j.
+.na_uncovered_stat_cols <- function(perf_mat, covered) {
+  nms <- colnames(perf_mat)
+  if (is.null(nms)) return(perf_mat)
+  stat_cols <- which(vapply(nms, function(n) is.na(.metric_map_fill(n)), logical(1)))
+  if (length(stat_cols) == 0L) return(perf_mat)
+  perf_mat <- as.matrix(perf_mat)
+  for (j in stat_cols) {
+    perf_mat[!covered(j), j] <- NA_real_
+  }
+  perf_mat
+}
+
+# Map per-region values onto a region-label volume. Unlike
+# neuroim2::map_values(), voxels outside every listed region receive `fill`
+# and NA region values stay NA (map_values() turns both into 0, which reads as
+# p = 0 for p-value maps; #130).
+.map_region_values <- function(region_mask, ids, values, fill = 0) {
+  labels <- as.vector(region_mask)
+  m <- match(labels, as.numeric(ids))
+  out <- rep(as.numeric(fill), length(labels))
+  hit <- !is.na(m)
+  out[hit] <- as.numeric(values)[m[hit]]
+  neuroim2::NeuroVol(array(out, dim(region_mask)), neuroim2::space(region_mask))
 }
 
 resolve_volume_space <- function(dataset) {
@@ -192,7 +255,8 @@ resolve_volume_mask <- function(mask, spatial_length = NULL) {
 estimate_mask_size <- function(dataset) {
   mask <- dataset$mask
   if (inherits(mask, c("NeuroVol", "NeuroVec"))) {
-    return(spatial_dim_product(neuroim2::space(mask)))
+    # Count in-mask voxels, not the enclosing grid (#131).
+    return(sum(resolve_volume_mask(mask), na.rm = TRUE))
   }
   if (inherits(mask, "NeuroSurface")) {
     if (!requireNamespace("neurosurf", quietly = TRUE)) {
@@ -202,7 +266,7 @@ estimate_mask_size <- function(dataset) {
     return(length(neurosurf::nodes(geom)))
   }
   if (is.numeric(mask) || is.logical(mask)) {
-    return(length(mask))
+    return(sum(mask != 0, na.rm = TRUE))
   }
   if (!is.null(dataset$train_data) && inherits(dataset$train_data, "NeuroVec")) {
     return(spatial_dim_product(neuroim2::space(dataset$train_data)))
@@ -543,6 +607,10 @@ combine_randomized <- function(model_spec, good_results, bad_results=NULL, ...) 
   }
   colnames(perf_mat) <- metric_names
 
+  # Statistical columns (p_*/z_*): centres never covered by a randomized ROI
+  # have no value, so they must not read as p = 0 (#130).
+  perf_mat <- .na_uncovered_stat_cols(perf_mat, function(j) as.numeric(counts_mat[, j]) > 0)
+
   # Wrap and return results
   .log_debug("combine_randomized: Wrapping output")
   ret <- wrap_out(perf_mat, model_spec$dataset)
@@ -696,6 +764,11 @@ pool_randomized <- function(model_spec,
   } else {
     model_spec$dataset$mask
   }
+
+  # Statistical columns (p_*/z_*): voxels without a pooled result have no
+  # value, so they must not read as p = 0 (#130).
+  pooled <- seq_len(nrow(perf_mat)) %in% ind_set
+  perf_mat <- .na_uncovered_stat_cols(perf_mat, function(j) pooled)
 
   ret <- wrap_out(perf_mat, model_spec$dataset, ids = NULL)
 

@@ -18,7 +18,8 @@ These are typically global indices into the mask space for volumetric data, or v
 A `searchlight_result` object containing
   \itemize{
     \item `results`: Named spatial maps for each metric.
-    \item `n_voxels`: Total number of voxels/vertices defined by the mask.
+    \item `n_voxels`: Number of voxels/vertices inside the mask (nonzero
+      mask entries), not the size of the enclosing grid.
     \item `active_voxels`: Number of voxels/vertices with results.
     \item `metrics`: Character vector of metric names.
   }
