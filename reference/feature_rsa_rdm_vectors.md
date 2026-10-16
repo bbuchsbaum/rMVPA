@@ -69,12 +69,12 @@ region_mask <- neuroim2::NeuroVol(
   neuroim2::space(sample_ds$dataset$mask)
 )
 res <- run_regional(mdl, region_mask)
-#> INFO [2026-10-11 03:25:05] 
+#> INFO [2026-10-16 10:24:54] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 3
 #> - Processed: 3
 #> - Skipped: 0
-#> INFO [2026-10-11 03:25:05] run_regional: 3 ROIs processed (success=3, errors=0)
+#> INFO [2026-10-16 10:24:54] run_regional: 3 ROIs processed (success=3, errors=0)
 vecs <- feature_rsa_rdm_vectors(res)
 vecs
 #> # A tibble: 3 × 6

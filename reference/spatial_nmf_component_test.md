@@ -125,8 +125,8 @@ set.seed(1)
 W <- matrix(runif(20 * 3), 20, 3)
 groups <- factor(rep(c("A", "B"), each = 10))
 result <- spatial_nmf_component_test(W = W, groups = groups, nperm = 50, seed = 1)
-#> INFO [2026-10-11 03:25:38] Spatial NMF component test: 50 permutations (serial)
-#> INFO [2026-10-11 03:25:38] Spatial NMF component test: permutations complete.
+#> INFO [2026-10-16 10:25:28] Spatial NMF component test: 50 permutations (serial)
+#> INFO [2026-10-16 10:25:28] Spatial NMF component test: permutations complete.
 result$table
 #>   component        stat mean_group1 mean_group2     p_unc    p_fwer
 #> 1         1  0.05558341   0.5515139   0.5588204 0.9215686 1.0000000

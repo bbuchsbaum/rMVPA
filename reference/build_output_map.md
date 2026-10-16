@@ -26,7 +26,11 @@ build_output_map(dataset, metric_vector, ids, ...)
 
 - ...:
 
-  Additional arguments.
+  Additional arguments. Volumetric and clustered methods accept `fill`,
+  the value given to voxels without a result (default `0`). Statistical
+  maps (p-values, z-scores) are built with `fill = NA` so that untested
+  voxels cannot pass a threshold such as `p < 0.05`. Surface maps are
+  sparse and ignore `fill`.
 
 ## Value
 

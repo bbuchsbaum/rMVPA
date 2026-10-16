@@ -62,12 +62,12 @@ model <- subspace_alignment_model(ds$dataset, ds$design, d = 5)
 region_mask <- neuroim2::NeuroVol(array(1, c(4, 4, 4)),
                                   neuroim2::space(ds$dataset$mask))
 res <- run_regional(model, region_mask)
-#> INFO [2026-10-11 03:25:40] 
+#> INFO [2026-10-16 10:25:30] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 1
 #> - Processed: 1
 #> - Skipped: 0
-#> INFO [2026-10-11 03:25:40] run_regional: 1 ROIs processed (success=1, errors=0)
+#> INFO [2026-10-16 10:25:30] run_regional: 1 ROIs processed (success=1, errors=0)
 res$performance_table
 #> # A tibble: 1 × 5
 #>   roinum Accuracy    AUC d_used alignment_frob

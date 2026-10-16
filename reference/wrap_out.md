@@ -34,7 +34,8 @@ A \`searchlight_result\` object containing
 
 - \`results\`: Named spatial maps for each metric.
 
-- \`n_voxels\`: Total number of voxels/vertices defined by the mask.
+- \`n_voxels\`: Number of voxels/vertices inside the mask (nonzero mask
+  entries), not the size of the enclosing grid.
 
 - \`active_voxels\`: Number of voxels/vertices with results.
 

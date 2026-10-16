@@ -2,6 +2,33 @@
 
 ## rMVPA (development version)
 
+- **Correctness fix:** statistical maps no longer hold 0 at voxels that
+  have no test result
+  ([\#130](https://github.com/bbuchsbaum/rMVPA/issues/130)).
+  [`run_permutation_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/run_permutation_searchlight.md)
+  returned `p_map` and `p_adj_map` as dense `NeuroVol`s that were 0
+  outside the mask, so thresholding at `p < 0.05` marked every voxel
+  outside the brain as significant. The same zero fill affected the
+  `p_*` and `z_*` permutation maps from models with `nperm > 0`
+  ([`vector_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/vector_rsa_model.md),
+  [`feature_rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_model.md))
+  in standard, randomized and clustered searchlights and in
+  [`run_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md),
+  and the volumetric maps from
+  [`spatial_nmf_voxelwise_stats()`](https://bbuchsbaum.github.io/rMVPA/reference/spatial_nmf_voxelwise_stats.md)
+  built from sparse inputs. These voxels are now `NA`, so `map < alpha`
+  selects only tested voxels; in-mask values are unchanged. Regional and
+  clustered maps also keep an `NA` region value as `NA` instead of
+  turning it into 0. Performance maps (accuracy, AUC, RSA scores) keep
+  their 0 fill. Surface maps were already sparse and are unchanged.
+  Re-threshold any p-value maps saved from earlier versions only inside
+  the mask.
+
+- [`print()`](https://rdrr.io/r/base/print.html) of a searchlight result
+  now reports the number of voxels in the mask under “Voxels/Vertices in
+  Mask”. It previously reported the size of the whole grid
+  ([\#131](https://github.com/bbuchsbaum/rMVPA/issues/131)).
+
 - [`rsa_model()`](https://bbuchsbaum.github.io/rMVPA/reference/rsa_model.md)
   now uses `regtype` for the comparison of the neural RDM with each
   model RDM, as documented. Previously the comparison used `distmethod`,

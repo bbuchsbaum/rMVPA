@@ -70,7 +70,8 @@ These are typically global indices into the mask space for volumetric data, or v
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A `searchlight_result` object containing</p><ul><li><p>`results`: Named spatial maps for each metric.</p></li>
-<li><p>`n_voxels`: Total number of voxels/vertices defined by the mask.</p></li>
+<li><p>`n_voxels`: Number of voxels/vertices inside the mask (nonzero
+      mask entries), not the size of the enclosing grid.</p></li>
 <li><p>`active_voxels`: Number of voxels/vertices with results.</p></li>
 <li><p>`metrics`: Character vector of metric names.</p></li>
 </ul></div>

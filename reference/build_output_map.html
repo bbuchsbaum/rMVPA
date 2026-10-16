@@ -64,7 +64,11 @@ a numeric vector of per-center metric values and the corresponding center IDs.</
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>Additional arguments.</p></dd>
+<dd><p>Additional arguments. Volumetric and clustered methods accept
+<code>fill</code>, the value given to voxels without a result (default
+<code>0</code>). Statistical maps (p-values, z-scores) are built with
+<code>fill = NA</code> so that untested voxels cannot pass a threshold such as
+<code>p &lt; 0.05</code>. Surface maps are sparse and ignore <code>fill</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">
