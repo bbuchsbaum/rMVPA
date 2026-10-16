@@ -434,12 +434,12 @@ toy$design$test_design$Item  <- toy$design$test_design$Ytest
 # suppressWarnings(): no per-item run metadata is supplied in this toy example
 model <- suppressWarnings(era_rsa_model(toy$dataset, toy$design, key_var = ~ Item))
 res <- run_regional(model, toy$dataset$mask)
-#> INFO [2026-10-16 10:24:51] 
+#> INFO [2026-10-16 10:58:24] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 1
 #> - Processed: 1
 #> - Skipped: 0
-#> INFO [2026-10-16 10:24:51] run_regional: 1 ROIs processed (success=1, errors=0)
+#> INFO [2026-10-16 10:58:24] run_regional: 1 ROIs processed (success=1, errors=0)
 res$performance_table
 #> # A tibble: 1 × 12
 #>   roinum n_items era_top1_acc era_diag_mean era_diag_minus_off geom_cor
