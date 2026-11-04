@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { api, isExample, decodeF32, decodeU8 } from "./api.js";
 import { Slices, PlaneSlice, COUNT_BINS } from "./brain.jsx";
-import { SubjectNull, SubjectStrip, AccuracyKey, RegionPairs, CountKey } from "./charts.jsx";
+import { SubjectNull, SubjectStrip, AccuracyKey, CountKey } from "./charts.jsx";
+import { RegionsView } from "./regions.jsx";
 
 const VERBS = {
   decode: "Predict a label or value", transfer: "Train on one set, test on another",
@@ -298,25 +299,7 @@ function ResultsView({ project, a }) {
   const excluded = a.cells.filter((c) => !inN(c.subject)).map((c) => `sub-${c.subject} (${c.status === "missing" ? "not run" : c.status})`);
   const n = a.cells.filter((c) => inN(c.subject)).length;
 
-  if (res.regions) {
-    const intervals = res.regions.length;
-    return (
-      <div className="page plain">
-        <h1>{a.name}</h1>
-        <p className="lede">{res.metric} by region · chance {res.chance} ({res.chance_source}) · <span className="stamp">descriptive only</span> rMVPA has no permutation path for transfer analyses.</p>
-        <Provenance a={a} res={res} used={n} excluded={excluded} extra={<div><dt>atlas</dt><dd>{res.atlas.file.split("/").pop()} · md5 {res.atlas.md5.slice(0, 8)}</dd></div>} />
-        <section className="fig">
-          <div className="fig-head">
-            <h2>Transfer accuracy, every subject, hemispheres paired
-              {order === "mean" && <span className="stamp" style={{ marginLeft: 8 }}>sorted by outcome · exploratory</span>}</h2>
-            <div className="seg">{["atlas", "mean"].map((o) => <button key={o} className={order === o ? "on" : ""} onClick={() => setOrder(o)}>{o === "atlas" ? "Atlas order" : "By mean"}</button>)}</div>
-          </div>
-          <RegionPairs regions={res.regions} subjects={res.subjects} chance={res.chance} order={order} hover={hover} setHover={setHover} />
-          <p className="fig-caption">A dot per subject (hover one to find it in every row); the tick is the mean, the bar its 95% t-interval. These are {intervals} intervals with no adjustment for multiplicity, so one or two may clear chance by luck. Atlas order carries no selection.</p>
-        </section>
-      </div>
-    );
-  }
+  if (res.regions) return <RegionsView a={a} res={res} Provenance={Provenance} used={n} excluded={excluded} />;
 
   const pz = res.peak_z;
   const slices = [-3, 0, 3, 6, 9, 12].map((d) => pz + d);

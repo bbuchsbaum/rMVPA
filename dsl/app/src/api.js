@@ -17,6 +17,7 @@ export const api = {
   project: () => get(EXAMPLE ? "./example/project.json" : "/api/project"),
   template: () => get(EXAMPLE ? "./example/template.json" : "/api/template"),
   results: (name) => get(EXAMPLE ? `./example/results-${name}.json` : `/api/results?analysis=${encodeURIComponent(name)}`),
+  surface: (template) => get(EXAMPLE ? `./example/surface-${template}.json` : `/api/surface?template=${encodeURIComponent(template)}`),
 };
 
 export function decodeF32(b64) {

@@ -273,3 +273,13 @@ kbd { font: 11px var(--mono); padding: 1px 5px; border-radius: 4px; border: 1px 
 .slices canvas { border-radius: 3px; }
 .slices .z { color: var(--ink-3); }
 .lr::before, .lr::after { color: var(--ink-3); top: -14px; }
+
+/* regional brain displays */
+.cortex { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.cortex figure { margin: 0; }
+.cortex figcaption { font: 10.5px var(--mono); color: var(--ink-3); text-align: center; padding-top: 2px; }
+.hemi-view { max-width: 100%; }
+.cortex-wait { height: 150px; display: grid; place-items: center; color: var(--ink-3); }
+.dkey { display: flex; flex-direction: column; gap: 2px; }
+.dkey-ramp { height: 8px; border-radius: 2px; }
+.seg button:disabled { color: var(--ink-3); cursor: not-allowed; }

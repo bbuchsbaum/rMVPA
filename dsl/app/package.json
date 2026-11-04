@@ -9,8 +9,11 @@
     "build:example": "vite build --mode example --outDir dist-example"
   },
   "dependencies": {
+    "neuroatlasjs": "github:bbuchsbaum/neuroatlasjs#9050d48efdb4e138df8d3b4a3e39ac2d77182d2e",
     "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "react-dom": "18.3.1",
+    "surfview": "^3.1.0",
+    "three": "^0.185.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "4.3.4",
