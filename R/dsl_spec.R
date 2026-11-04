@@ -119,11 +119,6 @@
                            top = .n_int(1), top_fraction = .n_num(0, 1)),
                       required = "by", exactly_one = c("top", "top_fraction"))
     ), required = "target")),
-    decode_trialwise = list(family = "decoding", node = .n_map(list(
-      set = .n_str(), target = .n_str(),
-      target_type = .n_enum(c("classification", "regression")),
-      events = .n_path("Trial-level event table used to build the trial design")
-    ), required = c("target", "events"))),
     transfer = list(family = "decoding", node = .n_map(list(
       train_set = .n_str(), test_set = .n_str(), target = .n_str(),
       method = .n_str("naive, remap_rrr, subspace_alignment, or a registered classifier"),
@@ -168,14 +163,13 @@
     ), required = c("item", "seed_region"))),
     rsa_mediate = list(family = "rsa", node = .n_map(list(
       set = .n_str(), item = .n_str(),
-      predictors = .dsl_rdm_dict("Exactly one predictor RDM (X)"),
-      mediator = .n_path("Mediator RDM table (M)"),
+      predictor = .n_path("Predictor RDM table (X); the region's own RDM is the mediator"),
       outcome = .n_path("Outcome RDM table (Y)")
-    ), required = c("item", "predictors", "mediator", "outcome"))),
+    ), required = c("item", "predictor", "outcome"))),
     encode = list(family = "models", node = .n_map(list(
       set = .n_str(), item = .n_str(),
       feature_spaces = .n_dict(.n_path("Feature table (CSV/TSV), item names in the first column")),
-      method = .n_enum(c("banded_ridge", "grouped_ridge"))
+      method = .n_enum("banded_ridge")
     ), required = c("item", "feature_spaces"))),
     pattern = list(family = "models", node = .n_map(list(
       set = .n_str(), target = .n_str(),
@@ -225,7 +219,6 @@
     scope = list(searchlight = list(sampling = "standard", iterations = 4L)),
     verbs = list(
       decode = list(method = "sda_notune"),
-      decode_trialwise = list(),
       transfer = list(method = "naive"),
       rsa = list(distance = "spearman", method = "pearson",
                  semipartial = FALSE, within_run_pairs = FALSE),

@@ -1,5 +1,27 @@
 # rMVPA (development version)
 
+* **New: the rmvpa analysis language (DSL 0.1).** A study is described by a
+  project file (`rmvpa.yml`: data, sets, folds, run settings) plus one small
+  YAML file per analysis. Each analysis names one verb: `decode`, `transfer`,
+  `rsa`, `rsa_vector`, `rsa_contrast`, `rsa_feature`, `rsa_era`,
+  `rsa_connect`, `rsa_mediate`, `encode`, `pattern`, `manova` or `custom`.
+  It compiles to the existing model constructors and `run_searchlight()`,
+  `run_regional()` or `run_global()`. The schema is closed (unknown keys are
+  errors with suggestions), defaults are pinned to the version, and
+  `rmvpa_explain()` shows the origin of every resolved value. Inference
+  defaults follow what rMVPA can compute for each verb and scope; other cells
+  are stamped "descriptive only", and requesting a permutation there is an
+  error. Outputs use BIDS-derivatives names with a JSON provenance sidecar,
+  and re-runs skip subject x analysis cells whose spec and inputs are
+  unchanged. New functions: `rmvpa_new()`, `rmvpa_add()`, `rmvpa_project()`,
+  `rmvpa_analysis()`, `rmvpa_explain()`, `rmvpa_check()`, `rmvpa_compile()`,
+  `rmvpa_run()`, `rmvpa_status()`, `rmvpa_lock()`, `rmvpa_migrate()`,
+  `rmvpa_classifiers()` and `rmvpa_cli()`, plus a single `rmvpa` command
+  installed by `install_cli()`. The language needs the suggested packages
+  `yaml` and `jsonlite`. See the "The rmvpa Analysis Language" article.
+* `rmvpa-searchlight` and `rmvpa-regional` now print a note pointing to
+  `rmvpa` and `rmvpa migrate`. Their behaviour is unchanged.
+
 * **Correctness fix:** statistical maps no longer hold 0 at voxels that have
   no test result (#130). `run_permutation_searchlight()` returned `p_map` and
   `p_adj_map` as dense `NeuroVol`s that were 0 outside the mask, so

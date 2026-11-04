@@ -149,6 +149,14 @@ Collate:
     'permutation_searchlight.R'
     'api_lifecycle.R'
     'workflow_api.R'
+    'dsl_spec.R'
+    'dsl_load.R'
+    'dsl_inference.R'
+    'dsl_data.R'
+    'dsl_compile.R'
+    'dsl_run.R'
+    'dsl_scaffold.R'
+    'dsl_cli.R'
 RoxygenNote: 7.3.3
 Suggests:
     albersdown (>= 2.1.0),

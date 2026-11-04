@@ -38,6 +38,7 @@ articles:
   - Regional_Analysis
   - Haxby_2001
   - articles/ITEM_Decoding
+  - articles/Analysis_DSL
   - articles/CommandLine
 - title: Pattern Models
   desc: |

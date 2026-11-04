@@ -137,29 +137,39 @@
   ok
 }
 
-# Load one set for one subject: concatenated beta series (masked) and its
-# design table after `keep` filtering.
-.dsl_load_set <- function(data, set_name, subject, root, mask) {
-  files <- .dsl_set_files(data, set_name, subject, root)
+# Design table of one set for one subject, concatenated across runs, with the
+# `keep` mask. Reads no image data.
+.dsl_load_design <- function(data, set_name, subject, root, files = NULL) {
+  files <- files %||% .dsl_set_files(data, set_name, subject, root)
   where <- sprintf("set '%s', sub-%s:", set_name, subject)
   designs <- lapply(seq_along(files$designs), function(i) {
     d <- .dsl_read_table(files$designs[i])
     if (!"run" %in% names(d) && !is.na(files$runs[i])) d$run <- files$runs[i]
     d
   })
+  design <- do.call(rbind, designs)
+  keep <- .dsl_apply_keep(design, data$sets[[set_name]]$keep, where)
+  if (!any(keep)) stop(sprintf("%s keep filters remove every row", where), call. = FALSE)
+  list(design = design, keep = keep, per_file = vapply(designs, nrow, 1L), files = files, where = where)
+}
+
+# Load one set for one subject: concatenated beta series (masked) and its
+# design table after `keep` filtering.
+.dsl_load_set <- function(data, set_name, subject, root, mask) {
+  dd <- .dsl_load_design(data, set_name, subject, root)
+  files <- dd$files
   vecs <- lapply(seq_along(files$betas), function(i) {
     v <- neuroim2::read_vec(files$betas[i], mask = mask)
     nv <- dim(v)[4]
-    if (nv != nrow(designs[[i]])) {
-      stop(sprintf("%s %s has %d volumes but its design table has %d rows", where,
-                   basename(files$betas[i]), nv, nrow(designs[[i]])), call. = FALSE)
+    if (nv != dd$per_file[i]) {
+      stop(sprintf("%s %s has %d volumes but its design table has %d rows", dd$where,
+                   basename(files$betas[i]), nv, dd$per_file[i]), call. = FALSE)
     }
     v
   })
-  design <- do.call(rbind, designs)
   vec <- if (length(vecs) == 1L) vecs[[1]] else do.call(neuroim2::concat, vecs)
-  keep <- .dsl_apply_keep(design, data$sets[[set_name]]$keep, where)
-  if (!any(keep)) stop(sprintf("%s keep filters remove every row", where), call. = FALSE)
+  design <- dd$design
+  keep <- dd$keep
   if (!all(keep)) {
     vec <- neuroim2::sub_vector(vec, which(keep))
     design <- design[keep, , drop = FALSE]

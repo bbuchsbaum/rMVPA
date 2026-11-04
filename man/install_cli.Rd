@@ -7,7 +7,7 @@
 install_cli(
   dest_dir,
   overwrite = FALSE,
-  commands = c("searchlight", "regional")
+  commands = c("dsl", "searchlight", "regional")
 )
 }
 \arguments{
@@ -18,13 +18,15 @@ directory unless you choose it.}
 \item{overwrite}{Logical; overwrite existing wrapper files if \code{TRUE}.}
 
 \item{commands}{Which wrappers to install. Any subset of
-\code{c("searchlight", "regional")}.}
+\code{c("dsl", "searchlight", "regional")}; \code{"dsl"} is the
+\code{rmvpa} command.}
 }
 \value{
 Invisibly, a named character vector of installed wrapper paths.
 }
 \description{
 Copies the packaged command-line wrappers into a directory on your
-\code{PATH}. The installed commands are \code{rmvpa-searchlight} and
+\code{PATH}. The installed commands are \code{rmvpa} (the analysis DSL,
+see \code{\link{rmvpa_cli}}) and the legacy \code{rmvpa-searchlight} and
 \code{rmvpa-regional}.
 }

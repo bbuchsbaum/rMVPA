@@ -66,32 +66,46 @@ print.rmvpa_project <- function(x, ...) {
 # an explicit NULL (`~` in YAML) removes the inherited key. `origins` maps
 # dotted leaf paths to the layer that set them; `notes` records replacements
 # and removals so `explain` can show them.
-.dsl_merge <- function(base, over, layer, origins, notes, path = "") {
+.dsl_merge <- function(base, over, layer, origins, notes, path = "", node = NULL) {
+  child <- function(k) {
+    if (is.null(node)) return(NULL)
+    if (identical(node$type, "map")) node$fields[[k]] else if (identical(node$type, "dict")) node$value else NULL
+  }
   for (k in names(over)) {
+    cn <- child(k)
     p <- if (nzchar(path)) paste0(path, ".", k) else k
     v <- over[[k]]
     if (is.null(v)) {
       if (!is.null(base[[k]])) notes[[length(notes) + 1L]] <- sprintf("%s: removed by %s", p, layer)
       base[k] <- NULL
-      origins <- origins[!startsWith(names(origins), p)]
+      origins <- .dsl_drop_origins(origins, p, self = TRUE)
       next
     }
     if (.dsl_is_map(v) && length(v) > 0L && .dsl_is_map(base[[k]])) {
-      r <- .dsl_merge(base[[k]], v, layer, origins, notes, p)
+      r <- .dsl_merge(base[[k]], v, layer, origins, notes, p, cn)
       base[[k]] <- r$value; origins <- r$origins; notes <- r$notes
     } else {
       old <- base[[k]]
-      if (!is.null(old) && !identical(old, v) && (length(v) > 1L || length(old) > 1L)) {
+      is_list <- !is.null(cn) && cn$type %in% c("strs", "enums")
+      if (!is.null(old) && !identical(old, v) && (is_list || length(v) > 1L || length(old) > 1L)) {
         notes[[length(notes) + 1L]] <- sprintf("%s: %s replaced the %s list %s", p, layer,
                                              origins[p] %|NA|% "inherited", .dsl_inline(old))
       }
       base[[k]] <- v
-      origins <- origins[!startsWith(names(origins), paste0(p, "."))]
+      origins <- .dsl_drop_origins(origins, p, self = FALSE)
       origins[[p]] <- layer
       if (.dsl_is_map(v)) origins <- .dsl_tag_leaves(v, p, layer, origins)
     }
   }
   list(value = base, origins = origins, notes = notes)
+}
+
+# Drop recorded origins at `p` (when `self`) and below it.
+.dsl_drop_origins <- function(origins, p, self = TRUE) {
+  nm <- names(origins)
+  if (is.null(nm)) return(origins)
+  drop <- startsWith(nm, paste0(p, ".")) | (self & nm == p)
+  origins[!drop]
 }
 
 .dsl_tag_leaves <- function(x, path, layer, origins) {
@@ -105,7 +119,7 @@ print.rmvpa_project <- function(x, ...) {
 
 .dsl_layer <- function(acc, over, layer) {
   if (is.null(over) || length(over) == 0L) return(acc)
-  r <- .dsl_merge(acc$value, over, layer, acc$origins, acc$notes)
+  r <- .dsl_merge(acc$value, over, layer, acc$origins, acc$notes, node = .dsl_analysis_node())
   r
 }
 
@@ -196,12 +210,14 @@ rmvpa_analysis <- function(project, analysis) {
                "Invalid analysis:")
   }
 
+  .dsl_check_scope(verb, scope_kind, where)
+
   # Inference: what the R code supports for this verb, method and scope.
   support <- .dsl_inference_support(verb, vb, scope_kind)
   inf_user <- a$inference %||% list()
   inf <- .dsl_resolve_inference(support, inf_user, defaults$permutation, dlayer)
   cfg$inference <- inf$value
-  origins <- origins[!startsWith(names(origins), "inference.")]
+  origins <- .dsl_drop_origins(origins, "inference", self = FALSE)
   origins <- c(origins, inf$origins)
 
   structure(list(
@@ -244,17 +260,24 @@ print.rmvpa_analysis_spec <- function(x, ...) {
   paste0("\"", gsub("([\"\\\\])", "\\\\\\1", s), "\"")
 }
 
-.dsl_emit <- function(x, origins, path = "", indent = 0L) {
+.dsl_emit <- function(x, origins, path = "", indent = 0L, node = NULL) {
   out <- character()
   pad <- strrep("  ", indent)
+  child <- function(k) {
+    if (is.null(node)) return(NULL)
+    if (identical(node$type, "map")) node$fields[[k]] else if (identical(node$type, "dict")) node$value else NULL
+  }
   for (k in names(x)) {
     p <- if (nzchar(path)) paste0(path, ".", k) else k
     v <- x[[k]]
+    cn <- child(k)
     if (.dsl_is_map(v) && length(v) > 0L && !identical(names(v), "in")) {
-      out <- c(out, paste0(pad, k, ":"), .dsl_emit(v, origins, p, indent + 1L))
+      out <- c(out, paste0(pad, k, ":"), .dsl_emit(v, origins, p, indent + 1L, cn))
     } else {
       o <- origins[p] %|NA|% ""
-      line <- paste0(pad, k, ": ", .dsl_inline(v))
+      txt <- .dsl_inline(v)
+      if (!is.null(cn) && cn$type %in% c("strs", "enums") && length(v) == 1L) txt <- paste0("[", txt, "]")
+      line <- paste0(pad, k, ": ", txt)
       out <- c(out, if (nzchar(o)) sprintf("%-46s # %s", line, o) else line)
     }
   }
@@ -270,7 +293,7 @@ print.rmvpa_analysis_spec <- function(x, ...) {
     sprintf("# rmvpa explain: analyses/%s.yml (DSL %s)", basename(spec$file), spec$project$version),
     sprintf("# every value is annotated with its origin; this output is itself a valid analysis file"),
     "extends: ../rmvpa.yml",
-    .dsl_emit(cfg, spec$origins),
+    .dsl_emit(cfg, spec$origins, node = .dsl_analysis_node()),
     sprintf("# null: %s", sup$description),
     if (length(spec$notes)) paste0("# note: ", unlist(spec$notes))
   )

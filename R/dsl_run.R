@@ -22,7 +22,7 @@
 # Each assertion returns list(name, pass, detail). Assertions that do not apply
 # to the verb are an error in check (the closed enum says where they apply).
 .dsl_assertion_applies <- list(
-  classes_in_every_fold = c("decode", "decode_trialwise", "transfer", "pattern"),
+  classes_in_every_fold = c("decode", "transfer", "pattern"),
   no_item_across_folds = c("rsa", "rsa_vector", "rsa_contrast", "rsa_feature", "rsa_connect",
                            "rsa_mediate", "encode"),
   one_run_per_fold = NULL,
@@ -117,7 +117,7 @@ rmvpa_compile <- function(project = ".", analysis, subject) {
   .dsl_build_cell(spec, subject)
 }
 
-.dsl_build_cell <- function(spec, subject) {
+.dsl_build_cell <- function(spec, subject, draft = FALSE) {
   root <- spec$project$root
   data <- spec$data
   sets <- .dsl_cell_sets(spec)
@@ -130,7 +130,7 @@ rmvpa_compile <- function(project = ".", analysis, subject) {
   where <- sprintf("%s, sub-%s:", spec$name, subject)
   ctx <- list(spec = spec, vb = spec$config[[spec$verb]], cfg = spec$config, root = root,
               subject = subject, dataset = dataset, train = train, test = test,
-              mask = mask, where = where)
+              mask = mask, where = where, draft = draft)
   compiled <- .dsl_compilers()[[spec$verb]](ctx)
   list(
     model_spec = compiled$model_spec,
@@ -150,6 +150,7 @@ rmvpa_compile <- function(project = ".", analysis, subject) {
   backend <- cfg$run$backend
   kind <- spec$scope_kind
   inf <- cfg$inference
+  if (inherits(ms, "banded_ridge_model")) return(run_banded_ridge(ms))
   use_perm <- !draft && identical(spec$inference_support$kind, "searchlight_permutation") &&
     identical(inf$test, "permutation")
 
@@ -169,7 +170,14 @@ rmvpa_compile <- function(project = ".", analysis, subject) {
   }
   if (kind == "regions") {
     atlas <- neuroim2::read_vol(.dsl_resolve_path(cfg$scope$regions$atlas, spec$project$root))
-    return(run_regional(ms, region_mask = atlas, backend = backend))
+    res <- run_regional(ms, region_mask = atlas, backend = backend, compute_performance = TRUE)
+    pt <- res$performance_table
+    if (inherits(res, "regional_mvpa_result") && (is.null(pt) || ncol(pt) <= 1L)) {
+      stop("every region failed, so there are no results to write. Inspect the per-region errors with ",
+           "cell <- rmvpa_compile(project, analysis, subject); run_regional(cell$model_spec, <atlas>).",
+           call. = FALSE)
+    }
+    return(res)
   }
   run_global(ms)
 }
@@ -249,7 +257,18 @@ rmvpa_compile <- function(project = ".", analysis, subject) {
         }
       }
     }
-  } else if (inherits(result, "global_mvpa_result")) {
+  } else if (inherits(result, "banded_ridge_result")) {
+    for (m in names(result$maps)) {
+      v <- result$maps[[m]]
+      if (inherits(v, "NeuroVol")) {
+        written <- c(written, .dsl_write_vol(v, file.path(dir, sprintf("%s_stat-%s_statmap.nii.gz", prefix,
+                                                                       .dsl_stat_label(m)))))
+      }
+    }
+    if (is.data.frame(result$metrics)) {
+      written <- c(written, .dsl_write_table(result$metrics, file.path(dir, sprintf("%s_voxels.tsv", prefix))))
+    }
+  } else if (inherits(result, "global_mvpa_result") || inherits(result, "pattern_global_result")) {
     perf <- result$performance_table %||% result$performance
     df <- if (is.data.frame(perf)) perf else as.data.frame(as.list(unlist(perf)))
     written <- c(written, .dsl_write_table(df, file.path(dir, sprintf("%s_global.tsv", prefix))))
@@ -262,11 +281,12 @@ rmvpa_compile <- function(project = ".", analysis, subject) {
 
 .dsl_chance <- function(spec, cell) {
   vb <- spec$config[[spec$verb]]
-  if (!spec$verb %in% c("decode", "transfer", "decode_trialwise", "pattern")) return(NULL)
+  if (!spec$verb %in% c("decode", "transfer", "pattern")) return(NULL)
   y <- cell$train$design[[vb$target]]
   if (is.numeric(y) && !identical(vb$target_type, "classification")) return(NULL)
   k <- length(unique(y))
-  list(accuracy = 1 / k, auc = 0.5, classes = k)
+  # rMVPA reports AUC chance-centred (2 * AUC - 1), so chance is 0.
+  list(Accuracy = 1 / k, AUC = 0, classes = k)
 }
 
 .dsl_require_json <- function() {
@@ -353,7 +373,7 @@ rmvpa_lock <- function(project = ".", analyses = NULL, note = NULL) {
 .dsl_run_cell <- function(spec, subject, draft = FALSE, force = FALSE) {
   rec_file <- .dsl_cell_record_file(spec, subject, draft)
   dir <- dirname(rec_file)
-  cell <- .dsl_build_cell(spec, subject)
+  cell <- .dsl_build_cell(spec, subject, draft = draft)
   hash <- .dsl_cell_hash(spec, cell$inputs, draft)
   if (!force && file.exists(rec_file)) {
     rec <- jsonlite::fromJSON(rec_file)
@@ -434,14 +454,23 @@ rmvpa_lock <- function(project = ".", analyses = NULL, note = NULL) {
 #'   searchlight (one iteration) and no permutations, into
 #'   `derivatives/rmvpa-draft/`. Outputs are stamped as drafts.
 #' @param force Re-run cells even when they are up to date.
+#' @param check Run [rmvpa_check()] first and stop on any error.
 #' @return A data frame with one row per cell (analysis, subject, status, dir),
 #'   invisibly.
 #' @export
-rmvpa_run <- function(project = ".", analyses = NULL, subjects = NULL, draft = FALSE, force = FALSE) {
+rmvpa_run <- function(project = ".", analyses = NULL, subjects = NULL, draft = FALSE, force = FALSE,
+                      check = TRUE) {
   if (!inherits(project, "rmvpa_project")) project <- rmvpa_project(project)
   .dsl_require_json()
   analyses <- analyses %||% names(project$analyses)
   if (!length(analyses)) stop("The project has no analyses. Add one with `rmvpa add <verb> <name>`.", call. = FALSE)
+  if (check) {
+    chk <- rmvpa_check(project, analyses, subjects = if (draft) NULL else subjects, quiet = TRUE)
+    if (!isTRUE(attr(chk, "ok"))) {
+      print(chk)
+      stop("rmvpa check found errors; nothing was run.", call. = FALSE)
+    }
+  }
   rows <- list()
   for (a in analyses) {
     spec <- rmvpa_analysis(project, a)
