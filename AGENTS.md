@@ -31,3 +31,8 @@ Run scoped tests in an isolated library for code changes; preserve ITEM's fmrils
 delegation and the archived hrfdecoder boundary. Never install into the user's
 library or alter evaluation thresholds without explicit authorization. End with
 exact changes, observed checks, unrun checks and the smallest valid next action.
+
+The `dsl/` folder holds rmvpadsl, a separate package (the YAML analysis
+language, its `rmvpa` command and a future web app). It is excluded from the
+rMVPA build, uses only rMVPA's exported API, and has its own tests; see
+`dsl/README.md`. Changes to rMVPA must not depend on it.

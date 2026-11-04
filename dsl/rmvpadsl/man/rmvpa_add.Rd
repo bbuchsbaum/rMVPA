@@ -7,18 +7,18 @@
 rmvpa_add(project = ".", verb, name, scope = NULL)
 }
 \arguments{
-\item{project}{An `rmvpa_project` or a project path.}
+\item{project}{An \code{rmvpa_project} or a project path.}
 
-\item{verb}{One of the DSL verbs, e.g. `"decode"`, `"rsa"`, `"transfer"`.}
+\item{verb}{One of the DSL verbs, e.g. \code{"decode"}, \code{"rsa"}, \code{"transfer"}.}
 
-\item{name}{File name for the analysis (without `.yml`).}
+\item{name}{File name for the analysis (without \code{.yml}).}
 
-\item{scope}{`"searchlight"`, `"regions"` or `"whole_brain"`.}
+\item{scope}{\code{"searchlight"}, \code{"regions"} or \code{"whole_brain"}.}
 }
 \value{
 The path of the new file, invisibly.
 }
 \description{
-Writes `analyses/<name>.yml` for `verb`, with required keys filled with
+Writes \verb{analyses/<name>.yml} for \code{verb}, with required keys filled with
 placeholders and the optional keys listed as comments with their defaults.
 }

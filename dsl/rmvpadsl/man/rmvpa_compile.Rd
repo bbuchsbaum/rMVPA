@@ -7,19 +7,19 @@
 rmvpa_compile(project = ".", analysis, subject)
 }
 \arguments{
-\item{project}{An `rmvpa_project` or a project path.}
+\item{project}{An \code{rmvpa_project} or a project path.}
 
-\item{analysis}{Analysis name (file name under `analyses/` without the
+\item{analysis}{Analysis name (file name under \verb{analyses/} without the
 extension) or a path to an analysis file.}
 
-\item{subject}{Subject label, without the `sub-` prefix.}
+\item{subject}{Subject label, without the \verb{sub-} prefix.}
 }
 \value{
-A list with `model_spec`, the loaded `train` (and `test`) sets,
-  `mask`, fold `assertions` and compile `info`.
+A list with \code{model_spec}, the loaded \code{train} (and \code{test}) sets,
+\code{mask}, fold \code{assertions} and compile \code{info}.
 }
 \description{
 Loads the subject's data for an analysis and compiles it to an ordinary
-rMVPA `model_spec`, exactly as the run would. Useful for inspecting or
+rMVPA \code{model_spec}, exactly as the run would. Useful for inspecting or
 running the compiled analysis by hand.
 }

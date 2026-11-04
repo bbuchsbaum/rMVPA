@@ -61,8 +61,9 @@
 
 #' Command-line entry point for the rmvpa DSL
 #'
-#' Implements the `rmvpa` command (see `rmvpa help`). Installed wrappers call
-#' this function; it can also be called from R with a character vector.
+#' Implements the `rmvpa` command (see `rmvpa help`). The launcher installed
+#' by [install_rmvpa_command()] calls this function; it can also be called from
+#' R with a character vector.
 #'
 #' @param argv Command-line arguments, without the program name.
 #' @return An exit status (0 on success), invisibly.
@@ -75,8 +76,8 @@ rmvpa_cli <- function(argv = commandArgs(trailingOnly = TRUE)) {
     analyses <- if (length(p$args)) p$args else NULL
     switch(p$cmd,
       help = , `--help` = cat(.dsl_cli_usage(), sep = "\n"),
-      version = cat(sprintf("rmvpa DSL %s (rMVPA %s)\n", paste(.dsl_versions, collapse = ", "),
-                            utils::packageVersion("rMVPA"))),
+      version = cat(sprintf("rmvpa DSL %s (rmvpadsl %s, rMVPA %s)\n", paste(.dsl_versions, collapse = ", "),
+                            utils::packageVersion("rmvpadsl"), utils::packageVersion("rMVPA"))),
       verbs = {
         v <- .dsl_verbs()
         for (n in names(v)) cat(sprintf("%-14s %-9s scopes: %s\n", n, v[[n]]$family,

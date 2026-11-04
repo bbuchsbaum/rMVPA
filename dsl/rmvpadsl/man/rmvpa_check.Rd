@@ -7,18 +7,18 @@
 rmvpa_check(project = ".", analyses = NULL, subjects = NULL, quiet = FALSE)
 }
 \arguments{
-\item{project}{An `rmvpa_project` or a project path.}
+\item{project}{An \code{rmvpa_project} or a project path.}
 
-\item{analyses}{Analysis names; all analyses when `NULL`.}
+\item{analyses}{Analysis names; all analyses when \code{NULL}.}
 
-\item{subjects}{Subject labels; all subjects when `NULL`.}
+\item{subjects}{Subject labels; all subjects when \code{NULL}.}
 
 \item{quiet}{Suppress the printed report.}
 }
 \value{
-An object of class `rmvpa_check`: a data frame of findings with
-  columns analysis, subject, level (`ok`, `warning`, `error`) and message,
-  plus an `ok` attribute.
+An object of class \code{rmvpa_check}: a data frame of findings with
+columns analysis, subject, level (\code{ok}, \code{warning}, \code{error}) and message,
+plus an \code{ok} attribute.
 }
 \description{
 Validates every analysis file, then for each subject finds the input

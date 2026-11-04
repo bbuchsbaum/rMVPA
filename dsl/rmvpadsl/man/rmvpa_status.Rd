@@ -7,15 +7,15 @@
 rmvpa_status(project = ".", analyses = NULL)
 }
 \arguments{
-\item{project}{An `rmvpa_project` or a project path.}
+\item{project}{An \code{rmvpa_project} or a project path.}
 
-\item{analyses}{Analysis names; all analyses when `NULL`.}
+\item{analyses}{Analysis names; all analyses when \code{NULL}.}
 }
 \value{
 A data frame with columns analysis, subject, status, lock.
 }
 \description{
-Reports whether each cell is `done`, `stale` (its resolved spec or inputs
-changed since the last run), or `missing`, and whether its analysis matches
+Reports whether each cell is \code{done}, \code{stale} (its resolved spec or inputs
+changed since the last run), or \code{missing}, and whether its analysis matches
 the most recent lock entry. Reads no neuroimaging data beyond hashing files.
 }

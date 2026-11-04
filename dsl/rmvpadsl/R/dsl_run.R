@@ -307,7 +307,8 @@ rmvpa_compile <- function(project = ".", analysis, subject) {
 .dsl_cell_hash <- function(spec, inputs, draft) {
   md5 <- unname(tools::md5sum(unique(inputs)))
   .dsl_hash(list(spec = .dsl_spec_hash(spec), inputs = md5, draft = draft,
-                 rmvpa = as.character(utils::packageVersion("rMVPA"))))
+                 rmvpa = as.character(utils::packageVersion("rMVPA")),
+                 rmvpadsl = as.character(utils::packageVersion("rmvpadsl"))))
 }
 
 .dsl_cell_record_file <- function(spec, subject, draft) {
@@ -401,6 +402,7 @@ rmvpa_lock <- function(project = ".", analyses = NULL, note = NULL) {
   sidecar <- list(
     rmvpa_dsl = spec$project$version,
     rmvpa_version = as.character(utils::packageVersion("rMVPA")),
+    rmvpadsl_version = as.character(utils::packageVersion("rmvpadsl")),
     analysis = spec$name, subject = subject, verb = spec$verb,
     draft = draft,
     model_class = class(cell$model_spec)[1],

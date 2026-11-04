@@ -1,24 +1,7 @@
 ---
-title: The rmvpa Analysis Language
-author: Bradley Buchsbaum
-date: '`r Sys.Date()`'
-output:
-  rmarkdown::html_vignette:
-    toc: yes
-    toc_depth: 3
-    css: ../albers.css
-    includes:
-      in_header: ../albers-header.html
-params:
-  family: red
-  preset: interaction
-resource_files:
-- albers.css
-- albers.js
-- albers-header.html
-- fonts
-
-vignette: |
+title: "The rmvpa Analysis Language"
+output: rmarkdown::html_vignette
+vignette: >
   %\VignetteIndexEntry{The rmvpa Analysis Language}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
@@ -30,13 +13,16 @@ knitr::opts_chunk$set(eval = FALSE)
 
 # Overview
 
-The `rmvpa` command describes a whole study in small YAML files. A
+The rmvpadsl package and its `rmvpa` command describe a whole study in
+small YAML files. A
 **project file**, `rmvpa.yml`, names the data once. Each file under
 `analyses/` describes one analysis with one **verb** (`decode`, `rsa`,
 `transfer`, ...), a **scope** (searchlight, regions or whole brain), and
 anything that differs from the defaults. Every analysis compiles to an
 ordinary rMVPA `model_spec` and runs through `run_searchlight()`,
 `run_regional()` or `run_global()`.
+
+Install the command once with `rmvpadsl::install_rmvpa_command("~/.local/bin")`.
 
 ```bash
 rmvpa new derivatives/lss --target category   # writes rmvpa.yml and analyses/decode_category.yml
@@ -264,7 +250,8 @@ scope:
 
 `rmvpa migrate old_config.yaml --dir new_project` converts a single-set config
 for the old commands into a project with explicit file paths and one
-analysis. The old commands still work and print a pointer to `rmvpa`.
+analysis. rMVPA's own `rmvpa-searchlight` and `rmvpa-regional` keep working
+unchanged.
 
 # Not in DSL 0.1
 

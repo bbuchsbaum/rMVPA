@@ -7,9 +7,9 @@
 rmvpa_lock(project = ".", analyses = NULL, note = NULL)
 }
 \arguments{
-\item{project}{An `rmvpa_project` or a project path.}
+\item{project}{An \code{rmvpa_project} or a project path.}
 
-\item{analyses}{Analysis names; all analyses when `NULL`.}
+\item{analyses}{Analysis names; all analyses when \code{NULL}.}
 
 \item{note}{Optional free-text note stored with each entry.}
 }
@@ -17,7 +17,7 @@ rmvpa_lock(project = ".", analyses = NULL, note = NULL)
 The appended entries, invisibly.
 }
 \description{
-Appends the hash of each resolved analysis to `rmvpa.lock` in the project
+Appends the hash of each resolved analysis to \code{rmvpa.lock} in the project
 root. The file is append-only. Later runs stamp each output with whether
 its analysis still matches the most recent lock entry. Locking is optional
 and does not affect re-runs or caching.

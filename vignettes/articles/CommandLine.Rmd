@@ -26,11 +26,6 @@ vignette: |
 
 # Introduction
 
-> For new work, use the `rmvpa` command and its project files, described in
-> [The rmvpa Analysis Language](Analysis_DSL.html). It covers every analysis
-> family, not only classifier decoding. `rmvpa migrate` converts a config
-> written for the commands below.
-
 `rMVPA` ships two native command-line interfaces:
 
 - `rmvpa-searchlight` for voxelwise or surface-neighbourhood analyses

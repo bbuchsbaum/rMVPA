@@ -7,9 +7,9 @@
 rmvpa_explain(project = ".", analysis)
 }
 \arguments{
-\item{project}{An `rmvpa_project` or a project path.}
+\item{project}{An \code{rmvpa_project} or a project path.}
 
-\item{analysis}{Analysis name (file name under `analyses/` without the
+\item{analysis}{Analysis name (file name under \verb{analyses/} without the
 extension) or a path to an analysis file.}
 }
 \value{
@@ -17,5 +17,5 @@ The explanation lines, invisibly.
 }
 \description{
 Prints the analysis with every default filled in and each value annotated
-with its origin (`analysis`, `project`, `default@0.1` or `inferred`).
+with its origin (\code{analysis}, \code{project}, \verb{default@0.1} or \code{inferred}).
 }

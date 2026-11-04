@@ -2,7 +2,7 @@
 % Please edit documentation in R/dsl_spec.R
 \name{rmvpa_classifiers}
 \alias{rmvpa_classifiers}
-\title{List classifiers usable as `decode.method`}
+\title{List classifiers usable as \code{decode.method}}
 \usage{
 rmvpa_classifiers()
 }
@@ -10,5 +10,5 @@ rmvpa_classifiers()
 A character vector of registered classifier names.
 }
 \description{
-List classifiers usable as `decode.method`
+List classifiers usable as \code{decode.method}
 }

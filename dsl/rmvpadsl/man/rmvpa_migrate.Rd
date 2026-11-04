@@ -11,7 +11,7 @@ rmvpa_migrate(config, dir = ".", mode = NULL, name = "migrated")
 
 \item{dir}{Project directory to write.}
 
-\item{mode}{`"searchlight"` or `"regional"`; guessed from the config when `NULL`.}
+\item{mode}{\code{"searchlight"} or \code{"regional"}; guessed from the config when \code{NULL}.}
 
 \item{name}{Analysis name.}
 }
@@ -19,7 +19,7 @@ rmvpa_migrate(config, dir = ".", mode = NULL, name = "migrated")
 The project directory, invisibly.
 }
 \description{
-Reads a flat configuration written for `rmvpa-searchlight` or
-`rmvpa-regional` and writes an equivalent project (`rmvpa.yml` with
+Reads a flat configuration written for \code{rmvpa-searchlight} or
+\code{rmvpa-regional} and writes an equivalent project (\code{rmvpa.yml} with
 explicit file paths, one subject) and one analysis file.
 }

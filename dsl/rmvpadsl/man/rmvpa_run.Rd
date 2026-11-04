@@ -14,27 +14,27 @@ rmvpa_run(
 )
 }
 \arguments{
-\item{project}{An `rmvpa_project` or a project path.}
+\item{project}{An \code{rmvpa_project} or a project path.}
 
-\item{analyses}{Analysis names; all analyses when `NULL`.}
+\item{analyses}{Analysis names; all analyses when \code{NULL}.}
 
-\item{subjects}{Subject labels; all subjects when `NULL`.}
+\item{subjects}{Subject labels; all subjects when \code{NULL}.}
 
-\item{draft}{If `TRUE`, run the first subject only, with a randomized
+\item{draft}{If \code{TRUE}, run the first subject only, with a randomized
 searchlight (one iteration) and no permutations, into
-`derivatives/rmvpa-draft/`. Outputs are stamped as drafts.}
+\verb{derivatives/rmvpa-draft/}. Outputs are stamped as drafts.}
 
 \item{force}{Re-run cells even when they are up to date.}
 
-\item{check}{Run [rmvpa_check()] first and stop on any error.}
+\item{check}{Run \code{\link[=rmvpa_check]{rmvpa_check()}} first and stop on any error.}
 }
 \value{
 A data frame with one row per cell (analysis, subject, status, dir),
-  invisibly.
+invisibly.
 }
 \description{
 Checks each analysis, then runs every subject x analysis cell whose
 resolved spec or input files changed since its last successful run.
-Outputs go to `derivatives/rmvpa/<analysis>/sub-<label>/` with BIDS
+Outputs go to \verb{derivatives/rmvpa/<analysis>/sub-<label>/} with BIDS
 entity names and a JSON sidecar per subject.
 }

@@ -17,18 +17,18 @@ rmvpa_new(
 
 \item{dir}{Project directory to create (default: current directory).}
 
-\item{target}{Design column to decode. When `NULL`, the candidates are
+\item{target}{Design column to decode. When \code{NULL}, the candidates are
 listed; in an interactive session you are asked to pick one.}
 
 \item{suffix}{BIDS suffix of the beta images.}
 
-\item{overwrite}{Replace an existing `rmvpa.yml`.}
+\item{overwrite}{Replace an existing \code{rmvpa.yml}.}
 }
 \value{
 The project directory, invisibly.
 }
 \description{
-Scans `bids_root` for beta series (`*_betas.nii[.gz]` with design tables
-alongside), writes `rmvpa.yml` with one set per task, and a first analysis
-`analyses/decode_<target>.yml` (a 6 mm searchlight).
+Scans \code{bids_root} for beta series (\verb{*_betas.nii[.gz]} with design tables
+alongside), writes \code{rmvpa.yml} with one set per task, and a first analysis
+\verb{analyses/decode_<target>.yml} (a 6 mm searchlight).
 }

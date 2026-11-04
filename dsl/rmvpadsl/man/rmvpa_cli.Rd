@@ -13,6 +13,7 @@ rmvpa_cli(argv = commandArgs(trailingOnly = TRUE))
 An exit status (0 on success), invisibly.
 }
 \description{
-Implements the `rmvpa` command (see `rmvpa help`). Installed wrappers call
-this function; it can also be called from R with a character vector.
+Implements the \code{rmvpa} command (see \verb{rmvpa help}). The launcher installed
+by \code{\link[=install_rmvpa_command]{install_rmvpa_command()}} calls this function; it can also be called from
+R with a character vector.
 }

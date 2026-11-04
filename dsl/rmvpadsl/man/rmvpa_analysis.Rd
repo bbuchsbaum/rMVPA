@@ -7,16 +7,16 @@
 rmvpa_analysis(project, analysis)
 }
 \arguments{
-\item{project}{An `rmvpa_project` or a project path.}
+\item{project}{An \code{rmvpa_project} or a project path.}
 
-\item{analysis}{Analysis name (file name under `analyses/` without the
+\item{analysis}{Analysis name (file name under \verb{analyses/} without the
 extension) or a path to an analysis file.}
 }
 \value{
-An object of class `rmvpa_analysis_spec`.
+An object of class \code{rmvpa_analysis_spec}.
 }
 \description{
-Reads an analysis file, follows its `extends:` line to the project file,
+Reads an analysis file, follows its \verb{extends:} line to the project file,
 and fills every value that was not written from the versioned defaults.
 Each resolved value records where it came from.
 }

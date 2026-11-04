@@ -1,0 +1,50 @@
+Package: rmvpadsl
+Title: A Declarative Analysis Language for 'rMVPA'
+Version: 0.1.0.9000
+Authors@R:
+    person("Bradley", "Buchsbaum", email = "brad.buchsbaum@gmail.com", role = c("aut", "cre"))
+Description: Describes multivariate pattern analyses of fMRI beta series in
+    small YAML files: one project file naming the data, plus one file per
+    analysis with a verb (decode, transfer, rsa, encode and others) and a
+    scope (searchlight, regions or whole brain). Each analysis compiles to an
+    ordinary 'rMVPA' model specification. Provides checking without fitting,
+    incremental re-runs, BIDS-derivatives outputs with provenance sidecars,
+    and the 'rmvpa' command.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Depends:
+    R (>= 4.1)
+Imports:
+    rMVPA (>= 0.1.3),
+    neuroim2 (>= 0.19.1),
+    yaml,
+    jsonlite,
+    digest,
+    future,
+    methods,
+    stats,
+    tools,
+    utils
+Suggests:
+    testthat (>= 3.0.0),
+    futile.logger,
+    knitr,
+    rmarkdown,
+    pls,
+    ffmanova
+Remotes:
+    bbuchsbaum/rMVPA
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Collate:
+    'rmvpadsl-package.R'
+    'dsl_spec.R'
+    'dsl_load.R'
+    'dsl_inference.R'
+    'dsl_data.R'
+    'dsl_compile.R'
+    'dsl_run.R'
+    'dsl_scaffold.R'
+    'dsl_cli.R'

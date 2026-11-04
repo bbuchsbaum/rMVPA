@@ -1,8 +1,7 @@
 #' Install rMVPA Command-Line Wrappers
 #'
 #' Copies the packaged command-line wrappers into a directory on your
-#' \code{PATH}. The installed commands are \code{rmvpa} (the analysis DSL,
-#' see \code{\link{rmvpa_cli}}) and the legacy \code{rmvpa-searchlight} and
+#' \code{PATH}. The installed commands are \code{rmvpa-searchlight} and
 #' \code{rmvpa-regional}.
 #'
 #' @param dest_dir Destination directory for the wrappers, for example
@@ -10,14 +9,13 @@
 #'   directory unless you choose it.
 #' @param overwrite Logical; overwrite existing wrapper files if \code{TRUE}.
 #' @param commands Which wrappers to install. Any subset of
-#'   \code{c("dsl", "searchlight", "regional")}; \code{"dsl"} is the
-#'   \code{rmvpa} command.
+#'   \code{c("searchlight", "regional")}.
 #'
 #' @return Invisibly, a named character vector of installed wrapper paths.
 #' @export
 install_cli <- function(dest_dir,
                         overwrite = FALSE,
-                        commands = c("dsl", "searchlight", "regional")) {
+                        commands = c("searchlight", "regional")) {
   if (missing(dest_dir)) {
     stop("install_cli() needs `dest_dir`, a directory on your PATH ",
          "(for example \"~/.local/bin\").", call. = FALSE)
@@ -83,7 +81,6 @@ install_cli <- function(dest_dir,
 #' @noRd
 .cli_command_map <- function() {
   c(
-    dsl = "rmvpa",
     searchlight = "rmvpa-searchlight",
     regional = "rmvpa-regional"
   )
@@ -1004,10 +1001,6 @@ run_cli_command <- function(mode = c("searchlight", "regional"),
     )
   }
 
-  message(sprintf(
-    "Note: %s is superseded by the `rmvpa` command (`rmvpa help`). Convert a config with `rmvpa migrate <config.yaml>`.",
-    .cli_command_map()[[mode]]
-  ))
   parser <- .cli_parser(mode)
   argv <- .cli_normalize_argv(argv)
   if (length(argv) == 0L) {

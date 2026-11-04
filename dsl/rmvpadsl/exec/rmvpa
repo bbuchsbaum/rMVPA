@@ -1,0 +1,17 @@
+#!/usr/bin/env Rscript
+# rmvpa: the rMVPA analysis language command. See `rmvpa help`.
+# Run from an installed rmvpadsl, or from a source checkout with pkgload.
+
+argv <- commandArgs(trailingOnly = FALSE)
+file_arg <- grep("^--file=", argv, value = TRUE)
+script <- if (length(file_arg)) normalizePath(sub("^--file=", "", file_arg[[1]]), mustWork = FALSE) else ""
+root <- if (nzchar(script)) normalizePath(file.path(dirname(script), ".."), mustWork = FALSE) else ""
+
+is_source <- nzchar(root) && file.exists(file.path(root, "DESCRIPTION")) &&
+  any(grepl("^Package: rmvpadsl$", readLines(file.path(root, "DESCRIPTION"), warn = FALSE)))
+if (is_source && requireNamespace("pkgload", quietly = TRUE)) {
+  suppressMessages(pkgload::load_all(root, export_all = FALSE, helpers = FALSE, quiet = TRUE))
+} else if (!requireNamespace("rmvpadsl", quietly = TRUE)) {
+  stop("Could not load rmvpadsl. Install it, or install 'pkgload' to run from a source checkout.", call. = FALSE)
+}
+quit(status = get("rmvpa_cli", envir = asNamespace("rmvpadsl"))(commandArgs(trailingOnly = TRUE)), save = "no")
