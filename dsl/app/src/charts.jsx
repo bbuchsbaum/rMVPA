@@ -33,7 +33,7 @@ function Axis({ x, lo, hi, y, top }) {
 // One subject: its searchlight centres against its own pooled null, as
 // probability densities on one square-root scale. The FDR threshold is drawn
 // with the null's tail beyond it shaded, and the surviving centres as a rug.
-export function SubjectNull({ subject, edges, chance, resolution, width = 1060 }) {
+export function SubjectNull({ subject, edges, chance, resolution, permutations, width = 1060 }) {
   const [lo, hi] = ACC;
   const m = { l: 120, r: 24 };
   const x = scale(lo, hi, m.l, width - m.r);
@@ -47,7 +47,7 @@ export function SubjectNull({ subject, edges, chance, resolution, width = 1060 }
     .map(([i, v], k) => `${k ? "L" : "M"}${x(edges[i]).toFixed(1)},${y(v).toFixed(1)}L${x(edges[i + 1]).toFixed(1)},${y(v).toFixed(1)}`).join("");
   const thr = subject.fdr?.threshold;
   const tail = thr ? nd.map((v, i) => (edges[i] >= thr ? `M${x(edges[i])},${base}L${x(edges[i])},${y(v)}L${x(Math.min(hi, edges[i + 1]))},${y(v)}L${x(Math.min(hi, edges[i + 1]))},${base}Z` : "")).join("") : "";
-  const rug = thr ? od.map((v, i) => (edges[i] >= thr && v > 0 ? x(edges[i] + (edges[1] - edges[0]) / 2) : null)).filter((v) => v != null) : [];
+  const rug = thr ? od.map((v, i) => (edges[i] >= thr && v > 0 && inDomain(i) ? x(edges[i] + (edges[1] - edges[0]) / 2) : null)).filter((v) => v != null) : [];
   return (
     <svg className="chart" width={width} height={H + 26} role="img" aria-label={`sub-${subject.id}: centres against its own null`}>
       <text x={0} y={22} style={{ fontWeight: 600, fill: "var(--ink)" }}>sub-{subject.id}</text>
@@ -66,9 +66,10 @@ export function SubjectNull({ subject, edges, chance, resolution, width = 1060 }
         <line x1={x(thr)} x2={x(thr)} y1={6} y2={base + 8} stroke="var(--warm)" strokeWidth={2} />
         <text x={x(thr) + 6} y={18} style={{ fill: "var(--warm)", fontWeight: 600 }}>FDR q &lt; .05 at ≥ {thr.toFixed(3)}</text>
         <text x={x(thr) + 6} y={33} style={{ fill: "var(--warm)" }}>{subject.fdr.surviving.toLocaleString()} centres survive</text>
-        {rug.map((rx, i) => <line key={i} x1={rx} x2={rx} y1={base + 2} y2={base + 9} stroke="var(--warm)" strokeWidth={1.5} />)}
+        {rug.map((rx, i) => <line key={i} x1={rx} x2={rx} y1={base - 8} y2={base - 1} stroke="var(--warm)" strokeWidth={1.5} />)}
       </> : <text x={x(0.36)} y={24} style={{ fill: "var(--ink-2)", fontWeight: 600 }}>no centre survives FDR q &lt; .05</text>}
-      <text x={width - m.r} y={H + 20} textAnchor="end" style={{ fill: "var(--ink-3)" }}>p resolution ≈ {resolution} ({Math.round(1 / resolution - 1)} permutations)</text>
+      <text x={width - m.r} y={H + 20} textAnchor="end" style={{ fill: permutations < 1000 ? "var(--amber)" : "var(--ink-3)" }}>
+        p resolution ≈ {resolution} with {permutations} permutations{permutations < 1000 ? " · FDR counts provisional below 1,000" : ""}</text>
     </svg>
   );
 }
@@ -138,22 +139,33 @@ export function AccuracyKey({ chance, width = 420, label = "own FDR threshold" }
   );
 }
 
-// Regions: one row per region, every subject as a dot (hover links a subject
-// across rows), the mean tick with a 95% interval.
-export function RegionDots({ regions, subjects, chance, order, hover, setHover, width = 1060 }) {
-  const rows = regions.map((r) => {
-    const v = r.values.map((x) => (typeof x === "number" ? x : null));
-    const ok = v.filter((x) => x != null);
-    return { ...r, v, ...meanCI(ok) };
-  });
-  if (order === "mean") rows.sort((a, b) => b.mean - a.mean);
-  const all = rows.flatMap((r) => r.v.filter((x) => x != null));
+// Regions, paired by hemisphere: one row per region pair, LH dots filled and
+// RH dots hollow on a slight vertical offset, a mean tick and 95% interval per
+// hemisphere. Hover links a subject across rows.
+export function RegionPairs({ regions, subjects, chance, order, hover, setHover, width = 1060 }) {
+  const half = regions.length / 2;
+  const stat = (r) => { const v = r.values.map((x) => (typeof x === "number" ? x : null)); return { ...r, v, ...meanCI(v.filter((x) => x != null)) }; };
+  let pairs = Array.from({ length: half }, (_, i) => ({ L: stat(regions[i]), R: stat(regions[i + half]), name: regions[i].name.replace(/^LH /, "") }));
+  if (order === "mean") pairs.sort((a, b) => Math.max(b.L.mean, b.R.mean) - Math.max(a.L.mean, a.R.mean));
+  const all = pairs.flatMap((p) => [...p.L.v, ...p.R.v].filter((x) => x != null));
   const lo = Math.min(chance, ...all) - 0.01, hi = Math.max(...all) + 0.01;
-  const rowH = 19, m = { l: 250, r: 150, t: 24, b: 26 };
-  const H = m.t + rows.length * rowH + m.b;
+  const rowH = 30, m = { l: 210, r: 190, t: 26, b: 26 };
+  const H = m.t + pairs.length * rowH + m.b;
   const x = scale(lo, hi, m.l, width - m.r);
+  const jitter = (j) => ((j * 7919) % 5 - 2) * 1.1;
+  const Hemi = ({ h, dy, filled }) => (
+    <g transform={`translate(0, ${dy})`}>
+      <rect x={x(h.lo)} y={-2} width={Math.max(1, x(h.hi) - x(h.lo))} height={4} fill="var(--ink)" opacity={0.22} />
+      {h.v.map((v, j) => v == null ? null : (
+        <circle key={j} cx={x(v)} cy={jitter(j)} r={hover === subjects[j] ? 4.5 : 2.4}
+          fill={filled ? "var(--ink)" : "var(--surface)"} stroke="var(--ink)" strokeWidth={filled ? 0 : 1}
+          opacity={hover == null ? 0.55 : hover === subjects[j] ? 1 : 0.15} onMouseEnter={() => setHover(subjects[j])} />
+      ))}
+      <line x1={x(h.mean)} x2={x(h.mean)} y1={-6} y2={6} stroke="var(--ink)" strokeWidth={2} />
+    </g>
+  );
   return (
-    <svg className="chart" width={width} height={H} role="img" aria-label="Accuracy by region, every subject" onMouseLeave={() => setHover(null)}>
+    <svg className="chart" width={width} height={H} role="img" aria-label="Accuracy by region pair, every subject" onMouseLeave={() => setHover(null)}>
       {ticks(lo, hi).map((t) => (
         <g key={t}>
           <line x1={x(t)} x2={x(t)} y1={m.t - 6} y2={H - m.b} stroke="var(--line-2)" />
@@ -162,22 +174,36 @@ export function RegionDots({ regions, subjects, chance, order, hover, setHover, 
       ))}
       <line x1={x(chance)} x2={x(chance)} y1={m.t - 10} y2={H - m.b} stroke="var(--ink)" strokeDasharray="2 3" />
       <text x={x(chance) + 4} y={m.t - 12} style={{ fill: "var(--ink)" }}>chance {chance}</text>
-      <text x={width - m.r + 10} y={m.t - 12}>mean (95% CI)</text>
-      {rows.map((r, i) => (
-        <g key={r.index} transform={`translate(0, ${m.t + i * rowH})`}>
-          {i % 2 === 0 && <rect x={0} y={0} width={width} height={rowH} fill="var(--sunk)" opacity={0.45} />}
-          <text x={m.l - 10} y={13} textAnchor="end"><tspan style={{ fill: "var(--ink-3)" }}>{r.index}  </tspan>{r.name}</text>
-          <rect x={x(r.lo)} y={rowH / 2 - 3} width={Math.max(1, x(r.hi) - x(r.lo))} height={6} fill="var(--ink)" opacity={0.12} />
-          {r.v.map((v, j) => v == null ? null : (
-            <circle key={j} cx={x(v)} cy={rowH / 2} r={hover === subjects[j] ? 4.5 : 2.6}
-              fill="var(--ink)" opacity={hover == null ? 0.35 : hover === subjects[j] ? 1 : 0.15}
-              onMouseEnter={() => setHover(subjects[j])} />
-          ))}
-          <line x1={x(r.mean)} x2={x(r.mean)} y1={3} y2={rowH - 3} stroke="var(--ink)" strokeWidth={2} />
-          <text x={width - m.r + 10} y={13} className="tnum">{r.mean.toFixed(3)} <tspan style={{ fill: "var(--ink-3)" }}>({r.lo.toFixed(2)}–{r.hi.toFixed(2)})</tspan></text>
+      <text x={width - m.r + 12} y={m.t - 12}>LH ● · RH ○ mean (95% CI)</text>
+      {hover && <text x={m.l} y={m.t - 12} style={{ fill: "var(--ink)", fontWeight: 600 }}>sub-{hover} in every row</text>}
+      {pairs.map((p, i) => (
+        <g key={p.name} transform={`translate(0, ${m.t + i * rowH})`}>
+          <text x={m.l - 12} y={rowH / 2 + 4} textAnchor="end">{p.name}</text>
+          <Hemi h={p.L} dy={rowH / 2 - 6} filled />
+          <Hemi h={p.R} dy={rowH / 2 + 6} />
+          <text x={width - m.r + 12} y={rowH / 2 - 2} className="tnum">● {p.L.mean.toFixed(3)} <tspan style={{ fill: "var(--ink-3)" }}>{p.L.lo.toFixed(2)}–{p.L.hi.toFixed(2)}</tspan></text>
+          <text x={width - m.r + 12} y={rowH / 2 + 12} className="tnum">○ {p.R.mean.toFixed(3)} <tspan style={{ fill: "var(--ink-3)" }}>{p.R.lo.toFixed(2)}–{p.R.hi.toFixed(2)}</tspan></text>
         </g>
       ))}
-      {hover && <text x={m.l} y={m.t - 12} style={{ fill: "var(--ink)", fontWeight: 600 }}>sub-{hover} highlighted in every row</text>}
+    </svg>
+  );
+}
+
+// Stepped key for integer counts: one faint swatch for a single subject,
+// then one step per count.
+export function CountKey({ max }) {
+  const steps = Array.from({ length: Math.max(0, max - 1) }, (_, i) => i + 2);
+  const hotc = (t) => { const H = [[122, 29, 14], [212, 73, 44], [243, 177, 59], [255, 241, 194]]; t = Math.max(0, Math.min(1, t)) * 3; const i = Math.min(2, Math.floor(t)), f = t - i; return `rgb(${H[i].map((c, k) => Math.round(c + f * (H[i + 1][k] - c))).join(",")})`; };
+  return (
+    <svg className="chart" width={40 + (steps.length + 1) * 18} height={34} role="img" aria-label="Count key">
+      <rect x={0} y={4} width={16} height={10} fill="#e8b9ac" />
+      <text x={8} y={28} textAnchor="middle">1</text>
+      {steps.map((k, i) => (
+        <g key={k}>
+          <rect x={22 + i * 18} y={4} width={16} height={10} fill={hotc((k - 2) / Math.max(1, max - 2))} />
+          {(k === 2 || k === max || k % 3 === 0) && <text x={30 + i * 18} y={28} textAnchor="middle">{k}</text>}
+        </g>
+      ))}
     </svg>
   );
 }

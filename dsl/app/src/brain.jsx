@@ -24,7 +24,9 @@ function paint(cv, nx, ny, tplAt, valAt, { threshold, top, floor, mode }) {
       const g = tplAt(i, j);
       let c = [g, g, g];
       const v = valAt(i, j);
-      if (v === v && mode === "count") {
+      if (v === v && mode === "binary") {
+        if (v >= threshold) c = [212, 73, 44];
+      } else if (v === v && mode === "count") {
         if (v >= 2) c = hot((v - 2) / Math.max(1, top - 2));
         else if (v >= 1) c = [g + 0.3 * (212 - g), g + 0.3 * (73 - g), g + 0.3 * (44 - g)];
       } else if (v === v && threshold != null) {
@@ -64,10 +66,11 @@ function VolSlice({ template, map, dims, k, ...opts }) {
 
 // One 2D slice (x-fastest) over the template slice k.
 export function PlaneSlice({ template, plane, dims, k, ...opts }) {
+  // opts: threshold, top, floor, mode
   const ref = useRef(null);
   useEffect(() => {
     const [nx, ny] = dims;
     paint(ref.current, nx, ny, (i, j) => template[i + nx * (j + ny * k)], (i, j) => plane[i + nx * j], opts);
-  }, [template, plane, dims, k, opts.threshold, opts.top, opts.floor]);
+  }, [template, plane, dims, k, opts.threshold, opts.top, opts.floor, opts.mode]);
   return <canvas ref={ref} />;
 }

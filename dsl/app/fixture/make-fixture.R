@@ -132,7 +132,8 @@ pmap <- array(NA_real_, dims); pmap[mask] <- pv
 # Per-subject maps at the peak slice; leave-one-subject-out ROI values.
 pk <- arrayInd(which.max(grp), dims); kz <- pk[3]
 gains <- rnorm(length(subs), 1, 0.35)
-prev <- array(0L, dims); prev[!mask] <- NA
+prev <- array(0L, dims); prev[!mask] <- NA   # subjects significant, done cells only (stale sub-07 excluded)
+prev_all <- prev                                # including the stale subject
 per <- vector("list", length(subs))
 for (i in seq_len(15)) {
   m <- chance + 0.14 * gains[i] * vot + array(rnorm(prod(dims), 0, 0.035), dims)
@@ -141,7 +142,8 @@ for (i in seq_len(15)) {
   p_i <- (1 + (n_null - findInterval(ov, nl))) / (n_null + 1)
   q_i <- p.adjust(p_i, "BH")
   sig <- array(FALSE, dims); sig[mask] <- q_i < 0.05
-  prev[sig] <- prev[sig] + 1L
+  prev_all[sig] <- prev_all[sig] + 1L
+  if (i != 7) prev[sig] <- prev[sig] + 1L
   sl <- m[, , kz]; sl[!mask[, , kz]] <- NaN
   per[[i]] <- list(
     fdr = list(threshold = if (any(q_i < 0.05)) round(min(ov[q_i < 0.05]), 4) else NULL, surviving = sum(q_i < 0.05)),
@@ -219,11 +221,12 @@ save_json(list(
                  hist = list(edges = edges, counts = as.integer(table(cut(pmin(pmax(obs, 0.1), 0.4999), edges, include.lowest = TRUE))))),
   fdr = list(q = 0.05, threshold = round(fdr_thr, 4), surviving = sum(q < 0.05)),
   peak_z = kz - 1L,
-  group = list(roi = "leave-one-subject-out: the FDR region of the other subjects' group map",
-               test = NULL, note = "rmvpadsl 0.1 computes no group-level test; these are per-subject values"),
+  group = list(roi_rule = "centres where at least k of the other subjects survive their own FDR (q < .05)", roi_k = 3L,
+               roi_sizes = as.list(setNames(round(rnorm(15, 160, 25)), subs[1:15])),
+               test = NULL, note = "no group-level test is computed; these are per-subject values"),
   peak = list(ijk = as.integer(arrayInd(peak_idx, dims)) - 1L, value = round(grp[peak_idx], 4)),
   subjects = subj,
-  maps = list(group_mean = vol(grp), prevalence = vol(prev)),
+  maps = list(group_mean = vol(grp), prevalence = vol(prev), prevalence_all = vol(prev_all)),
   hist_edges = edges,
   sidecar = list(rmvpa_dsl = "0.1", rmvpa_version = "0.1.3", rmvpadsl_version = "0.1.0.9000", analysis = "decode_category",
                  subject = "01", verb = "decode", model_class = "mvpa_model",
@@ -237,7 +240,9 @@ save_json(list(analysis = "rsa_animacy", metric = "t", chance = 0, metrics = c("
                null = list(kind = "searchlight_permutation", permutations = 1000L, joint = TRUE,
                            description = "joint null of no association with any predictor; per-predictor maps have no conditional test"),
                maps = list(animacy = vol(anim_t), category = vol(cat_t), time = vol(time_t))), "results-rsa_animacy.json")
-save_json(list(analysis = "transfer_memory", metric = "Accuracy", chance = chance, regions = xfer_tab, subjects = subs,
+save_json(list(analysis = "transfer_memory", metric = "Accuracy", chance = chance,
+               chance_source = "1 / 4 classes; the retrieval set is balanced (36 trials per class per subject)",
+               regions = xfer_tab, subjects = subs,
                atlas = list(file = "atlas/space-MNI152NLin2009cAsym_atlas-demo_dseg.nii.gz", md5 = unname(tools::md5sum(file.path(root, "atlas", "space-MNI152NLin2009cAsym_atlas-demo_dseg.nii.gz")))),
                null = list(kind = "none", description = "none: descriptive only (no permutation path in rMVPA for this analysis)")),
           "results-transfer_memory.json")

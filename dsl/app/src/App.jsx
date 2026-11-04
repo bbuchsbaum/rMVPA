@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { api, isExample, decodeF32, decodeU8 } from "./api.js";
 import { Slices, PlaneSlice } from "./brain.jsx";
-import { SubjectNull, SubjectStrip, AccuracyKey, RegionDots } from "./charts.jsx";
+import { SubjectNull, SubjectStrip, AccuracyKey, RegionPairs, CountKey } from "./charts.jsx";
 
 const VERBS = {
   decode: "Predict a label or value", transfer: "Train on one set, test on another",
@@ -14,6 +14,7 @@ const VERBS = {
 // The fold assertion that does apply, per verb, when a project-wide one doesn't.
 const GUARD = { rsa_era: "train_test_disjoint_runs", transfer: "train_test_disjoint_runs" };
 const NUMERIC = new Set(["radius", "iterations", "permutations", "subsample", "workers", "seed", "nfolds", "repeats", "max_rank", "rank"]);
+const UNITS = { radius: "mm", permutations: "permutations", iterations: "iterations", workers: "workers", subsample: "of centres" };
 
 function useHash() {
   const [h, setH] = useState(location.hash.slice(1));
@@ -54,7 +55,9 @@ export default function App() {
   const [kind, name] = hash.includes("-") ? [hash.slice(0, hash.indexOf("-")), hash.slice(hash.indexOf("-") + 1)] : ["project", null];
   const analysis = project.analyses.find((a) => a.name === name);
   const blocked = project.analyses.filter((a) => problems(project, a.name).some((p) => p.level === "error")).map((a) => a.name);
-  const todo = project.analyses.filter((a) => !blocked.includes(a.name)).flatMap((a) => a.cells.filter((c) => c.status !== "done"));
+  const todoBy = project.analyses.filter((a) => !blocked.includes(a.name))
+    .map((a) => [a.name, a.cells.filter((c) => c.status !== "done").length]).filter(([, n]) => n > 0);
+  const todo = todoBy.reduce((s, [, n]) => s + n, 0);
 
   return (
     <div className="app">
@@ -68,8 +71,8 @@ export default function App() {
         <button className={`pill ${blocked.length ? "bad" : ""}`} onClick={() => blocked.length && go(`a-${blocked[0]}`)}><i />
           {blocked.length ? `${blocked.join(", ")} blocked by check` : "Check passed"}
         </button>
-        <button className="button primary" title={`${todo.length} stale or missing cells`}>
-          Run {todo.length}{blocked.length ? ` · skips ${blocked.join(", ")}` : ""}<kbd style={{ borderColor: "#555", color: "#ccc" }}>⌘↵</kbd>
+        <button className="button primary" title={todoBy.map(([n, k]) => `${k} × ${n}`).join("\n")}>
+          Run {todo} cells{blocked.length ? ` · skips ${blocked.join(", ")}` : ""}<kbd style={{ borderColor: "#555", color: "#ccc" }}>⌘↵</kbd>
         </button>
       </header>
       <div className="body">
@@ -171,7 +174,7 @@ function AnalysisView({ project, a }) {
     <div className={`field ${blocking && blocking.path === r.path ? "err" : ""}`}>
       <label htmlFor={r.path}>{r.key}</label>
       {NUMERIC.has(r.key)
-        ? <input id={r.path} className="select num tnum" type="number" defaultValue={r.value} />
+        ? <span className="stepper"><button type="button" aria-label={`decrease ${r.key}`}>−</button><input id={r.path} className="tnum" type="number" defaultValue={r.value} /><button type="button" aria-label={`increase ${r.key}`}>+</button>{UNITS[r.key] && <span className="unit">{UNITS[r.key]}</span>}</span>
         : <select id={r.path} className="select" defaultValue={r.value}><option>{r.value}</option></select>}
       <span className={`origin ${(r.origin || "").split("@")[0].split(" ")[0]}`}>{r.origin}</span>
     </div>
@@ -183,11 +186,10 @@ function AnalysisView({ project, a }) {
         <p className="lede">analyses/{a.name}.yml · {hasResults ? <a href={`#r-${a.name}`}>Results →</a> : <a className="disabled">No results yet</a>}</p>
         {blocking && (
           <div className="banner" role="alert">
-            <div className="grow"><b>Blocked by check.</b> <code>assert {blocking.assertion}</code> does not apply to {a.verb}.
+            <div><b>Blocked by check.</b> <code>assert {blocking.assertion}</code> does not apply to {a.verb}.
               {blocking.guard ? <> The guard that does is <code>{blocking.guard}</code>: train and test sets must not share runs.</> : " No assertion of this kind applies."}
               {" "}The change is written to the analysis file and stamped in each sidecar.</div>
-            <button className="fix">{blocking.fix}</button>
-            <button className="fix">Open in YAML</button>
+            <div className="banner-actions"><button className="fix strong">{blocking.fix}</button><button className="fix">Open in YAML</button></div>
           </div>
         )}
         <Section n={1} title="Question">
@@ -250,7 +252,7 @@ function Provenance({ a, res, used, excluded, extra }) {
     <dl className="prov">
       <div><dt>n</dt><dd>{used}</dd></div>
       {excluded.length > 0 && <div><dt>excluded</dt><dd>{excluded.join(", ")}</dd></div>}
-      <div><dt>lock</dt><dd className={`lock-${a.lock}`}>{a.lock}</dd></div>
+      <div><dt>lock</dt><dd className={`lock-${a.lock}`}>{a.lock === "none" ? "none · not preregistered" : a.lock}</dd></div>
       {sc.spec_hash && <div><dt>spec</dt><dd>{sc.spec_hash.slice(0, 10)}</dd></div>}
       {sc.inference && <div><dt>null</dt><dd>{sc.inference.permutations} perms · {sc.inference.shuffle}</dd></div>}
       {extra}
@@ -273,28 +275,42 @@ function ResultsView({ project, a }) {
   const vol = useMemo(() => (tpl ? { dims: tpl.dims, template: decodeU8(tpl.template) } : null), [tpl]);
   const maps = useMemo(() => (res?.maps ? Object.fromEntries(Object.entries(res.maps).map(([k, v]) => [k, decodeF32(v)])) : {}), [res]);
   const planes = useMemo(() => Object.fromEntries((res?.subjects || []).filter((s) => typeof s.slice === "string").map((s) => [s.id, decodeF32(s.slice)])), [res]);
+  const statusOf = Object.fromEntries(a.cells.map((c) => [c.subject, c.status]));
+  const ran = (res?.subjects || []).filter((s) => typeof s.slice === "string").map((s) => s.id);
+  // ←/→ step through subjects.
+  useEffect(() => {
+    const f = (e) => {
+      if (!ran.length || !["ArrowLeft", "ArrowRight"].includes(e.key) || e.target.closest("input,select")) return;
+      const i = ran.indexOf(sel);
+      setSel(ran[(i + (e.key === "ArrowRight" ? 1 : ran.length - 1)) % ran.length]);
+    };
+    addEventListener("keydown", f);
+    return () => removeEventListener("keydown", f);
+  }, [sel, ran.join()]);
   if (!res || !vol) return <div className="page">Loading…</div>;
   if (res.missing) return <div className="page"><h1>{a.name}</h1><p className="lede">No results yet.</p></div>;
 
-  const statusOf = Object.fromEntries(a.cells.map((c) => [c.subject, c.status]));
-  const excluded = a.cells.filter((c) => c.status === "missing" || (c.status === "stale" && !include)).map((c) => `sub-${c.subject} (${c.status === "missing" ? "not run" : "stale"})`);
-  const used = a.cells.filter((c) => c.status === "done" || (c.status === "stale" && include)).length;
+  // One n for every panel: done cells, plus stale ones when included.
+  const inN = (id) => statusOf[id] === "done" || (statusOf[id] === "stale" && include);
+  const excluded = a.cells.filter((c) => !inN(c.subject)).map((c) => `sub-${c.subject} (${c.status === "missing" ? "not run" : c.status})`);
+  const n = a.cells.filter((c) => inN(c.subject)).length;
 
   if (res.regions) {
+    const intervals = res.regions.length;
     return (
-      <div className="page">
+      <div className="page plain">
         <h1>{a.name}</h1>
-        <p className="lede">{res.metric} by region · chance {res.chance}</p>
-        <Provenance a={a} res={res} used={used} excluded={excluded} extra={<div><dt>atlas</dt><dd>{res.atlas.file.split("/").pop()} · md5 {res.atlas.md5.slice(0, 8)}</dd></div>} />
-        <div className="card">
+        <p className="lede">{res.metric} by region · chance {res.chance} ({res.chance_source}) · <span className="stamp">descriptive only</span> rMVPA has no permutation path for transfer analyses.</p>
+        <Provenance a={a} res={res} used={n} excluded={excluded} extra={<div><dt>atlas</dt><dd>{res.atlas.file.split("/").pop()} · md5 {res.atlas.md5.slice(0, 8)}</dd></div>} />
+        <section className="fig">
           <div className="fig-head">
-            <h2>Transfer accuracy, every subject <span className="stamp" style={{ marginLeft: 8 }}>descriptive only</span>
-              {order === "mean" && <span className="stamp" style={{ marginLeft: 6 }}>ordered by result</span>}</h2>
+            <h2>Transfer accuracy, every subject, hemispheres paired
+              {order === "mean" && <span className="stamp" style={{ marginLeft: 8 }}>sorted by outcome · exploratory</span>}</h2>
             <div className="seg">{["atlas", "mean"].map((o) => <button key={o} className={order === o ? "on" : ""} onClick={() => setOrder(o)}>{o === "atlas" ? "Atlas order" : "By mean"}</button>)}</div>
           </div>
-          <RegionDots regions={res.regions} subjects={res.subjects} chance={res.chance} order={order} hover={hover} setHover={setHover} />
-          <p className="fig-caption">rMVPA has no permutation path for transfer analyses, so these are descriptive: a dot per subject (hover one to find it in every row), the tick is the mean and the band its 95% t-interval. Atlas order carries no selection.</p>
-        </div>
+          <RegionPairs regions={res.regions} subjects={res.subjects} chance={res.chance} order={order} hover={hover} setHover={setHover} />
+          <p className="fig-caption">A dot per subject (hover one to find it in every row); the tick is the mean, the bar its 95% t-interval. These are {intervals} intervals with no adjustment for multiplicity, so one or two may clear chance by luck. Atlas order carries no selection.</p>
+        </section>
       </div>
     );
   }
@@ -302,79 +318,68 @@ function ResultsView({ project, a }) {
   const pz = res.peak_z;
   const slices = [-3, 0, 3, 6, 9, 12].map((d) => pz + d);
   const subjects = res.subjects.map((s) => ({ ...s, status: statusOf[s.id] || s.status }));
-  const ran = subjects.filter((s) => typeof s.slice === "string");
-  const nSig = ran.filter((s) => s.status === "done" || include).length;
-  const selected = subjects.find((s) => s.id === sel) || ran[0];
+  const selected = subjects.find((s) => s.id === sel) || subjects.find((s) => ran.includes(s.id));
   const tiles = [...a.cells].sort((p, q) => {
     if (tileOrder === "id") return p.subject.localeCompare(q.subject);
     const v = (c) => subjects.find((s) => s.id === c.subject)?.loso_roi ?? -1;
     return v(q) - v(p);
   });
-  const tops = Math.max(...Array.from(maps.prevalence || []).filter((v) => v === v));
+  const prev = include ? maps.prevalence_all : maps.prevalence;
+  const tops = Math.max(...Array.from(prev || []).filter((v) => v === v));
+  const nRan = ran.filter((id) => inN(id)).length;
+  const provisional = res.null.permutations < 1000;
   return (
-    <div className="page">
+    <div className="page plain">
       <h1>{a.name}</h1>
-      <p className="lede">{res.metric} · {res.classes} classes, chance {res.chance}</p>
-      <Provenance a={a} res={res} used={used} excluded={excluded} />
-      <p className="levelnote"><b>Inference is per subject.</b> rMVPA tests each subject's searchlight map against that subject's own pooled permutation null ({res.null.adjust}). Maps across subjects below are descriptive: rmvpa 0.1 computes no group-level test.</p>
-      <div className="stack">
-        <div className="card">
-          <div className="fig-head">
-            <h2>{view === "count" ? "How many subjects are significant at each centre" : "Mean accuracy across subjects"} <span className="stamp" style={{ marginLeft: 8 }}>descriptive</span></h2>
-            <div className="seg">
-              <button className={view === "count" ? "on" : ""} onClick={() => setView("count")}>Subjects significant</button>
-              <button className={view === "mean" ? "on" : ""} onClick={() => setView("mean")}>Mean accuracy</button>
-            </div>
-          </div>
-          {view === "count"
-            ? <Slices template={vol.template} map={maps.prevalence} dims={vol.dims} mode="count" top={tops} slices={slices} />
-            : <Slices template={vol.template} map={maps.group_mean} dims={vol.dims} threshold={0.30} top={0.42} floor={res.chance} slices={slices} />}
-          <div className="subhead">
-            <p className="fig-caption" style={{ margin: 0 }}>{view === "count"
-              ? <>Colour counts the subjects whose own map survives FDR q &lt; .05 at that centre, faint for a single subject, then from 2 (dark) to {tops} of {ran.length} (light). Grey: no subject. A lone subject is often a false positive at q &lt; .05.</>
-              : <>Mean of {nSig} subjects' accuracy maps, no threshold implied. Faint below 0.30, full colour above.</>}</p>
-            {view === "count"
-              ? <span className="origin">2 subjects <span className="swatch" style={{ background: "linear-gradient(90deg,#7a1d0e,#d4492c,#f3b13b,#fff1c2)", width: 120, height: 8 }} /> {tops} subjects</span>
-              : <AccuracyKey chance={res.chance} label="0.30" />}
-          </div>
-        </div>
+      <p className="lede">{res.metric} · {res.classes} classes, chance {res.chance}. <b>Inference is per subject:</b> each subject's searchlight map is tested against its own pooled permutation null ({res.null.adjust}). Views across subjects are descriptive; no group-level test is computed.</p>
+      <Provenance a={a} res={res} used={n} excluded={excluded} extra={<label className="toggle"><input id="include-stale" type="checkbox" checked={include} onChange={(e) => setInclude(e.target.checked)} /> include stale</label>} />
 
-        <div className="card">
-          <div className="fig-head">
-            <div className="inspector-head"><h2>One subject against its own null</h2>
-              <div className="picker">{ran.map((s) => <button key={s.id} className={`${s.id === selected.id ? "on" : ""} ${s.status !== "done" ? "stale" : ""}`} onClick={() => setSel(s.id)} onMouseEnter={() => setHover(s.id)} onMouseLeave={() => setHover(null)}>{s.id}</button>)}</div>
-            </div>
-          </div>
-          <SubjectNull subject={selected} edges={res.hist_edges} chance={res.chance} resolution={res.null.p_resolution} />
-          {res.null.permutations < 1000 && <p className="advice">With {res.null.permutations} permutations the pooled null resolves p only to about {res.null.p_resolution}, because centres within one permutation are correlated. Treat these FDR counts as provisional; use at least 1,000 permutations before reporting them.</p>}
-          <SubjectStrip subjects={subjects} chance={res.chance} include={include} hover={hover} setHover={setHover} select={setSel} />
-          <div className="subhead">
-            <p className="fig-caption" style={{ margin: 0 }}>Both panels share the accuracy axis. A subject's strip value is its accuracy in the region found from the <i>other</i> subjects (leave-one-subject-out), so no subject picks its own voxels. The interval describes the spread of these values; it is not a test.</p>
-            <label className="toggle"><input id="include-stale" type="checkbox" checked={include} onChange={(e) => setInclude(e.target.checked)} /> include stale</label>
+      <section className="fig">
+        <div className="fig-head">
+          <h2>{view === "count" ? `How many of the ${nRan} subjects are significant at each centre` : `Mean accuracy of ${nRan} subjects`}
+            <span className="stamp" style={{ marginLeft: 8 }}>descriptive</span>{view === "count" && provisional && <span className="stamp amber" style={{ marginLeft: 6 }}>provisional · {res.null.permutations} permutations</span>}</h2>
+          <div className="seg">
+            <button className={view === "count" ? "on" : ""} onClick={() => setView("count")}>Subjects significant</button>
+            <button className={view === "mean" ? "on" : ""} onClick={() => setView("mean")}>Mean accuracy</button>
           </div>
         </div>
+        {view === "count"
+          ? <Slices template={vol.template} map={prev} dims={vol.dims} mode="count" top={tops} slices={slices} />
+          : <Slices template={vol.template} map={maps.group_mean} dims={vol.dims} threshold={res.chance} top={0.42} slices={slices} />}
+        <div className="subhead">
+          <p className="fig-caption" style={{ margin: 0 }}>{view === "count"
+            ? <>Each colour step is a count of independent per-subject decisions (own FDR, q &lt; .05), up to {tops} of {nRan}. There is no null for this count, and a lone subject is often a false positive, so 1 is drawn faint.</>
+            : <>Continuous from chance ({res.chance}) to 0.42; no threshold is implied.</>}</p>
+          {view === "count" ? <CountKey max={tops} /> : <AccuracyKey chance={res.chance} label="" />}
+        </div>
+      </section>
 
-        <div className="card">
-          <div className="fig-head"><h2>Each subject at z {pz}, at its own FDR threshold</h2>
-            <div className="seg">{[["id", "By subject"], ["value", "By value"]].map(([k, l]) => <button key={k} className={tileOrder === k ? "on" : ""} onClick={() => setTileOrder(k)}>{l}</button>)}</div>
-          </div>
-          <div className="multiples">
-            {tiles.map((c) => {
-              const s = subjects.find((x) => x.id === c.subject);
-              if (!s || !planes[c.subject]) return <div key={c.subject} className="tile missing">sub-{c.subject}<br />not run</div>;
-              const thr = s.fdr?.threshold ?? 9;
-              return (
-                <div key={c.subject} className={`tile ${s.status === "stale" ? "stale" : ""} ${hover === c.subject ? "hl" : ""} ${selected.id === c.subject ? "sel" : ""}`}
-                  onMouseEnter={() => setHover(c.subject)} onMouseLeave={() => setHover(null)} onClick={() => setSel(c.subject)}>
-                  <PlaneSlice template={vol.template} plane={planes[c.subject]} dims={vol.dims} k={pz} threshold={thr} top={thr + 0.08} floor={res.chance} />
-                  <div className="lab"><span><b>{c.subject}</b> · {s.loso_roi?.toFixed(3)}</span><span>{s.status === "stale" ? "stale" : s.fdr?.surviving ? `${s.fdr.surviving} sig` : "0 sig"}</span></div>
-                </div>
-              );
-            })}
-          </div>
-          <div className="subhead"><p className="fig-caption" style={{ margin: 0 }}>Full colour: the subject's own FDR survivors. Faint: above chance, not significant. Labels give the LOSO accuracy and how many centres survive. Click a tile to inspect that subject.</p><AccuracyKey chance={res.chance} /></div>
+      <section className="fig">
+        <div className="fig-head"><h2>sub-{selected.id} against its own null</h2><span className="origin">click any dot or tile · ← → to step</span></div>
+        <SubjectNull subject={selected} edges={res.hist_edges} chance={res.chance} resolution={res.null.p_resolution} permutations={res.null.permutations} />
+        <SubjectStrip subjects={subjects} chance={res.chance} include={include} hover={hover} setHover={setHover} select={setSel} />
+        <p className="fig-caption">Both panels share the accuracy axis. A subject's strip value is its accuracy in its leave-one-subject-out region: {res.group.roi_rule}, with k = {res.group.roi_k}. No subject picks its own voxels. The interval describes the spread of these values; it is not a test.</p>
+      </section>
+
+      <section className="fig">
+        <div className="fig-head"><h2>Each subject at z {pz}: centres that survive its own FDR</h2>
+          <div className="seg">{[["id", "By subject"], ["value", "By value"]].map(([k, l]) => <button key={k} className={tileOrder === k ? "on" : ""} onClick={() => setTileOrder(k)}>{l}</button>)}</div>
         </div>
-      </div>
+        <div className="multiples">
+          {tiles.map((c) => {
+            const s = subjects.find((x) => x.id === c.subject);
+            if (!s || !planes[c.subject]) return <div key={c.subject} className="tile missing">sub-{c.subject}<br />not run</div>;
+            return (
+              <div key={c.subject} className={`tile ${s.status === "stale" ? "stale" : ""} ${hover === c.subject ? "hl" : ""} ${selected.id === c.subject ? "sel" : ""}`}
+                onMouseEnter={() => setHover(c.subject)} onMouseLeave={() => setHover(null)} onClick={() => setSel(c.subject)}>
+                <PlaneSlice template={vol.template} plane={planes[c.subject]} dims={vol.dims} k={pz} threshold={s.fdr?.threshold ?? 9} mode="binary" />
+                <div className="lab"><span><b>{c.subject}</b> · {s.loso_roi?.toFixed(3)}</span><span>{s.status === "stale" ? "stale" : `${s.fdr?.surviving || 0} sig`}</span></div>
+              </div>
+            );
+          })}
+        </div>
+        <p className="fig-caption">Red marks the centres that survive the subject's own FDR; colour carries no accuracy, so tiles compare directly. Labels give the LOSO accuracy and the number of surviving centres.</p>
+      </section>
     </div>
   );
 }

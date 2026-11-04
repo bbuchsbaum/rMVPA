@@ -227,3 +227,25 @@ kbd { font: 11px var(--mono); padding: 1px 5px; border-radius: 4px; border: 1px 
 .subhead { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin: 4px 0 8px; }
 .levelnote { padding: 10px 12px; border-radius: var(--radius); background: var(--sunk); color: var(--ink-2); font-size: 12.5px; margin: 0 0 16px; max-width: 110ch; }
 .levelnote b { color: var(--ink); }
+
+/* round 4 */
+.cell { background: #d4d3cd; opacity: 1; }
+.dots i { background: #c9c8c1; opacity: 1; }
+.legend i.l-done { background: #d4d3cd; opacity: 1; }
+.banner { flex-direction: column; align-items: stretch; gap: 10px; }
+.banner-actions { display: flex; gap: 8px; }
+.fix.strong { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.stepper { display: inline-flex; align-items: center; height: 28px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); width: 280px; }
+.stepper input { width: 80px; border: 0; background: none; text-align: left; padding: 0 8px; height: 26px; -moz-appearance: textfield; }
+.stepper input::-webkit-inner-spin-button { -webkit-appearance: none; }
+.stepper button { border: 0; background: none; width: 26px; height: 26px; color: var(--ink-2); }
+.stepper button:hover { background: var(--sunk); }
+.stepper .unit { color: var(--ink-3); font-size: 12px; margin-left: 4px; }
+.page.plain .fig { padding: 20px 0 26px; border-top: 1px solid var(--line-2); }
+.page.plain .fig:first-of-type { border-top: 0; }
+.page.plain .prov { border: 0; background: none; padding: 0 0 10px; }
+.page.plain .lede { max-width: 110ch; }
+.stamp.amber { color: #6d4b07; border-color: var(--amber); }
+.tile.sel { border-color: var(--ink); box-shadow: 0 0 0 2px var(--ink); }
+.tile.hl { border-color: var(--ink-3); }
+.prov .lock-none { color: var(--amber); font-weight: 600; }
