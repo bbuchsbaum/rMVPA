@@ -283,3 +283,14 @@ kbd { font: 11px var(--mono); padding: 1px 5px; border-radius: 4px; border: 1px 
 .dkey { display: flex; flex-direction: column; gap: 2px; }
 .dkey-ramp { height: 8px; border-radius: 2px; }
 .seg button:disabled { color: var(--ink-3); cursor: not-allowed; }
+
+/* round 7: regional figure */
+.pslices { display: grid; gap: 6px; }
+.pslice { position: relative; }
+.pslice canvas { width: 100%; display: block; image-rendering: pixelated; }
+.pslice .z { font: 10px var(--mono); color: var(--ink-3); text-align: center; }
+.lr-tag { position: absolute; top: 4px; font: 600 10px var(--mono); color: var(--ink-3); }
+.lr-tag.l { left: 6px; } .lr-tag.r { right: 6px; }
+.ptag { position: absolute; transform: translate(-50%, -140%); font: 600 10.5px var(--sans); color: var(--ink); background: color-mix(in srgb, var(--paper) 85%, transparent); padding: 0 4px; border-radius: 3px; white-space: nowrap; pointer-events: none; }
+.empty-detail { padding: 14px 0; color: var(--ink-2); max-width: 90ch; }
+.empty-detail b { color: var(--ink); }

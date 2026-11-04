@@ -5,7 +5,7 @@
 import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { VolumeAtlas, SurfaceAtlas, ParcelValues } from "neuroatlasjs";
 import { api, decodeU8 } from "./api.js";
-import { ParcelSlices, DIVERGING } from "./brain.jsx";
+import { ParcelSlices, diverge } from "./brain.jsx";
 import { meanCI, ticks } from "./charts.jsx";
 
 const CortexViews = React.lazy(() => import("./surface.jsx"));
@@ -48,9 +48,8 @@ export function useRegionalData(res) {
 
 // Each network is a row; each parcel a dot at its subject mean (LH filled,
 // RH hollow). The selected parcel and its homologue are ringed.
-function NetworkStrip({ stats, chance, selected, homologue, onSelect, hover, setHover, width = 1060 }) {
-  const all = stats.map((s) => s.mean);
-  const lo = Math.min(chance - 0.02, ...all) - 0.005, hi = Math.max(...all) + 0.01;
+function NetworkStrip({ stats, chance, selected, homologue, onSelect, hover, setHover, domain, width = 1060 }) {
+  const [lo, hi] = domain;
   const m = { l: 210, r: 24, t: 22, b: 26 }, rowH = 30;
   const H = m.t + NETWORKS.length * rowH + m.b;
   const x = scale(lo, hi, m.l, width - m.r);
@@ -61,9 +60,13 @@ function NetworkStrip({ stats, chance, selected, homologue, onSelect, hover, set
       <text x={x(chance) + 4} y={m.t - 12} style={{ fill: "var(--ink)" }}>chance {chance}</text>
       {NETWORKS.map(([key, name], i) => {
         const rows = stats.filter((s) => s.network === key);
+        const nm = rows.reduce((a, s) => a + s.mean, 0) / rows.length;
+        const tagged = rows.filter((s) => s.index === selected || s.index === homologue);
         return (
           <g key={key} transform={`translate(0, ${m.t + i * rowH})`}>
             <text x={m.l - 12} y={rowH / 2 + 4} textAnchor="end">{name} <tspan style={{ fill: "var(--ink-3)" }}>{rows.length}</tspan></text>
+            <line x1={x(nm)} x2={x(nm)} y1={3} y2={rowH - 3} stroke="var(--ink-3)" strokeWidth={2} />
+            {tagged.map((s) => <text key={s.index} x={x(s.mean) + 10} y={rowH / 2 + (s.hemisphere === "left" ? -6 : 14)} style={{ fill: "var(--ink)", fontWeight: s.index === selected ? 600 : 400 }}>{s.hemisphere === "left" ? "LH" : "RH"} {s.name}</text>)}
             {rows.map((s, j) => {
               const lh = s.hemisphere === "left";
               const on = s.index === selected || s.index === homologue || s.index === hover;
@@ -82,10 +85,9 @@ function NetworkStrip({ stats, chance, selected, homologue, onSelect, hover, set
 }
 
 // The selected parcel and its homologue: every subject, mean, 95% interval.
-function ParcelDetail({ sel, hom, chance, subjects, width = 1060 }) {
+function ParcelDetail({ sel, hom, chance, subjects, domain, width = 1060 }) {
   const rows = [sel, hom].filter(Boolean);
-  const all = rows.flatMap((r) => r.values);
-  const lo = Math.min(chance - 0.02, ...all) - 0.01, hi = Math.max(...all) + 0.01;
+  const [lo, hi] = domain;
   const m = { l: 210, r: 230, t: 18, b: 26 }, rowH = 34;
   const H = m.t + rows.length * rowH + m.b;
   const x = scale(lo, hi, m.l, width - m.r);
@@ -96,7 +98,7 @@ function ParcelDetail({ sel, hom, chance, subjects, width = 1060 }) {
       {rows.map((r, i) => (
         <g key={r.index} transform={`translate(0, ${m.t + i * rowH})`}>
           <text x={m.l - 12} y={rowH / 2 + 4} textAnchor="end" style={{ fontWeight: i === 0 ? 600 : 400 }}>{r.hemisphere === "left" ? "LH" : "RH"} {r.name}</text>
-          {r.values.map((v, j) => <circle key={j} cx={x(v)} cy={rowH / 2 + ((j * 7919) % 5 - 2) * 1.6} r={3} fill={r.hemisphere === "left" ? "var(--ink)" : "var(--surface)"} stroke="var(--ink)" strokeWidth={r.hemisphere === "left" ? 0 : 1} opacity={0.55}><title>sub-{subjects[j]} {v.toFixed(3)}</title></circle>)}
+          {r.values.map((v, j) => <circle key={j} cx={x(v)} cy={rowH / 2} r={3} fill={r.hemisphere === "left" ? "var(--ink)" : "var(--surface)"} stroke="var(--ink)" strokeWidth={r.hemisphere === "left" ? 0 : 1} opacity={0.55}><title>sub-{subjects[j]} {v.toFixed(3)}</title></circle>)}
           <line x1={x(r.lo)} x2={x(r.hi)} y1={rowH / 2} y2={rowH / 2} stroke="var(--ink)" strokeWidth={2} />
           <line x1={x(r.mean)} x2={x(r.mean)} y1={rowH / 2 - 7} y2={rowH / 2 + 7} stroke="var(--ink)" strokeWidth={2.5} />
           <text x={width - m.r + 12} y={rowH / 2 + 4} className="tnum">{r.mean.toFixed(3)} <tspan style={{ fill: "var(--ink-3)" }}>95% CI {r.lo.toFixed(3)}–{r.hi.toFixed(3)}</tspan></text>
@@ -106,9 +108,9 @@ function ParcelDetail({ sel, hom, chance, subjects, width = 1060 }) {
   );
 }
 
-function DivergingKey({ chance, span }) {
+function DivergingKey({ chance, span, deadzone }) {
   const W = 260;
-  const stops = DIVERGING.map((c, i) => `rgb(${c.join(",")}) ${(i / (DIVERGING.length - 1)) * 100}%`).join(",");
+  const stops = Array.from({ length: 41 }, (_, i) => `rgb(${diverge(i / 20 - 1, deadzone).join(",")}) ${i * 2.5}%`).join(",");
   const x = scale(chance - span, chance + span, 0, W);
   return (
     <div className="dkey">
@@ -128,23 +130,30 @@ export function RegionsView({ a, res, Provenance, used, excluded }) {
   if (!data) return <div className="page">Loading…</div>;
   const { stats } = data;
   const byId = new Map(stats.map((s) => [s.index, s]));
-  const top = [...stats].sort((p, q) => q.mean - p.mean)[0];
-  const selId = sel ?? top.index;
-  const selected = byId.get(selId);
-  const homologue = stats.find((s) => s.name === selected.name && s.hemisphere !== selected.hemisphere);
-  const span = 0.12;
+  const selected = sel != null ? byId.get(sel) : null;
+  const homologue = selected ? stats.find((s) => s.name === selected.name && s.hemisphere !== selected.hemisphere) : null;
+  const marked = [selected?.index, homologue?.index].filter((v) => v != null);
+  const names = Object.fromEntries(stats.map((s) => [s.index, `${s.hemisphere === "left" ? "LH" : "RH"} ${s.name}`]));
+  // Colour domain fitted to the parcel means; a ±0.01 band around chance stays neutral.
+  const maxDev = Math.max(...stats.map((s) => Math.abs(s.mean - res.chance)));
+  const span = Math.ceil(maxDev / 0.02) * 0.02;
+  const deadzone = 0.01 / span;
   const pick = (id) => { if (id > 0 && byId.has(id)) setSel(id); };
-  const pz = 18;
-  const slices = [-6, -2, 2, 6, 10, 14].map((d) => pz + d);
+  const slices = [14, 19, 24, 29, 34, 38];
+  const allVals = stats.flatMap((s) => s.values);
+  const domain = [Math.min(res.chance, ...allVals) - 0.01, Math.max(...allVals) + 0.01];
+  const above = stats.filter((s) => s.lo > res.chance).length;
+  const ex = (p) => a.explain.find((r) => r.path === p)?.value;
+  const direction = `trained on ${ex("transfer.train_set")}, tested once on ${ex("transfer.test_set")}`;
   return (
     <div className="page plain">
       <h1>{a.name}</h1>
-      <p className="lede">{res.metric} by parcel ({res.atlas.name}) · chance {res.chance} ({res.chance_source}) · <span className="stamp">descriptive only</span> rMVPA has no permutation path for transfer analyses.</p>
+      <p className="lede">{res.metric} by parcel, {direction}. Atlas: {res.atlas.name}. Chance {res.chance}: {res.chance_source}. <b>Descriptive only:</b> rMVPA has no permutation path for transfer analyses.</p>
       <Provenance a={a} res={res} used={used} excluded={excluded} extra={<div><dt>atlas</dt><dd>Schaefer-200 · md5 {res.atlas.md5.slice(0, 8)}</dd></div>} />
 
       <section className="fig">
         <div className="fig-head">
-          <h2>Mean transfer accuracy of {used} subjects, by parcel</h2>
+          <h2>Mean accuracy of {used} subjects in each parcel</h2>
           <div className="seg">
             <button className={view === "cortex" ? "on" : ""} onClick={() => setView("cortex")} disabled={!data.surface}>Cortex</button>
             <button className={view === "slices" ? "on" : ""} onClick={() => setView("slices")}>Slices</button>
@@ -152,32 +161,34 @@ export function RegionsView({ a, res, Provenance, used, excluded }) {
         </div>
         {view === "cortex" && data.surface ? (
           <Suspense fallback={<div className="cortex-wait">Drawing the cortex…</div>}>
-            <CortexViews surface={data.surface.mesh} projected={data.surface.projected} selected={selId} span={span} onPick={pick} />
+            <CortexViews surface={data.surface.mesh} projected={data.surface.projected} selected={marked} span={span} deadzone={deadzone} onPick={pick} />
           </Suspense>
         ) : (
-          <ParcelSlices template={data.template} values={data.voxelMeans} labels={data.labels} dims={data.dims} center={res.chance} span={span} slices={slices} selected={selId} onPick={pick} />
+          <ParcelSlices template={data.template} values={data.voxelMeans} labels={data.labels} dims={data.dims} center={res.chance} span={span} deadzone={deadzone} slices={slices} selected={marked} names={names} onPick={pick} />
         )}
         <div className="subhead">
           <p className="fig-caption" style={{ margin: 0 }}>
-            Each parcel takes one colour: the mean over subjects, blue below chance and red above. Click a parcel to see its subjects.
+            Each parcel takes one colour: the mean over subjects, blue below chance and red above; within ±0.01 of chance stays neutral. Click a parcel to see its subjects and its homologue (both outlined).
             {view === "cortex"
               ? <> Shown on {data.surface?.template} (pial, sulcal shading) with the atlas's surface labels; the analysis itself ran on the volumetric atlas in the data space. Medial wall uncoloured.</>
               : <> The volumetric atlas the analysis used, resampled to the studio template for display.</>}
           </p>
-          <DivergingKey chance={res.chance} span={span} />
+          <DivergingKey chance={res.chance} span={span} deadzone={deadzone} />
         </div>
       </section>
 
       <section className="fig">
-        <div className="fig-head"><h2>{selected.hemisphere === "left" ? "LH" : "RH"} {selected.name} <span className="origin">{selected.network} network · parcel {selected.index}{sel == null ? " · opened on the highest mean" : ""}</span></h2></div>
-        <ParcelDetail sel={selected} hom={homologue} chance={res.chance} subjects={res.subjects} />
-        <p className="fig-caption">Every subject's accuracy in this parcel and its homologue; the tick is the mean and the bar its 95% t-interval. Opening on the highest mean is a selection: the interval for that parcel is optimistic.</p>
+        {selected ? <>
+          <div className="fig-head"><h2>{names[selected.index]} <span className="origin">{selected.network} network · parcel {selected.index}</span></h2><button className="fix" onClick={() => setSel(null)}>Clear</button></div>
+          <ParcelDetail sel={selected} hom={homologue} chance={res.chance} subjects={res.subjects} domain={domain} />
+          <p className="fig-caption">Every subject's accuracy in this parcel and its homologue; the tick is the mean and the bar its 95% t-interval. If you chose this parcel because it looked strong, its interval is optimistic.</p>
+        </> : <div className="empty-detail"><b>No parcel selected.</b> Click a parcel on the brain or a dot below to see every subject's accuracy there and in its homologue. The studio does not open on the strongest parcel, so the first one you see is your choice.</div>}
       </section>
 
       <section className="fig">
-        <div className="fig-head"><h2>All {stats.length} parcels, by network</h2><span className="origin">LH ● · RH ○ · click a dot to select</span></div>
-        <NetworkStrip stats={stats} chance={res.chance} selected={selId} homologue={homologue?.index} onSelect={setSel} hover={hover} setHover={setHover} />
-        <p className="fig-caption">One dot per parcel at its subject mean. These are {stats.length} unadjusted means; some will sit above chance by luck.</p>
+        <div className="fig-head"><h2>All {stats.length} parcels, by network</h2><span className="origin">LH ● · RH ○ · grey tick: network mean · click a dot to select</span></div>
+        <NetworkStrip stats={stats} chance={res.chance} selected={selected?.index} homologue={homologue?.index} onSelect={setSel} hover={hover} setHover={setHover} domain={domain} />
+        <p className="fig-caption"><b>{above} of {stats.length}</b> parcels have a 95% interval entirely above chance. With per-parcel intervals and no effect anywhere, about {Math.round(stats.length * 0.025)} would by chance. This count is a description, not a test. Same accuracy axis as the panel above.</p>
       </section>
     </div>
   );

@@ -5,13 +5,13 @@
 // each its own NeuroSurfaceViewer. Per-vertex values come from neuroatlasjs's
 // SurfaceAtlas.project; the medial wall (parcel 0) is left uncoloured.
 import React, { useEffect, useRef } from "react";
-import { NeuroSurfaceViewer, SurfaceGeometry, MultiLayerNeuroSurface, DataLayer, CurvatureLayer } from "surfview";
-import { DIVERGING } from "./brain.jsx";
+import { NeuroSurfaceViewer, SurfaceGeometry, MultiLayerNeuroSurface, DataLayer, CurvatureLayer, OutlineLayer } from "surfview";
+import { diverge } from "./brain.jsx";
 
-const ZOOM = Number(new URLSearchParams(location.search).get("zoom")) || 300; // camera distance in mm for an fsaverage hemisphere
+const ZOOM = Number(new URLSearchParams(location.search).get("zoom")) || 255; // camera distance in mm for an fsaverage hemisphere
 const VIEWS = [["left", "lateral"], ["left", "medial"], ["right", "medial"], ["right", "lateral"]];
 
-function HemiView({ hemi, view, mesh, values, selectedMask, span, onPick, width, height }) {
+function HemiView({ hemi, view, mesh, values, selected, span, deadzone, onPick, width, height }) {
   const box = useRef(null);
   const state = useRef(null);
   useEffect(() => {
@@ -32,29 +32,25 @@ function HemiView({ hemi, view, mesh, values, selectedMask, span, onPick, width,
     const st = state.current;
     if (!st) return;
     for (const id of ["values", "selected"]) { try { st.surface.removeLayer(id); } catch { /* absent */ } }
-    st.surface.addLayer(new DataLayer("values", values, null, DIVERGING.map((c) => "#" + c.map((v) => v.toString(16).padStart(2, "0")).join("")), { range: [-span, span] }));
-    if (selectedMask) st.surface.addLayer(new DataLayer("selected", selectedMask, null, ["#17181b", "#17181b"], { range: [0, 1] }));
+    // Sample the same dead-zone ramp the slices use, so both views match.
+    const ramp = Array.from({ length: 41 }, (_, i) => "#" + diverge(i / 20 - 1, deadzone).map((v) => v.toString(16).padStart(2, "0")).join(""));
+    st.surface.addLayer(new DataLayer("values", values, null, ramp, { range: [-span, span] }));
+    const present = (selected || []).filter((id) => mesh.labels.includes(id));
+    if (present.length) {
+      st.surface.addLayer(new OutlineLayer("selected", { roiLabels: mesh.labels, roiSubset: present, color: 0x17181b, width: 3, halo: false }));
+    }
     st.viewer.requestRender?.();
-  }, [values, selectedMask, span]);
+  }, [values, (selected || []).join(), span, deadzone]);
 
   return <div ref={box} className="hemi-view" style={{ width, height }} />;
 }
 
-export default function CortexViews({ surface, projected, selected, span, onPick, width = 250, height = 150 }) {
-  const masks = {};
-  for (const h of ["left", "right"]) {
-    const lab = surface[h].labels;
-    if (selected == null) { masks[h] = null; continue; }
-    const m = new Float32Array(lab.length).fill(NaN);
-    let any = false;
-    for (let i = 0; i < lab.length; i++) if (lab[i] === selected) { m[i] = 1; any = true; }
-    masks[h] = any ? m : null;
-  }
+export default function CortexViews({ surface, projected, selected, span, deadzone, onPick, width = 250, height = 150 }) {
   return (
     <div className="cortex">
       {VIEWS.map(([h, v]) => (
         <figure key={h + v}>
-          <HemiView hemi={h} view={v} mesh={surface[h]} values={projected[h]} selectedMask={masks[h]} span={span} onPick={onPick} width={width} height={height} />
+          <HemiView hemi={h} view={v} mesh={surface[h]} values={projected[h]} selected={selected} span={span} deadzone={deadzone} onPick={onPick} width={width} height={height} />
           <figcaption>{h === "left" ? "Left" : "Right"} {v}</figcaption>
         </figure>
       ))}

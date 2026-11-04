@@ -15,9 +15,14 @@ export const COUNT_BINS = [
 ];
 
 // Diverging ramp around chance: blue below, neutral at chance, warm above.
-export const DIVERGING = [[40, 70, 170], [120, 150, 220], [232, 230, 224], [236, 150, 120], [212, 73, 44], [140, 35, 18]];
-export function diverge(t) { // t in [-1, 1]
-  t = (Math.max(-1, Math.min(1, t)) + 1) / 2 * (DIVERGING.length - 1);
+// Odd number of stops so the centre (chance) is exactly the neutral one.
+export const DIVERGING = [[40, 70, 170], [95, 125, 210], [170, 185, 230], [236, 234, 229], [240, 165, 135], [212, 73, 44], [140, 35, 18]];
+// A small neutral band around chance (dz, as a fraction of the span) keeps
+// near-chance parcels from reading as "above chance".
+export function diverge(t, dz = 0) { // t in [-1, 1]
+  t = Math.max(-1, Math.min(1, t));
+  t = Math.sign(t) * Math.max(0, (Math.abs(t) - dz) / (1 - dz));
+  t = (t + 1) / 2 * (DIVERGING.length - 1);
   const i = Math.min(DIVERGING.length - 2, Math.floor(t)), f = t - i;
   return DIVERGING[i].map((c, k) => Math.round(c + f * (DIVERGING[i + 1][k] - c)));
 }
@@ -41,13 +46,17 @@ function paint(cv, nx, ny, tplAt, valAt, opts, labelAt) {
       const g = tplAt(i, j);
       let c = [g, g, g];
       const v = valAt(i, j);
-      if (v === v && mode === "diverge") {
-        c = diverge((v - threshold) / top);
-        if (labelAt && opts.selected != null && labelAt(i, j) === opts.selected) {
-          const L = (a, b) => labelAt(a, b);
-          const edge = i === 0 || j === 0 || i === nx - 1 || j === ny - 1 ||
-            L(i - 1, j) !== opts.selected || L(i + 1, j) !== opts.selected || L(i, j - 1) !== opts.selected || L(i, j + 1) !== opts.selected;
-          if (edge) c = [23, 24, 27];
+      if (mode === "diverge") {
+        // Paper ground, faint anatomy, parcel colour, ink outline with a paper halo.
+        const paperC = [245, 245, 242];
+        c = g < 8 ? paperC : paperC.map((p) => p - (p - g) * 0.35);
+        if (v === v) c = diverge((v - threshold) / top, opts.deadzone || 0);
+        const sel = opts.selected || [];
+        if (labelAt && sel.length) {
+          const me = labelAt(i, j);
+          const nb = [[i - 1, j], [i + 1, j], [i, j - 1], [i, j + 1]].map(([a, b]) => (a < 0 || b < 0 || a >= nx || b >= ny ? 0 : labelAt(a, b)));
+          if (sel.includes(me) && nb.some((n) => n !== me)) c = [23, 24, 27];
+          else if (!sel.includes(me) && nb.some((n) => sel.includes(n))) c = paperC;
         }
       } else if (v === v && mode === "binary") {
         if (v >= threshold) c = [212, 73, 44];
@@ -103,28 +112,41 @@ export function PlaneSlice({ template, plane, dims, k, ...opts }) {
 // Parcel values painted into the atlas on axial slices. `values` is a
 // per-voxel Float64Array (NaN outside parcels) from VolumeAtlas.project;
 // clicking a voxel reports its parcel id.
-export function ParcelSlices({ template, values, labels, dims, center, span, slices, selected, onPick }) {
+export function ParcelSlices({ template, values, labels, dims, center, span, deadzone, slices, selected, names, onPick }) {
   return (
-    <div className="slices lr" style={{ gridTemplateColumns: `repeat(${slices.length}, minmax(0, 1fr))` }}>
-      {slices.map((k) => <ParcelSlice key={k} k={k} template={template} values={values} labels={labels} dims={dims}
-        center={center} span={span} selected={selected} onPick={onPick} />)}
+    <div className="pslices" style={{ gridTemplateColumns: `repeat(${slices.length}, minmax(0, 1fr))` }}>
+      {slices.map((k, n) => <ParcelSlice key={k} k={k} first={n === 0} template={template} values={values} labels={labels} dims={dims}
+        center={center} span={span} deadzone={deadzone} selected={selected} names={names} onPick={onPick} />)}
     </div>
   );
 }
 
-function ParcelSlice({ template, values, labels, dims, k, center, span, selected, onPick }) {
+function ParcelSlice({ template, values, labels, dims, k, first, center, span, deadzone, selected, names, onPick }) {
   const ref = useRef(null);
   const [nx, ny] = dims;
   const at = (i, j) => i + nx * (j + ny * k);
   useEffect(() => {
     paint(ref.current, nx, ny, (i, j) => template[at(i, j)], (i, j) => values[at(i, j)],
-      { mode: "diverge", threshold: center, top: span, selected }, (i, j) => labels[at(i, j)]);
-  }, [template, values, labels, k, center, span, selected]);
+      { mode: "diverge", threshold: center, top: span, deadzone, selected }, (i, j) => labels[at(i, j)]);
+  }, [template, values, labels, k, center, span, deadzone, (selected || []).join()]);
+  // Name the selected parcel in place, at its centroid on this slice.
+  const tags = (selected || []).map((id) => {
+    let sx = 0, sy = 0, n = 0;
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) if (labels[at(i, j)] === id) { sx += i; sy += j; n++; }
+    return n >= 4 ? { id, x: (sx / n + 0.5) / nx * 100, y: (1 - (sy / n + 0.5) / ny) * 100 } : null;
+  }).filter(Boolean);
   const click = (e) => {
     const r = e.currentTarget.getBoundingClientRect();
     const i = Math.floor((e.clientX - r.left) / r.width * nx), j = ny - 1 - Math.floor((e.clientY - r.top) / r.height * ny);
     const id = labels[at(i, j)];
     if (id > 0) onPick?.(id);
   };
-  return <div><canvas ref={ref} onClick={click} style={{ cursor: "pointer" }} /><div className="z">z {k}</div></div>;
+  return (
+    <div className="pslice">
+      <canvas ref={ref} onClick={click} style={{ cursor: "pointer" }} />
+      {first && <><span className="lr-tag l">L</span><span className="lr-tag r">R</span></>}
+      {tags.map((t) => <span key={t.id} className="ptag" style={{ left: `${t.x}%`, top: `${t.y}%` }}>{names?.[t.id]}</span>)}
+      <div className="z">z {k}</div>
+    </div>
+  );
 }
