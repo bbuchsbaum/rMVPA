@@ -209,6 +209,11 @@ feature_rsa_design <- function(S=NULL, F=NULL, labels, k=0, max_comps=10, block_
 #'   the regional result's `fits` slot and extracted with
 #'   \code{\link{feature_rsa_predictions}}. Off by default because
 #'   `n_obs x n_voxels` matrices across many ROIs can be large.
+#' @param endpoints Optional \code{\link{era_endpoint_spec}} for scoring held-out
+#'   predicted templates against observed patterns. Keys must equal unique design
+#'   labels, every item must be assessed once, and each competitor block must lie
+#'   within one outer assessment fold. Fitting, tuning and existing metrics are
+#'   unchanged; endpoint inference is not included in existing permutation tests.
 #' @param max_retained_mb Allocation contract (MiB) for retained out-of-fold
 #'   predicted and observed patterns. The estimate counts both matrices for a
 #'   partition of the active mask (one copy of each voxel). A refusal is
@@ -409,6 +414,7 @@ feature_rsa_model <- function(dataset,
                                max_retained_mb = 1024,
                                prediction_overflow = c("error", "none"),
                                feature_standardize = NULL,
+                               endpoints = NULL,
                                ...) {
   
   method <- match.arg(method)
@@ -419,6 +425,7 @@ feature_rsa_model <- function(dataset,
   permute_by <- match.arg(permute_by)
   assertthat::assert_that(inherits(dataset, "mvpa_dataset"))
   assertthat::assert_that(inherits(design, "feature_rsa_design"))
+  .endpoint_validate_spec(endpoints, design$labels)
   # A design built from a similarity matrix S holds PCA-like scores, whose
   # column variances are the eigenvalues; scaling them away is exactly the
   # degenerate case, so such designs default to centering only.
@@ -592,7 +599,9 @@ feature_rsa_model <- function(dataset,
     crossval= crossval, 
     compute_performance = TRUE,
     return_predictions = return_predictions,
-    return_fits = isTRUE(return_rdm_vectors) || return_predictions
+    return_fits = isTRUE(return_rdm_vectors) || return_predictions || isTRUE(endpoints$return_items),
+    endpoints = endpoints,
+    endpoint_item_keys = if (!is.null(endpoints)) as.character(design$labels) else NULL
   )
   
   # Single "max_comps" in use
@@ -752,7 +761,7 @@ feature_rsa_model <- function(dataset,
   )
   model_spec$return_predictions <- retention$return_predictions
   model_spec$return_fits <- isTRUE(model_spec$return_rdm_vectors) ||
-    isTRUE(retention$return_predictions)
+    isTRUE(retention$return_predictions) || isTRUE(model_spec$endpoints$return_items)
   model_spec$retention_estimated_bytes <- retention$retention_estimated_bytes
   if (!is.null(retention$retention_notice)) {
     model_spec$retention_notice <- retention$retention_notice
@@ -4386,6 +4395,21 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
   base_metrics <- c(base_metrics, diagnostics)
   base_names <- c(base_names, names(diagnostics))
 
+  endpoint_result <- NULL
+  if (!is.null(obj$endpoints)) {
+    if (is.null(combined_test_index) || anyDuplicated(combined_test_index) ||
+        anyNA(combined_test_index) ||
+        !setequal(combined_test_index, seq_along(obj$endpoint_item_keys))) {
+      stop("Endpoint scoring requires exactly one out-of-fold prediction per design item; repeated/partial assessments are unsupported.",
+           call. = FALSE)
+    }
+    endpoint_result <- .endpoint_score(combined_predicted, combined_observed,
+      obj$endpoint_item_keys[combined_test_index], obj$endpoints,
+      "feature_endpoint_", "held_out_prediction", fold_id = combined_fold_id)
+    base_metrics <- c(base_metrics, endpoint_result$metrics)
+    base_names <- c(base_names, names(endpoint_result$metrics))
+  }
+
   if (is.null(perf$permutation_results)) {
       perf_values <- base_metrics
       perf_names <- base_names
@@ -4439,6 +4463,10 @@ merge_results.feature_rsa_model <- function(obj, result_set, indices, id, ...) {
       observed = if (keep_predictions) combined_observed else NULL,
       voxel_index = if (keep_predictions) indices else NULL
     )
+  }
+  if (isTRUE(obj$endpoints$return_items)) {
+    if (is.null(predictor_obj)) predictor_obj <- list()
+    predictor_obj$endpoints <- endpoint_result
   }
   
   tibble::tibble(
@@ -4508,6 +4536,7 @@ output_schema.feature_rsa_model <- function(model) {
       "ncomp"
     }
   )
+  nms <- c(nms, .endpoint_metric_names(model$endpoints, "feature_endpoint_"))
   setNames(rep("scalar", length(nms)), nms)
 }
 
@@ -4545,6 +4574,11 @@ run_searchlight.feature_rsa_model <- function(model_spec, radius,
                                               niter = 4,
                                               backend = c("default", "shard", "auto"),
                                               ...) {
+  if (!is.null(model_spec$endpoints)) {
+    model_spec$endpoints$return_items <- FALSE
+    model_spec$return_fits <- isTRUE(model_spec$return_rdm_vectors) ||
+      isTRUE(model_spec$return_predictions)
+  }
   if (isTRUE(model_spec$return_predictions)) {
     stop(
       "feature_rsa_model(return_predictions = TRUE) is not supported for ",

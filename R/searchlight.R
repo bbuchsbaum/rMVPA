@@ -1332,6 +1332,11 @@ run_searchlight_base <- function(model_spec,
 run_searchlight.default <- function(model_spec, radius = 8, method = c("standard","randomized","resampled"),
                                     niter = 4,
                                     backend = c("default", "shard", "auto"), ...) {
+  # Endpoint item tables are regional payloads; overlapping searchlights only
+  # need their declared scalar summaries.
+  if (inherits(model_spec$endpoints, "era_endpoint_spec")) {
+    model_spec$endpoints$return_items <- FALSE
+  }
   backend <- .resolve_searchlight_backend(backend = backend, missing_backend = missing(backend))
   method <- match.arg(method)
   dots <- list(...)

@@ -1,0 +1,26 @@
+{
+  "base_commit": "3dd1ac725963609e58331fcd9d9d1497f0e912f8",
+  "branch": "fix/cran-blockers",
+  "scope": "Validated changed/new files; excludes this manifest and the post-validation receipt",
+  "files_sha256": {
+    "DESCRIPTION": "00f3c6202ffa2154efce22cb2a990ba15bff8c8972099e861f2e1b4fdc179435",
+    "NAMESPACE": "b5a6266f0ee72d74a556e79d4b4d56b847fbe8d8fc97e9bc9c8afdd6cc7cc28e",
+    "NEWS.md": "c4c6929c65044fc5f028a54e4dc0c852f41b037a284124cf4e77ff13cf76e5e1",
+    "R/era_association.R": "e48529eb0b5745cfb86fa5240795b95f56806dc4f6de9bd97fc0bf8fae312200",
+    "R/era_rsa_model.R": "3dcb191748e1e140405c4dc77baf9e9d0cffefb91809237314fdd6cec72c1ed7",
+    "R/feature_rsa_model.R": "6de4336b7706b7355391cafd65a8e286f46bee88f82092b781b0dfe8ac255e93",
+    "R/searchlight.R": "a6f4ad4a86fc0ead5cd7b86c925dc22d824180a667791757e92a95b6114b1395",
+    "_pkgdown.yml": "5dc130099b7ca783e4ff75d2bf0bbf4741cc670e5bba809da900fd018fc83a8f",
+    "cran-comments.md": "467f519457868b978dd9e0232616dab08fe9e27a4a61a4543d192d6bf622e794",
+    "man/era_rsa_model.Rd": "1827671338150ce0a5c0c0376bd32f69cacebd4eca00bd5e688c407411bc0cbe",
+    "man/feature_rsa_model.Rd": "634026467bb4761aa95df357114a167c25b104aed87b31898e779713b3db6f0c",
+    "vignettes/articles/ERA_RSA_Cross_Decoding.Rmd": "3530f884c468a96ad49417a8d126ed46fcd8e65f9c7122893c5c742498217140",
+    "R/era_endpoints.R": "6801ae1bfd667878c3569dca53f60ab7145c9ab9ac14a525e654ff71ee5d1878",
+    "man/era_endpoint_decomposition.Rd": "6654346a73a0e6b6159439d6f264d29b7ff1dbaac110608f82d949e34c7ef27e",
+    "man/era_endpoint_spec.Rd": "b283300afadbba1f9bcad4efedd24b24cf404950a02da5225f7812dacdb245b7",
+    "man/summarize_era_endpoints.Rd": "03ecc4893cb8bc12f9e115946eff8b271351f91cb227a18f4810f822663fd654",
+    "tests/testthat/test_era_endpoint_models.R": "4fe8aa9425504423be9f04ea64d5ad177de488d1ec38de43194186077c3ceff5",
+    "tests/testthat/test_era_endpoints.R": "7f1742fe9c212eaaba67322827a4c6ae5719e201e4a04668d26fad22488cb952",
+    "vignettes/articles/ERA_Endpoints.Rmd": "a75c89c7d1a011121588f6a2d4f37f3863917345e8aaca92f98e8f539e483f61"
+  }
+}

@@ -36,7 +36,7 @@ Imports:
     memoise,
     methods,
     modelr,
-    neuroim2 (>= 0.20.0),
+    neuroim2 (>= 0.19.1),
     purrr,
     rlang,
     stringr,
@@ -122,6 +122,7 @@ Collate:
     'run_searchlight_remap_rrr.R'
     'era_rsa_design.R'
     'era_association.R'
+    'era_endpoints.R'
     'era_global_nuisance.R'
     'era_rsa_model.R'
     'era_rsa_searchlight.R'

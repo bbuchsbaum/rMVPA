@@ -67,6 +67,7 @@ articles:
   contents:
   - articles/Naive_Cross_Decoding
   - articles/ERA_RSA_Cross_Decoding
+  - articles/ERA_Endpoints
   - articles/REMAP_RRR
   - articles/repmap_model
   - articles/repmed_model

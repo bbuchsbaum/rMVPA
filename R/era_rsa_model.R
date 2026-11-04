@@ -149,6 +149,13 @@
 #'   and \code{era_association}. \code{"item_specificity"} (default) subtracts
 #'   each retrieval item's mean similarity to nonmatching encoding items.
 #'   \code{"matched"} uses raw matched encoding-retrieval similarity.
+#'   \code{"joint_excess"} uses the joint nonmatch residual and requires
+#'   \code{endpoints}; existing specificity and matched metrics stay unchanged.
+#' @param endpoints Optional \code{\link{era_endpoint_spec}} for joint endpoint
+#'   raw and behavioral summaries. Requires \code{pairing = "one_to_one"} and
+#'   spatial Pearson similarity. Competitor pools are explicit and independent
+#'   of legacy \code{item_block} metrics. With \code{return_items = TRUE},
+#'   regional \code{$fits[[i]]$endpoints} retains item scores and diagnostics.
 #' @param era_correlates Optional right-hand-side formula selecting numeric
 #'   retrieval variables for zero-order correlations with the score selected
 #'   by \code{era_association_score}, for example \code{~ vividness}.
@@ -295,13 +302,14 @@ era_rsa_model <- function(dataset,
                           era_simfun       = c("pearson", "spearman"),
                           era_min_voxels   = 2L,
                           era_components   = c("item", "identification", "geometry"),
-                          era_association_score = c("item_specificity", "matched"),
+                          era_association_score = c("item_specificity", "matched", "joint_excess"),
                           era_correlates   = NULL,
                           era_cor_method   = c("spearman", "pearson"),
                           era_association  = NULL,
                           era_effects      = NULL,
                           era_effects_block = NULL,
                           era_min_complete = 4L,
+                          endpoints        = NULL,
                           ...) {
 
   pairing <- match.arg(pairing)
@@ -352,6 +360,15 @@ era_rsa_model <- function(dataset,
   encoding_level <- prepared$encoding_level
   retrieval_level <- prepared$retrieval_level
   pairing_info <- .era_pairing_info(design, key_var, pairing)
+  .endpoint_validate_spec(endpoints, pairing_info$common_keys)
+  if (!is.null(endpoints) && (pairing != "one_to_one" || era_simfun != "pearson")) {
+    stop("Endpoint scoring requires explicit pairing = 'one_to_one' and era_simfun = 'pearson'.",
+         call. = FALSE)
+  }
+  if (era_association_score == "joint_excess" && is.null(endpoints)) {
+    stop("era_association_score = 'joint_excess' requires endpoints = era_endpoint_spec(...).",
+         call. = FALSE)
+  }
 
   association_data <- .era_association_item_data(
     design = design,
@@ -436,7 +453,7 @@ era_rsa_model <- function(dataset,
     })
   }
 
-  create_model_spec(
+  model <- create_model_spec(
     "era_rsa_model",
     dataset  = dataset,
     design   = design,
@@ -457,6 +474,7 @@ era_rsa_model <- function(dataset,
     era_min_complete = era_min_complete,
     era_correlate_spec = era_correlate_spec,
     era_association_spec = era_association_spec,
+    endpoints = endpoints,
     era_combined_input = prepared$combined,
     era_encoding_indices = prepared$encoding_indices,
     era_retrieval_indices = prepared$retrieval_indices,
@@ -473,6 +491,8 @@ era_rsa_model <- function(dataset,
     return_predictions  = FALSE,
     ...
   )
+  if (isTRUE(endpoints$return_items)) model$return_fits <- TRUE
+  model
 }
 
 
@@ -531,6 +551,8 @@ output_schema.era_rsa_model <- function(model) {
     base_names <- c(base_names, beta_names, sp_names)
   }
 
+  base_names <- c(base_names, .endpoint_metric_names(model$endpoints, "era_endpoint_"))
+
   setNames(rep("scalar", length(base_names)), base_names)
 }
 
@@ -580,6 +602,14 @@ fit_roi.era_rsa_model <- function(model, roi_data, context, ...) {
   common_keys <- prototypes$keys
   K <- length(common_keys)
 
+  # Endpoint scoring uses the supplied ROI geometry, without the legacy
+  # across-item constant-voxel screening below. It only centers each pattern
+  # spatially; a common spatial pattern can be meaningful in this estimand.
+  endpoint_result <- if (!is.null(model$endpoints)) {
+    .endpoint_score(E, R, common_keys, model$endpoints, "era_endpoint_",
+                    "observed_encoding", min_voxels = model$era_min_voxels)
+  } else NULL
+
   if (K < 2L) {
     return(roi_result(
       metrics = NULL, indices = ind, id = id,
@@ -593,6 +623,14 @@ fit_roi.era_rsa_model <- function(model, roi_data, context, ...) {
   sd_R     <- apply(R, 2, stats::sd, na.rm = TRUE)
   keep_vox <- (is.finite(sd_E) & sd_E > 0) | (is.finite(sd_R) & sd_R > 0)
   if (!any(keep_vox)) {
+    if (!is.null(endpoint_result)) {
+      perf <- setNames(rep(NA_real_, length(output_schema(model))), names(output_schema(model)))
+      perf["n_items"] <- K
+      perf[names(endpoint_result$metrics)] <- endpoint_result$metrics
+      return(roi_result(metrics = perf, indices = ind, id = id,
+        result = if (isTRUE(model$endpoints$return_items))
+          list(predictor = list(endpoints = endpoint_result)) else NULL))
+    }
     return(roi_result(
       metrics = NULL, indices = ind, id = id,
       error = TRUE,
@@ -776,9 +814,11 @@ fit_roi.era_rsa_model <- function(model, roi_data, context, ...) {
   perf <- all_perf[names(all_perf) %in% schema_names]
 
   if (need_item) {
-    association_score <- if (identical(
-      model$era_association_score %||% "item_specificity", "matched"
-    )) diag_sim else specificity
+    association_score <- switch(model$era_association_score %||% "item_specificity",
+      matched = diag_sim, item_specificity = specificity,
+      joint_excess = endpoint_result$decomposition$items$excess)
+    association_tolerance <- if (identical(model$era_association_score, "joint_excess"))
+      model$endpoints$tolerance else NULL
     perf <- c(
       perf,
       .era_correlate_metrics(
@@ -786,13 +826,15 @@ fit_roi.era_rsa_model <- function(model, roi_data, context, ...) {
         keys = common_keys,
         spec = model$era_correlate_spec,
         method = model$era_cor_method %||% "spearman",
-        min_complete = model$era_min_complete %||% 4L
+        min_complete = model$era_min_complete %||% 4L,
+        tolerance = association_tolerance
       ),
       .era_association_metrics(
         similarity = association_score,
         keys = common_keys,
         spec = model$era_association_spec,
-        min_complete = model$era_min_complete %||% 4L
+        min_complete = model$era_min_complete %||% 4L,
+        tolerance = association_tolerance
       )
     )
   }
@@ -818,7 +860,10 @@ fit_roi.era_rsa_model <- function(model, roi_data, context, ...) {
     perf <- c(perf, full_beta, full_sp)
   }
 
-roi_result(metrics = perf, indices = ind, id = id)
+  if (!is.null(endpoint_result)) perf <- c(perf, endpoint_result$metrics)
+  roi_result(metrics = perf, indices = ind, id = id,
+    result = if (isTRUE(model$endpoints$return_items))
+      list(predictor = list(endpoints = endpoint_result)) else NULL)
 }
 
 

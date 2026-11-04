@@ -27,6 +27,7 @@ feature_rsa_model(
   max_retained_mb = 1024,
   prediction_overflow = c("error", "none"),
   feature_standardize = NULL,
+  endpoints = NULL,
   ...
 )
 }
@@ -169,6 +170,12 @@ resolves to \code{"center"} for designs built from a similarity matrix
 \code{"scale"} otherwise. Use \code{"center"} whenever the column
 variances of \code{F} are meaningful, e.g. PCA scores or other
 pre-whitened inputs. See the Feature standardization section.}
+
+\item{endpoints}{Optional \code{\link{era_endpoint_spec}} for scoring held-out
+predicted templates against observed patterns. Keys must equal unique design
+labels, every item must be assessed once, and each competitor block must lie
+within one outer assessment fold. Fitting, tuning and existing metrics are
+unchanged; endpoint inference is not included in existing permutation tests.}
 
 \item{...}{Additional arguments (currently unused). Passing deprecated
 arguments such as \code{cache_pca} now results in an error.}

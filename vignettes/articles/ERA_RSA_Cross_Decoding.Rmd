@@ -765,3 +765,9 @@ stopifnot(
 ERA-RSA is particularly useful when you want to go beyond simple
 accuracy and ask **how similar the geometry of neural representations
 is across phases**, and how that similarity varies across brain regions.
+
+For the distinction between one-sided specificity and matched correspondence
+beyond both endpoint tendencies, see
+[Joint endpoints](ERA_Endpoints.html). That article covers the opt-in
+`era_endpoint_spec()` path, raw baseline/excess summaries, additive behavioral
+covariance, and held-out feature-pattern scoring.

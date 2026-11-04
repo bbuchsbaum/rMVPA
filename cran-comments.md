@@ -2,12 +2,17 @@
 
 This is a new submission.
 
-rMVPA depends on neuroim2 (>= 0.20.0) and suggests fmridesign, fmrilss and
-neurosurf. These packages, by the same maintainer, are submitted to CRAN
+rMVPA depends on neuroim2 (>= 0.19.1) and suggests fmridesign, fmrilss and
+neurosurf. The neuroim2 minimum was corrected on 2026-11-04: 0.19.1 already
+removes the masking scale() export; the previously specified 0.20.0 is not an
+available release. Any remaining dependencies not yet on CRAN are submitted
 first; rMVPA is submitted once they are available, so no `Remotes` field
 remains in the submitted DESCRIPTION.
 
 ## R CMD check results
+
+The following receipt predates the dependency correction and endpoint feature;
+it is retained as history, not a check of the current tree.
 
 0 errors | 0 warnings | 3 notes (expected)
 

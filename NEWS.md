@@ -1,5 +1,13 @@
 # rMVPA (development version)
 
+* Add opt-in joint nonmatch endpoint decomposition for ERA and held-out feature
+  patterns (#92): keyed complete-block fits, raw baseline/excess/RMS summaries,
+  common-projection behavioral covariance contributions, separate correlations,
+  and scalar regional/searchlight exports. Existing scores remain unchanged.
+* Correct the `neuroim2` minimum to the available 0.19.1 release, which already
+  removes the masking `scale()` export. The previous 0.20.0 requirement named
+  an unavailable release; this does not change numerical acceptance thresholds.
+
 * `install_cli()` no longer defaults `dest_dir` to `~/.local/bin`; the
   destination must be given, so nothing is written to the home directory
   unless chosen (CRAN policy).

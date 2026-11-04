@@ -26,13 +26,14 @@ era_rsa_model(
   era_simfun = c("pearson", "spearman"),
   era_min_voxels = 2L,
   era_components = c("item", "identification", "geometry"),
-  era_association_score = c("item_specificity", "matched"),
+  era_association_score = c("item_specificity", "matched", "joint_excess"),
   era_correlates = NULL,
   era_cor_method = c("spearman", "pearson"),
   era_association = NULL,
   era_effects = NULL,
   era_effects_block = NULL,
   era_min_complete = 4L,
+  endpoints = NULL,
   ...
 )
 }
@@ -144,7 +145,9 @@ item patterns are finite.}
 \item{era_association_score}{Per-item response used by \code{era_correlates}
 and \code{era_association}. \code{"item_specificity"} (default) subtracts
 each retrieval item's mean similarity to nonmatching encoding items.
-\code{"matched"} uses raw matched encoding-retrieval similarity.}
+\code{"matched"} uses raw matched encoding-retrieval similarity.
+\code{"joint_excess"} uses the joint nonmatch residual and requires
+\code{endpoints}; existing specificity and matched metrics stay unchanged.}
 
 \item{era_correlates}{Optional right-hand-side formula selecting numeric
 retrieval variables for zero-order correlations with the score selected
@@ -173,6 +176,12 @@ set; numerator degrees of freedom are based on the fitted rank difference.}
 
 \item{era_min_complete}{Minimum number of complete matched items required
 for zero-order correlations and adjusted association models.}
+
+\item{endpoints}{Optional \code{\link{era_endpoint_spec}} for joint endpoint
+raw and behavioral summaries. Requires \code{pairing = "one_to_one"} and
+spatial Pearson similarity. Competitor pools are explicit and independent
+of legacy \code{item_block} metrics. With \code{return_items = TRUE},
+regional \code{$fits[[i]]$endpoints} retains item scores and diagnostics.}
 
 \item{...}{Additional fields stored on the model spec.}
 }

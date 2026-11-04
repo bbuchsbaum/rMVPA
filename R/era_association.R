@@ -650,7 +650,8 @@
 
 #' @keywords internal
 #' @noRd
-.era_correlate_metrics <- function(similarity, keys, spec, method, min_complete) {
+.era_correlate_metrics <- function(similarity, keys, spec, method, min_complete,
+                                    tolerance = NULL) {
   if (is.null(spec)) return(numeric())
   idx <- match(keys, rownames(spec$values))
   out <- numeric()
@@ -659,7 +660,10 @@
     ok <- is.finite(similarity) & is.finite(value)
     n <- sum(ok)
     estimate <- NA_real_
-    if (n >= min_complete && stats::sd(similarity[ok]) > 0 && stats::sd(value[ok]) > 0) {
+    variable <- function(x) {
+      if (is.null(tolerance)) stats::sd(x) > 0 else .endpoint_nonconstant(x, tolerance)
+    }
+    if (n >= min_complete && variable(similarity[ok]) && variable(value[ok])) {
       estimate <- suppressWarnings(stats::cor(similarity[ok], value[ok], method = method))
     }
     stem <- paste0("era_", spec$metric_labels[[i]])
@@ -678,7 +682,8 @@
 #'
 #' @keywords internal
 #' @noRd
-.era_association_metrics <- function(similarity, keys, spec, min_complete) {
+.era_association_metrics <- function(similarity, keys, spec, min_complete,
+                                      tolerance = NULL) {
   if (is.null(spec)) return(numeric())
   idx <- match(keys, rownames(spec$matrix))
   X <- spec$matrix[idx, , drop = FALSE]
@@ -708,7 +713,9 @@
     full <- stats::lm.fit(x = Xk, y = yk)
     full_rank <- full$rank
     df_resid <- n - full_rank
-    if (df_resid > 0L && stats::sd(yk) > 0) {
+    score_variable <- if (is.null(tolerance)) stats::sd(yk) > 0 else
+      .endpoint_nonconstant(yk, tolerance)
+    if (df_resid > 0L && score_variable) {
       for (i in seq_along(spec$effect_columns)) {
         col <- spec$effect_columns[[i]]
         x <- Xk[, col]
@@ -724,7 +731,7 @@
     }
 
     tss <- sum((yk - mean(yk))^2)
-    if (length(spec$block_columns) && is.finite(tss) && tss > 0) {
+    if (length(spec$block_columns) && score_variable && is.finite(tss) && tss > 0) {
       rss_full <- sum(full$residuals^2)
       for (i in seq_along(spec$block_columns)) {
         label <- spec$block_metric_labels[[i]]

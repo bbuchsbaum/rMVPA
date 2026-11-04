@@ -1,0 +1,286 @@
+---
+title: "Joint endpoints: matched correspondence and behavioral covariance"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Joint endpoints: matched correspondence and behavioral covariance}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+library(rMVPA)
+```
+
+## What a matched similarity measures
+
+A pattern can resemble its matched partner because the template resembles
+retrieval patterns generally, because the retrieval pattern resembles templates
+generally, or because that particular pair exceeds both tendencies. All three
+can covary with a rating such as vividness. Endpoint tendencies can carry
+meaningful stimulus or state information; they are not causal directions or
+automatically noise.
+
+`era_endpoint_decomposition()` separates these terms within prespecified,
+complete competitor blocks. **Encoding/templates are rows; retrieval patterns
+are columns.** After centering each pattern across voxels and normalizing its
+length, the cross-product matrix contains spatial Pearson similarities. Within
+each block, using only nonmatches, the model is
+
+\[
+M_{ij}=\mu+a_i+b_j+\epsilon_{ij},\quad i\ne j,\qquad
+\sum_i a_i=\sum_i b_i=0.
+\]
+
+The diagonal is then decomposed as
+\(d_i=\mu+a_i+b_i+e_i\). The shared baseline is \(\mu\), the encoding/template
+endpoint is \(a_i\), the retrieval endpoint is \(b_i\), and matched excess is
+\(e_i\). Endpoints never use the diagonal. This is an exact joint least-squares
+fit, including its finite-block correction, rather than two independently
+subtracted backgrounds. It requires at least three matched items per block.
+
+```{r standalone}
+set.seed(92)
+keys <- sprintf("item%02d", 1:12)
+E <- matrix(rnorm(12 * 20), 12, dimnames = list(keys, NULL))
+R <- E + matrix(rnorm(12 * 20), 12)
+rownames(R) <- keys
+enc_run <- setNames(rep(c("E1", "E2"), each = 6), keys)
+ret_run <- setNames(rep(c("R1", "R2"), each = 6), keys)
+pool <- setNames(as.character(interaction(enc_run, ret_run, drop = TRUE)), keys)
+
+z <- era_endpoint_decomposition(
+  E, R, competitor_block = pool,
+  encoding_run = enc_run, retrieval_run = ret_run
+)
+head(z$items)
+z$blocks
+```
+
+Keys are mandatory, either as matrix row names or explicit `item_key`. Separate
+encoding and retrieval key vectors can be supplied in a named list. Retrieval
+rows are reordered by identity, never paired by unlabelled row order. Metadata
+vectors can be named by key. Unnamed metadata must have exactly one value per
+declared key; scalar recycling, repeated-item averaging, and incomplete key
+matching are refused. Feature columns must have matching identities and order.
+Phase-scoped run labels are recorded separately from the declared competitor
+pool; run labels alone do not determine the pool.
+
+Nonfinite or constant spatial patterns invalidate their **entire block**. The
+returned NA components and `status` explain why. `invalid = "error"` requests a
+hard failure. No items are silently removed and no correlations use different
+voxel subsets for different pairs. Weighted, rectangular and incomplete
+competitor designs require a generalized solver and are unsupported here.
+Unusable small blocks are retained in the denominator/exclusion ledger.
+
+The default pattern path uses normalized pattern sums. Set
+`return_matrices = TRUE` to retain the explicit within-block matrices, or supply
+`similarity_matrix` to decompose already computed, pre-link scores. The latter
+does not certify that arbitrary matrices can be realized as spatial correlations.
+Probability, softmax, rank-percentile and correctness outputs remain separate:
+the linear decomposition does not carry through those nonlinear operations.
+
+## Specificity and excess are different trial scores
+
+Existing retrieval-column specificity is
+\(s_i=d_i-\operatorname{mean}_{j\ne i}M_{ji}\). For a complete block of size n,
+
+\[
+s_i=\frac{n}{n-1}a_i+e_i.
+\]
+
+It removes the retrieval endpoint and retains the template endpoint. Its
+correlation with behavior is therefore a different estimand from the excess
+correlation. Existing `matched`, `background`, `specificity`, `era_diag_minus_off`
+and feature metrics keep their meanings. `era_partition_model()` also remains
+distinct: its first-/second-order variance partition is not this endpoint fit.
+
+Even symmetric subtraction is not exact:
+\(d_i-r_i-c_i+\mu=e_i+(a_i+b_i)/(n-1)\). The correction matters particularly in
+small pools. If all retrieval patterns are identical, template similarities may
+vary with behavior while excess is zero. Correlating numerical remnants of that
+zero vector would be misleading; separate component correlations return NA with
+a constant-component reason.
+
+## Raw performance retains the baseline
+
+```{r raw}
+raw <- summarize_era_endpoints(z)
+raw$table
+raw$identity_error
+```
+
+Raw means weight valid complete blocks by their item counts. Consequently,
+mean(total) = mean(shared) + mean(excess), and mean(encoding) and mean(retrieval)
+are structural zeros. Their tiny floating-point estimates must not be tested
+against zero. The result marks structural/descriptive quantities and leaves
+inferential fields NA. Invalid blocks are excluded explicitly, with counts and
+zero raw weight; inspect those counts before combining participants.
+
+Mean excess equals mean one-sided specificity **for the same complete pools and
+item weights**. The addition is a trialwise allocation, not a new average
+discrimination score under those conditions. Endpoint RMS measures the amplitude
+of endpoint variation, includes estimation noise, and is not additive performance
+or evidence of above-chance matching. Do not split the shared baseline into
+arbitrary encoding and retrieval halves.
+
+## Additive behavioral covariance
+
+```{r behavior}
+vividness <- setNames(rnorm(12), keys)
+motion <- matrix(rnorm(24), 12, 2,
+                 dimnames = list(keys, c("encoding_fd", "retrieval_fd")))
+vividness[3] <- NA_real_
+assoc <- summarize_era_endpoints(
+  z, summary = "covariance_contributions", behavior = vividness,
+  nuisance = motion, adjust_blocks = TRUE, cor_method = "spearman"
+)
+assoc$table
+assoc$exclusions
+assoc$identity_error
+```
+
+Endpoints are fitted to the prespecified full blocks **before** behavior/motion
+subsetting. One common complete-case set and one nuisance projection H are then
+used for every component and the behavior. The projection always includes an
+intercept and, by default, competitor-block intercepts. Redundant nuisance
+columns are handled by the same QR projection. Counts, exclusion reasons,
+nuisance rank and residual degrees of freedom accompany the estimates.
+
+For a component x, the signed contribution is
+
+\[
+C_x=\frac{(Hx)^\top(HV)}{\|Hd\|\,\|HV\|}.
+\]
+
+Thus the **Pearson** total correlation equals the sum of shared, encoding,
+retrieval and excess contributions. Shared contributes only numerical roundoff
+when H absorbs its block intercepts. With `adjust_blocks = FALSE`, its explicit
+contribution must be kept. Contributions can cancel or exceed one in magnitude;
+they are not unique variance percentages, semi-partial correlations, or
+"percent of reactivation explained."
+
+The separately named `correlation` column normalizes each component separately.
+With `cor_method = "spearman"`, components and behavior are ranked before the
+same nuisance projection (the supplied nuisance design itself is unchanged).
+These correlations do **not** add. Contributions always use unranked scores.
+Effectively constant components/behavior return NA correlations with reasons;
+constant total or behavior also makes the common contribution denominator
+undefined. `status` describes contributions; `correlation_status` describes
+each separate correlation. The default numerical tolerance is recorded in the
+fit. Endpoint means over a behavioral subset need not be zero; the returned
+`subset_component_means` makes that distinction visible.
+
+## Regional and searchlight models
+
+Use the same keyed specification with either analysis family:
+
+```{r model-examples, eval=FALSE}
+endpoint_spec <- era_endpoint_spec(
+  keys, pool, behavior = vividness, nuisance = motion,
+  encoding_run = enc_run, retrieval_run = ret_run,
+  return_items = TRUE
+)
+era <- era_rsa_model(
+  dataset, design, key_var = ~ item, pairing = "one_to_one",
+  era_simfun = "pearson", era_components = "item", endpoints = endpoint_spec,
+  era_association_score = "joint_excess", era_correlates = ~ vividness
+)
+regional <- run_regional(era, region_mask)
+regional$fits[[1]]$endpoints$decomposition$items
+maps <- run_searchlight(era, radius = 5)
+save_results(maps, "endpoint-maps")
+
+feature <- feature_rsa_model(
+  dataset, feature_design, crossval = folds, method = "ridge",
+  endpoints = endpoint_spec, return_predictions = TRUE
+)
+feature_regions <- run_regional(feature, region_mask)
+predictions <- feature_rsa_predictions(feature_regions)
+feature_regions$fits[[1]]$endpoints$decomposition$items
+```
+
+ERA requires explicit one-to-one pairing for this opt-in path. Its ordinary
+association formulas can select `era_association_score = "joint_excess"`;
+the specification's behavior/nuisance summary separately emits all component
+contributions and correlations. It need not use the same covariates as the
+ordinary formula analysis, so record both estimands.
+
+Feature scoring uses unchanged out-of-fold predictions and observed patterns.
+Keys must match unique design labels, every design row must be assessed once,
+and competitor blocks must be nested within outer assessment folds. A block
+crossing folds is refused, not silently split. Use smaller, prespecified pools
+within a fold if scientifically appropriate. No tuning on behavior occurs.
+The `encoding` column now denotes a **predicted-template endpoint** and carries
+`template_source = "held_out_prediction"` and the fold ledger. Retaining the
+source prediction matrices is optional and supported for regional results;
+searchlights require `return_predictions = FALSE` and discard item tables.
+
+The built-in feature summaries compare predictions with the observed targets of
+that feature fit. To address the cross-phase question with **predicted encoding
+templates versus separate recall observations**, reuse the retained predictions
+explicitly, without refitting or retuning the feature model:
+
+```{r predicted-encoding-recall, eval=FALSE}
+predicted_keys <- feature_design$labels[predictions$observation_index[[1]]]
+stopifnot(identical(recall_voxel_index, predictions$voxel_index[[1]]))
+predicted_era <- era_endpoint_decomposition(
+  encoding = predictions$predicted[[1]], retrieval = recall_patterns,
+  item_key = list(encoding = predicted_keys, retrieval = recall_item_key),
+  competitor_block = pool, template_source = "held_out_prediction"
+)
+summarize_era_endpoints(predicted_era, "covariance_contributions",
+                        behavior = vividness, nuisance = motion)
+```
+
+This requires exactly the same item set and voxel identities in the two phases;
+the helper aligns the items by key. Keep the prediction fold ledger alongside
+the result and prespecify pools nested within those folds. The standalone
+provenance label does not itself verify training ancestry or held-out status.
+
+Scalar names start with `era_endpoint_` or `feature_endpoint_`. They include
+`mean_total`, `mean_shared`, `mean_encoding`, `mean_retrieval`, `mean_excess`,
+`encoding_rms`, `retrieval_rms`, `n`, `n_excluded`, `n_blocks`, and `identity_error`.
+Behavior adds `assoc_n`, `assoc_n_excluded`, `assoc_identity_error`,
+`contribution_<component>` and `cor_<component>`. The total contribution is the
+Pearson total association; the separate total correlation follows `cor_method`.
+NIfTI exports retain structural NA values and local item counts. These counts
+are not participant counts: group summaries must calculate the number of
+participants with a finite value separately at each location and metric.
+
+Model scoring sees the features supplied by the existing ROI extraction and
+training-only filtering pipeline. Endpoint decomposition adds no across-item
+mean subtraction or new feature screening. Direct helper comparisons must use
+the same retained voxel set. Different filters or competitor pools change the
+estimand and must be recorded.
+
+## Interpretation and inference
+
+Spatial centering per pattern, subtracting an across-item mean spatial pattern,
+run nuisance handling, and endpoint decomposition are different operations. A
+predictive across-item transformation must be estimated on training data only.
+Endpoint decomposition changes the score interpretation; it cannot establish
+that a GLM, timing alignment, mask, or experimental null is valid.
+
+Use independent participants for group inference. Off-diagonal cells and
+overlapping searchlights are not independent observations. Ordinary participant
+means preserve the additive identities; separately Fisher-transforming
+components does not. Test paired differences between contributions to compare
+them, and test group differences directly instead of comparing significance
+within groups. Specify multiplicity families for the scientific claim: pooled
+FDR over strong baseline effects and excess is not necessarily more conservative
+for excess than an excess-only family.
+
+Endpoint permutations are not implemented by the feature model's existing
+permutation outputs. A future permutation analysis must define whether it tests
+behavioral labels, conditional pairing, or generalization to new items. Pairing
+shuffles must respect pools, keep behavior attached to its observational unit,
+and recompute the decomposition; learned models must be refitted when the null
+requires it. Existing `nperm` outputs test only the legacy feature metrics.
+
+Excess is correspondence beyond an additive endpoint model, not proof of an
+exclusively item-specific or causal reinstatement mechanism. Nonadditive category
+structure, estimation noise and misspecification can remain. Excluding diagonal
+cells does not make endpoint estimation held-out across items: each item's
+pattern still participates in nonmatch comparisons. Feature cross-validation is
+a separate protection, whose provenance must also be retained.
