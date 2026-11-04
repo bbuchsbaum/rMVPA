@@ -1189,6 +1189,9 @@ run_permutation_searchlight <- function(
   # Fail before the observed pass, inspecting all fitted predictors rather
   # than only the requested metric or the predictors tagged as models.
   rsa_null <- .resolve_rsa_permutation_null(model_spec, perm_ctrl)
+  # Dry run of the per-permutation adaptation on the unpermuted design, so a
+  # model whose null cannot come from relabelling refuses before any fitting.
+  invisible(.permuted_model_spec(model_spec, model_spec$design))
 
   # Step 1: run observed searchlight if not supplied
   if (is.null(observed)) {
@@ -1299,8 +1302,7 @@ run_permutation_searchlight <- function(
       seed   = perm_seed
     )
 
-    perm_spec        <- model_spec
-    perm_spec$design <- perm_design
+    perm_spec <- .permuted_model_spec(model_spec, perm_design)
 
     fast_mat <- if (!is.null(fast)) fast$score(perm_spec)
     if (!is.null(fast_mat)) {
@@ -1427,6 +1429,27 @@ run_permutation_searchlight <- function(
     return(results[[1L]])
   }
   structure(results, class = c("permutation_result_set", "list"))
+}
+
+
+#' Adapt a model specification to a permuted design
+#'
+#' Called once per permutation after `permute_labels()`. The default only
+#' swaps the design. Models that cache label-derived state at construction
+#' must rebuild it from `perm_design`, or every permutation silently reuses
+#' the observed labels. Models whose null cannot be produced by relabelling
+#' the design must stop with an explanation.
+#' @keywords internal
+#' @noRd
+.permuted_model_spec <- function(model_spec, perm_design) {
+  UseMethod(".permuted_model_spec")
+}
+
+#' @keywords internal
+#' @noRd
+.permuted_model_spec.default <- function(model_spec, perm_design) {
+  model_spec$design <- perm_design
+  model_spec
 }
 
 
