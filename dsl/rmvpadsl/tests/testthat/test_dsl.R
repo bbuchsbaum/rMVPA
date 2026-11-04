@@ -1,13 +1,6 @@
 # rmvpa DSL 0.1: schema, inheritance, explain, check, run, cache, status, lock,
 # generators and the CLI. Uses the synthetic BIDS project in helper-dsl.R.
 
-quiet_dsl <- function(expr) {
-  futile.logger::flog.threshold(futile.logger::ERROR)
-  on.exit(futile.logger::flog.threshold(futile.logger::INFO), add = TRUE)
-  suppressWarnings(suppressMessages(utils::capture.output(res <- force(expr))))
-  invisible(res)
-}
-
 atlas_line <- "  regions: { atlas: atlas/space-MNI_atlas-two_dseg.nii.gz, labels: atlas/space-MNI_atlas-two_dseg.tsv }"
 
 dsl_decode_project <- function(...) {

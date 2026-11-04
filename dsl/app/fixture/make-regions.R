@@ -66,7 +66,11 @@ hemi <- function(H, h) {
   list(n = nrow(pos), positions = b64(t(pos)), faces = b64(t(tri), int = TRUE),
        sulc = b64(as.numeric(sulc)), labels = b64(ids, int = TRUE))
 }
+# atlas_md5 ties the vertex labels to the volumetric atlas file whose parcel
+# ids they use: rmvpa_studio(surfaces = ) draws regional results on this mesh
+# only for analyses run on that atlas.
 surface <- list(template = "fsaverage5", mesh = "pial", source = "TemplateFlow tpl-fsaverage den-10k; CBIG Schaefer2018 fsaverage5 annot",
+                atlas_md5 = unname(tools::md5sum(file.path(src, "Schaefer2018_200Parcels_7Networks_order_FSLMNI152_2mm.nii.gz"))),
                 left = hemi("L", "lh"), right = hemi("R", "rh"))
 
 dir.create(out, recursive = TRUE, showWarnings = FALSE)

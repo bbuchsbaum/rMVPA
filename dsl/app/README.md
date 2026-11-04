@@ -1,7 +1,18 @@
 # rmvpa studio (web app)
 
 React + Vite source for the rmvpadsl studio. `npm run build` writes the bundle
-to `../rmvpadsl/inst/app/`, which the R package serves. `npm run build:example`
+to `../rmvpadsl/inst/app/` (commit it: CI fails when it is stale). The same
+bundle is used three ways, chosen at run time in `src/api.js`:
+
+| Where the data comes from | When |
+|---|---|
+| `window.__RMVPA_DATA__`, set by `data/*.js` scripts | a static export (`rmvpa export <dir>`), opened from disk or a static host |
+| `/api/*` with the `X-Rmvpa-Token` header | served by `rmvpa studio`, which puts the token in a `<meta>` tag |
+| `./example/*.json` | `npm run dev` and the hosted example build |
+
+The bundle is a single classic script (IIFE) loaded with `defer`, with CSS
+injected by the script and the surface code inlined, because browsers refuse
+ES-module scripts on `file://` pages. `npm run build:example`
 builds a static copy that reads the recorded example project in
 `public/example/` (regenerate it with `Rscript fixture/make-fixture.R`; it
 needs rmvpadsl installed). The example's project files, `explain` output and
@@ -10,8 +21,9 @@ needs rmvpadsl installed). The example's project files, `explain` output and
 ## Display libraries
 
 - **surfview** (`ParcelSurface`-style rendering via `DataLayer` + `CurvatureLayer`)
-  draws parcel values on the cortex. It is loaded lazily (`src/surface.jsx`),
-  so three.js stays out of the main bundle.
+  draws parcel values on the cortex (`src/surface.jsx`). Regional results are
+  drawn on a mesh only when a studio surface file is given
+  (`rmvpa_studio(surfaces = )`) whose `atlas_md5` matches the analysis's atlas.
 - **neuroatlasjs** (pinned to a commit; not on npm) holds atlas semantics:
   `VolumeAtlas` / `SurfaceAtlas` share one region table, and `ParcelValues`
   are projected to voxels and to vertices.

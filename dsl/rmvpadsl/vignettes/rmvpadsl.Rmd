@@ -222,6 +222,24 @@ The JSON sidecar records:
 * the MD5 of every input file;
 * lock status, and whether the run was a draft.
 
+# The studio
+
+`rmvpa studio` opens a browser view of the project: the analyses with each
+value's origin, what `check` reports, the status of every cell, and the
+results `run` wrote (per-subject searchlight maps against their own nulls,
+regional values on atlas slices). It reads outputs only.
+
+```sh
+rmvpa studio                       # serve on 127.0.0.1 and open the browser
+rmvpa export studio-snapshot       # or write a folder that opens from disk
+```
+
+The server needs the httpuv package and listens on 127.0.0.1 only; the
+address it prints carries a session token. An export holds result maps and
+summaries but no beta images; send the folder, or put it on any static host.
+`rmvpa_studio(background = "anat.nii.gz")` draws slices over an anatomical
+image instead of the mask.
+
 # Preregistration
 
 `rmvpa lock` appends the hash of each resolved analysis to `rmvpa.lock`. The

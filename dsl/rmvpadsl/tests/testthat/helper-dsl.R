@@ -4,6 +4,13 @@
 # (2 categories x 4 stimuli, every stimulus once per run), a task "memory"
 # with encoding/retrieval phases, a brain mask, a 2-region atlas and RDMs.
 
+quiet_dsl <- function(expr) {
+  futile.logger::flog.threshold(futile.logger::ERROR)
+  on.exit(futile.logger::flog.threshold(futile.logger::INFO), add = TRUE)
+  suppressWarnings(suppressMessages(utils::capture.output(res <- force(expr))))
+  invisible(res)
+}
+
 dsl_skip_if_missing <- function() {
   testthat::skip_if_not_installed("yaml")
   testthat::skip_if_not_installed("jsonlite")

@@ -236,6 +236,15 @@ rmvpa_compile <- function(project = ".", analysis, subject) {
       if (inherits(r$p_adj_map, "NeuroVol")) {
         written <- c(written, .dsl_write_vol(r$p_adj_map, file.path(dir, sprintf("%s_stat-%spfdr_statmap.nii.gz", prefix, lab))))
       }
+      # The pooled null as 1001 quantiles: enough to redraw its distribution
+      # (the studio does) without keeping every permuted centre.
+      nv <- unlist(r$adj_null$bin_nulls, use.names = FALSE)
+      nv <- nv[is.finite(nv)]
+      if (length(nv)) {
+        qs <- seq(0, 1, by = 0.001)
+        qt <- data.frame(quantile = qs, value = unname(stats::quantile(nv, qs, type = 7)), n = length(nv))
+        written <- c(written, .dsl_write_table(qt, file.path(dir, sprintf("%s_stat-%s_null.tsv", prefix, lab))))
+      }
     }
   } else if (inherits(result, "searchlight_result")) {
     written <- c(written, maps_from(result))

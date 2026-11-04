@@ -13,6 +13,8 @@
     "  status [analysis...]                            done / stale / missing per subject",
     "  lock [analysis...] [--note TEXT]                append a preregistration record",
     "  migrate <old_config.yaml> [--dir DIR]           convert an rmvpa-searchlight/regional config",
+    "  studio [--port N] [--no-browser] [--background IMG] [--surface FILE]   open the studio in the browser",
+    "  export <dir> [analysis...] [--background IMG] [--surface FILE] [--force]   write a static studio folder",
     "  verbs | classifiers | version | help",
     "",
     "Run inside a project directory, or pass --project DIR."
@@ -21,7 +23,7 @@
 
 .dsl_cli_parse <- function(argv) {
   flags <- list(); pos <- character()
-  value_flags <- c("dir", "target", "subjects", "scope", "note", "project")
+  value_flags <- c("dir", "target", "subjects", "scope", "note", "project", "port", "background", "surface")
   i <- 1L
   while (i <= length(argv)) {
     a <- argv[i]
@@ -40,7 +42,7 @@
     }
     i <- i + 1L
   }
-  unknown <- setdiff(names(flags), c(value_flags, "force", "yes", "help"))
+  unknown <- setdiff(names(flags), c(value_flags, "force", "yes", "help", "no-browser"))
   if (length(unknown)) stop("unknown option --", unknown[1], call. = FALSE)
   list(cmd = if (length(pos)) pos[1] else "help", args = pos[-1], flags = flags)
 }
@@ -111,13 +113,20 @@ rmvpa_cli <- function(argv = commandArgs(trailingOnly = TRUE)) {
       },
       status = print(rmvpa_status(proj, analyses), row.names = FALSE),
       lock = rmvpa_lock(proj, analyses, note = f$note),
+      studio = rmvpa_studio(proj, port = if (!is.null(f$port)) as.integer(f$port), launch = !isTRUE(f[["no-browser"]]),
+                            background = f$background, surfaces = .dsl_cli_split(f$surface), block = TRUE),
+      export = {
+        if (!length(p$args)) stop("usage: rmvpa export <dir> [analysis...]", call. = FALSE)
+        rmvpa_export_studio(proj, p$args[1], analyses = if (length(p$args) > 1) p$args[-1],
+                            background = f$background, surfaces = .dsl_cli_split(f$surface), overwrite = isTRUE(f$force))
+      },
       migrate = {
         if (length(p$args) != 1L) stop("usage: rmvpa migrate <old_config.yaml> [--dir DIR]", call. = FALSE)
         rmvpa_migrate(p$args[1], dir = f$dir %||% ".")
       },
       stop(sprintf("unknown command '%s'%s. Run `rmvpa help`.", p$cmd,
                    .dsl_did_you_mean(p$cmd, c("new", "add", "explain", "check", "draft", "run", "status",
-                                              "lock", "migrate", "verbs", "classifiers", "version", "help"))),
+                                              "lock", "migrate", "studio", "export", "verbs", "classifiers", "version", "help"))),
            call. = FALSE)
     )
     0L

@@ -33,8 +33,9 @@ function Axis({ x, lo, hi, y, top }) {
 // One subject: its searchlight centres against its own pooled null, as
 // probability densities on one square-root scale. The FDR threshold is drawn
 // with the null's tail beyond it shaded, and the surviving centres as a rug.
-export function SubjectNull({ subject, edges, chance, resolution, permutations, width = 1060 }) {
-  const [lo, hi] = ACC;
+export function SubjectNull({ subject, edges, chance, resolution, permutations, domain = ACC, width = 1060 }) {
+  const [lo, hi] = domain;
+  const at = (f) => lo + f * (hi - lo);
   const m = { l: 120, r: 24 };
   const x = scale(lo, hi, m.l, width - m.r);
   const H = 150, base = 120;
@@ -60,14 +61,14 @@ export function SubjectNull({ subject, edges, chance, resolution, permutations, 
       <path d={step(od)} fill="none" stroke="var(--ink)" strokeWidth={1.4} />
       <line x1={x(chance)} x2={x(chance)} y1={6} y2={base} stroke="var(--ink)" strokeDasharray="2 3" />
       <text x={x(chance) - 4} y={16} textAnchor="end" style={{ fill: "var(--ink)" }}>chance</text>
-      <text x={x(0.205)} y={y(Math.max(...nd)) + 30} textAnchor="end" style={{ fill: "var(--ink-2)" }}>null</text>
-      <text x={x(0.29)} y={y(od[Math.round((0.29 - edges[0]) / (edges[1] - edges[0]))] || 0) - 6} style={{ fill: "var(--ink)" }}>centres</text>
+      <text x={x(at(0.12))} y={y(Math.max(...nd)) + 30} textAnchor="end" style={{ fill: "var(--ink-2)" }}>null</text>
+      <text x={x(at(0.4))} y={y(od[Math.round((at(0.4) - edges[0]) / (edges[1] - edges[0]))] || 0) - 6} style={{ fill: "var(--ink)" }}>centres</text>
       {thr ? <>
         <line x1={x(thr)} x2={x(thr)} y1={6} y2={base + 8} stroke="var(--warm)" strokeWidth={2} />
         <text x={x(thr) + 6} y={18} style={{ fill: "var(--warm)", fontWeight: 600 }}>FDR q &lt; .05 at ≥ {thr.toFixed(3)}{permutations < 1000 ? " · provisional" : ""}</text>
         <text x={x(thr) + 6} y={33} style={{ fill: "var(--warm)" }}>{subject.fdr.surviving.toLocaleString()} centres survive</text>
         {rug.map((rx, i) => <line key={i} x1={rx} x2={rx} y1={base - 8} y2={base - 1} stroke="var(--warm)" strokeWidth={1.5} />)}
-      </> : <text x={x(0.36)} y={24} style={{ fill: "var(--ink-2)", fontWeight: 600 }}>no centre survives FDR q &lt; .05</text>}
+      </> : <text x={x(at(0.63))} y={24} style={{ fill: "var(--ink-2)", fontWeight: 600 }}>no centre survives FDR q &lt; .05</text>}
       <text x={width - m.r} y={H + 20} textAnchor="end" style={{ fill: "var(--ink-3)" }}>
         y: square root of density · p resolution ≈ {resolution} with {permutations} permutations{permutations < 1000 ? "; counts are provisional below 1,000" : ""}</text>
     </svg>
@@ -76,8 +77,8 @@ export function SubjectNull({ subject, edges, chance, resolution, permutations, 
 
 // Subjects on the same axis: accuracy in a leave-one-subject-out region,
 // the mean with a 95% t-interval, extremes labelled, stale shown hollow.
-export function SubjectStrip({ subjects, chance, include, hover, setHover, select, selected, width = 1060 }) {
-  const [lo, hi] = ACC;
+export function SubjectStrip({ subjects, chance, include, hover, setHover, select, selected, domain = ACC, width = 1060 }) {
+  const [lo, hi] = domain;
   const m = { l: 120, r: 24 };
   const x = scale(lo, hi, m.l, width - m.r);
   const subs = subjects.filter((s) => typeof s.loso_roi === "number");
@@ -124,19 +125,20 @@ export function SubjectStrip({ subjects, chance, include, hover, setHover, selec
 }
 
 // Keyed colour ramp on the accuracy axis.
-export function AccuracyKey({ chance, width = 420, label = "own FDR threshold" }) {
-  const [lo, hi] = ACC;
+export function AccuracyKey({ chance, domain = ACC, width = 420, label = "own FDR threshold", mark }) {
+  const [lo, hi] = domain;
   const x = scale(lo, hi, 0, width);
+  const t = mark ?? chance + 0.45 * (hi - chance);
   return (
     <svg className="chart" width={width + 20} height={34} role="img" aria-label="Colour key">
       <defs>
         <linearGradient id="faint" x1="0" x2="1"><stop offset="0" stopColor="#d9d6d0" /><stop offset="1" stopColor="#e8b9ac" /></linearGradient>
         <linearGradient id="hot" x1="0" x2="1"><stop offset="0" stopColor="#7a1d0e" /><stop offset=".35" stopColor="#d4492c" /><stop offset=".7" stopColor="#f3b13b" /><stop offset="1" stopColor="#fff1c2" /></linearGradient>
       </defs>
-      <rect x={x(chance)} y={4} width={x(0.35) - x(chance)} height={8} fill="url(#faint)" />
-      <rect x={x(0.35)} y={4} width={x(hi) - x(0.35)} height={8} fill="url(#hot)" />
+      <rect x={x(chance)} y={4} width={x(t) - x(chance)} height={8} fill="url(#faint)" />
+      <rect x={x(t)} y={4} width={x(hi) - x(t)} height={8} fill="url(#hot)" />
       <text x={x(chance)} y={28} textAnchor="middle">chance</text>
-      <text x={x(0.35)} y={28} textAnchor="middle">{label}</text>
+      <text x={x(t)} y={28} textAnchor="middle">{label}</text>
       <text x={x(hi)} y={28} textAnchor="end">{hi.toFixed(2)}</text>
     </svg>
   );
