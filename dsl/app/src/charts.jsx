@@ -64,19 +64,19 @@ export function SubjectNull({ subject, edges, chance, resolution, permutations, 
       <text x={x(0.29)} y={y(od[Math.round((0.29 - edges[0]) / (edges[1] - edges[0]))] || 0) - 6} style={{ fill: "var(--ink)" }}>centres</text>
       {thr ? <>
         <line x1={x(thr)} x2={x(thr)} y1={6} y2={base + 8} stroke="var(--warm)" strokeWidth={2} />
-        <text x={x(thr) + 6} y={18} style={{ fill: "var(--warm)", fontWeight: 600 }}>FDR q &lt; .05 at ≥ {thr.toFixed(3)}</text>
+        <text x={x(thr) + 6} y={18} style={{ fill: "var(--warm)", fontWeight: 600 }}>FDR q &lt; .05 at ≥ {thr.toFixed(3)}{permutations < 1000 ? " · provisional" : ""}</text>
         <text x={x(thr) + 6} y={33} style={{ fill: "var(--warm)" }}>{subject.fdr.surviving.toLocaleString()} centres survive</text>
         {rug.map((rx, i) => <line key={i} x1={rx} x2={rx} y1={base - 8} y2={base - 1} stroke="var(--warm)" strokeWidth={1.5} />)}
       </> : <text x={x(0.36)} y={24} style={{ fill: "var(--ink-2)", fontWeight: 600 }}>no centre survives FDR q &lt; .05</text>}
-      <text x={width - m.r} y={H + 20} textAnchor="end" style={{ fill: permutations < 1000 ? "var(--amber)" : "var(--ink-3)" }}>
-        p resolution ≈ {resolution} with {permutations} permutations{permutations < 1000 ? " · FDR counts provisional below 1,000" : ""}</text>
+      <text x={width - m.r} y={H + 20} textAnchor="end" style={{ fill: "var(--ink-3)" }}>
+        y: square root of density · p resolution ≈ {resolution} with {permutations} permutations{permutations < 1000 ? "; counts are provisional below 1,000" : ""}</text>
     </svg>
   );
 }
 
 // Subjects on the same axis: accuracy in a leave-one-subject-out region,
 // the mean with a 95% t-interval, extremes labelled, stale shown hollow.
-export function SubjectStrip({ subjects, chance, include, hover, setHover, select, width = 1060 }) {
+export function SubjectStrip({ subjects, chance, include, hover, setHover, select, selected, width = 1060 }) {
   const [lo, hi] = ACC;
   const m = { l: 120, r: 24 };
   const x = scale(lo, hi, m.l, width - m.r);
@@ -85,13 +85,14 @@ export function SubjectStrip({ subjects, chance, include, hover, setHover, selec
   const ci = meanCI(used.map((s) => s.loso_roi));
   const sorted = [...used].sort((a, b) => a.loso_roi - b.loso_roi);
   const extremes = new Set([sorted[0]?.id, sorted[sorted.length - 1]?.id]);
+  // Centred 1-D beeswarm: rows alternate above and below one line.
   const placed = [];
-  const pts = subs.map((s) => {
+  const order = [0, -1, 1, -2, 2, -3, 3];
+  const pts = [...subs].sort((a, b) => a.loso_roi - b.loso_roi).map((s) => {
     const px = x(s.loso_roi);
-    let row = 0;
-    while (placed.some((p) => p.row === row && Math.abs(p.px - px) < 11)) row++;
+    const row = order.find((r) => !placed.some((p) => p.row === r && Math.abs(p.px - px) < 11)) ?? 4;
     placed.push({ px, row });
-    return { s, px, py: 26 + row * 12 };
+    return { s, px, py: 44 + row * 10 };
   });
   const H = 112;
   return (
@@ -110,8 +111,10 @@ export function SubjectStrip({ subjects, chance, include, hover, setHover, selec
         const lab = on || extremes.has(s.id) || stale;
         return (
           <g key={s.id} onMouseEnter={() => setHover(s.id)} onMouseLeave={() => setHover(null)} onClick={() => select?.(s.id)} style={{ cursor: "pointer" }}>
+            {selected === s.id && <circle cx={px} cy={py} r={8.5} fill="none" stroke="var(--ink)" strokeWidth={2} />}
             <circle cx={px} cy={py} r={on ? 6 : 4.5} fill={stale ? "var(--surface)" : "var(--ink)"} stroke={stale ? "var(--amber)" : "var(--surface)"} strokeWidth={stale ? 1.8 : 1} />
-            {lab && <text x={px} y={stale ? py + 18 : py - 8} textAnchor="middle" style={{ fill: stale ? "var(--amber)" : "var(--ink)", fontWeight: on ? 600 : 400 }}>
+            {stale && <line x1={px} x2={px + 18} y1={py + 5} y2={py + 22} stroke="var(--amber)" />}
+            {lab && <text x={stale ? px + 21 : px} y={stale ? py + 26 : py - 10} textAnchor={stale ? "start" : "middle"} style={{ fill: stale ? "var(--amber)" : "var(--ink)", fontWeight: on ? 600 : 400 }}>
               {s.id}{stale ? (include ? " stale, in mean" : " stale, not in mean") : on ? ` ${s.loso_roi.toFixed(3)}` : ""}</text>}
           </g>
         );
@@ -148,20 +151,20 @@ export function RegionPairs({ regions, subjects, chance, order, hover, setHover,
   let pairs = Array.from({ length: half }, (_, i) => ({ L: stat(regions[i]), R: stat(regions[i + half]), name: regions[i].name.replace(/^LH /, "") }));
   if (order === "mean") pairs.sort((a, b) => Math.max(b.L.mean, b.R.mean) - Math.max(a.L.mean, a.R.mean));
   const all = pairs.flatMap((p) => [...p.L.v, ...p.R.v].filter((x) => x != null));
-  const lo = Math.min(chance, ...all) - 0.01, hi = Math.max(...all) + 0.01;
+  const lo = Math.min(chance, ...all) - 0.01, hi = Math.ceil((Math.max(...all) + 0.005) / 0.05) * 0.05;
   const rowH = 30, m = { l: 210, r: 190, t: 26, b: 26 };
   const H = m.t + pairs.length * rowH + m.b;
   const x = scale(lo, hi, m.l, width - m.r);
   const jitter = (j) => ((j * 7919) % 5 - 2) * 1.1;
   const Hemi = ({ h, dy, filled }) => (
     <g transform={`translate(0, ${dy})`}>
-      <rect x={x(h.lo)} y={-2} width={Math.max(1, x(h.hi) - x(h.lo))} height={4} fill="var(--ink)" opacity={0.22} />
       {h.v.map((v, j) => v == null ? null : (
         <circle key={j} cx={x(v)} cy={jitter(j)} r={hover === subjects[j] ? 4.5 : 2.4}
           fill={filled ? "var(--ink)" : "var(--surface)"} stroke="var(--ink)" strokeWidth={filled ? 0 : 1}
-          opacity={hover == null ? 0.55 : hover === subjects[j] ? 1 : 0.15} onMouseEnter={() => setHover(subjects[j])} />
+          opacity={hover == null ? 0.45 : hover === subjects[j] ? 1 : 0.12} onMouseEnter={() => setHover(subjects[j])} />
       ))}
-      <line x1={x(h.mean)} x2={x(h.mean)} y1={-6} y2={6} stroke="var(--ink)" strokeWidth={2} />
+      <line x1={x(h.lo)} x2={x(h.hi)} y1={0} y2={0} stroke="var(--ink)" strokeWidth={2} />
+      <line x1={x(h.mean)} x2={x(h.mean)} y1={-6} y2={6} stroke="var(--ink)" strokeWidth={2.5} />
     </g>
   );
   return (
@@ -189,19 +192,14 @@ export function RegionPairs({ regions, subjects, chance, order, hover, setHover,
   );
 }
 
-// Stepped key for integer counts: one faint swatch for a single subject,
-// then one step per count.
-export function CountKey({ max }) {
-  const steps = Array.from({ length: Math.max(0, max - 1) }, (_, i) => i + 2);
-  const hotc = (t) => { const H = [[122, 29, 14], [212, 73, 44], [243, 177, 59], [255, 241, 194]]; t = Math.max(0, Math.min(1, t)) * 3; const i = Math.min(2, Math.floor(t)), f = t - i; return `rgb(${H[i].map((c, k) => Math.round(c + f * (H[i + 1][k] - c))).join(",")})`; };
+// Binned key for subjects-significant counts; the same bins colour the map.
+export function CountKey({ bins }) {
   return (
-    <svg className="chart" width={40 + (steps.length + 1) * 18} height={34} role="img" aria-label="Count key">
-      <rect x={0} y={4} width={16} height={10} fill="#e8b9ac" />
-      <text x={8} y={28} textAnchor="middle">1</text>
-      {steps.map((k, i) => (
-        <g key={k}>
-          <rect x={22 + i * 18} y={4} width={16} height={10} fill={hotc((k - 2) / Math.max(1, max - 2))} />
-          {(k === 2 || k === max || k % 3 === 0) && <text x={30 + i * 18} y={28} textAnchor="middle">{k}</text>}
+    <svg className="chart" width={bins.length * 46} height={34} role="img" aria-label="Count key">
+      {bins.map((b, i) => (
+        <g key={b.label}>
+          <rect x={i * 46} y={4} width={42} height={10} fill={`rgb(${b.rgb.join(",")})`} />
+          <text x={i * 46 + 21} y={28} textAnchor="middle">{b.label}</text>
         </g>
       ))}
     </svg>

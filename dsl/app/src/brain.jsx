@@ -6,6 +6,14 @@ import React, { useEffect, useRef } from "react";
 // Values at or above `threshold` take the hot ramp; values between `floor`
 // and `threshold` are tinted faintly, so sub-threshold signal stays visible.
 
+// Subjects-significant counts, binned so each step is clearly distinct.
+export const COUNT_BINS = [
+  { lo: 1, hi: 1, label: "1", rgb: [214, 190, 182] },
+  { lo: 2, hi: 3, label: "2–3", rgb: [150, 40, 22] },
+  { lo: 4, hi: 6, label: "4–6", rgb: [224, 92, 44] },
+  { lo: 7, hi: 99, label: "7+", rgb: [250, 214, 120] },
+];
+
 const HOT = [[122, 29, 14], [212, 73, 44], [243, 177, 59], [255, 241, 194]];
 export function hot(t) {
   t = Math.max(0, Math.min(1, t)) * (HOT.length - 1);
@@ -27,8 +35,8 @@ function paint(cv, nx, ny, tplAt, valAt, { threshold, top, floor, mode }) {
       if (v === v && mode === "binary") {
         if (v >= threshold) c = [212, 73, 44];
       } else if (v === v && mode === "count") {
-        if (v >= 2) c = hot((v - 2) / Math.max(1, top - 2));
-        else if (v >= 1) c = [g + 0.3 * (212 - g), g + 0.3 * (73 - g), g + 0.3 * (44 - g)];
+        const bin = COUNT_BINS.find((b) => v >= b.lo && v <= b.hi);
+        if (bin) c = bin.rgb;
       } else if (v === v && threshold != null) {
         if (v >= threshold) c = hot((v - threshold) / Math.max(1e-9, top - threshold));
         else if (floor != null && v > floor) {
