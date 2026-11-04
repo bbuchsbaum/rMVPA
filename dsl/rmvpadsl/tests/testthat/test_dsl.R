@@ -132,6 +132,18 @@ test_that("check passes on a valid project and reads no images", {
   expect_true(any(grepl("classes_in_every_fold", chk$message)))
 })
 
+test_that("check warns when a searchlight permutation test has fewer than 1000 permutations", {
+  dsl_skip_if_missing()
+  dir <- dsl_fixture(subjects = "01"); dsl_write_project(dir)
+  dsl_write_analysis(dir, "sl", c("decode: { set: objects, target: category }", "scope:", "  searchlight: { radius: 4 }"))
+  chk <- rmvpa_check(dir, quiet = TRUE)
+  expect_true(attr(chk, "ok"))
+  expect_true(any(chk$level == "warning" & grepl("permutations = 100: .*about 0.0099", chk$message)))
+  dsl_write_analysis(dir, "sl", c("decode: { set: objects, target: category }", "scope:", "  searchlight: { radius: 4 }",
+                                  "inference: { permutations: 1000 }"))
+  expect_false(any(rmvpa_check(dir, quiet = TRUE)$level == "warning"))
+})
+
 test_that("check reports missing columns and failing assertions", {
   dsl_skip_if_missing()
   dir <- dsl_fixture(subjects = "01")

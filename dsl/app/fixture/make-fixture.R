@@ -54,8 +54,9 @@ cz <- cut(idx[, 3], quantile(idx[, 3], 0:2 / 2), include.lowest = TRUE, labels =
 lab[idx] <- (cx - 1L) * 12L + (cy - 1L) * 2L + cz
 write_vol(NeuroVol(array(as.numeric(lab), dims), sp), file.path(root, "atlas", "space-MNI152NLin2009cAsym_atlas-demo_dseg.nii.gz"))
 lobes <- c("Occipital", "Occipital", "Temporal", "Parietal", "Frontal", "Frontal")
-regions <- data.frame(index = 1:24, name = sprintf("%s %s %s", rep(c("LH", "RH"), each = 12),
-  rep(rep(lobes, each = 2), 2), rep(c("inferior", "superior"), 12)))
+part <- c("posterior", "anterior", "", "", "posterior", "anterior")
+regions <- data.frame(index = 1:24, name = trimws(gsub("  +", " ", sprintf("%s %s %s %s", rep(c("LH", "RH"), each = 12),
+  rep(rep(lobes, each = 2), 2), rep(rep(part, each = 2), 2), rep(c("inferior", "superior"), 12)))))
 write.table(regions, file.path(root, "atlas", "space-MNI152NLin2009cAsym_atlas-demo_dseg.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
 anim <- outer(stims, stims, function(a, b) as.numeric(grepl("^(face|animal)", a) != grepl("^(face|animal)", b)))
 catr <- outer(stims, stims, function(a, b) as.numeric(sub("[0-9]+$", "", a) != sub("[0-9]+$", "", b)))
@@ -131,15 +132,28 @@ pmap <- array(NA_real_, dims); pmap[mask] <- pv
 # Per-subject maps at the peak slice; leave-one-subject-out ROI values.
 pk <- arrayInd(which.max(grp), dims); kz <- pk[3]
 gains <- rnorm(length(subs), 1, 0.35)
-subj_slice <- lapply(seq_along(subs), function(i) {
-  if (i == 16) return(NULL)
-  m <- chance + 0.14 * gains[i] * vot[, , kz] + array(rnorm(dims[1] * dims[2], 0, 0.035), dims[1:2]); m[!mask[, , kz]] <- NaN
-  jsonlite::base64_enc(writeBin(as.numeric(m), raw(), size = 4))
-})
+prev <- array(0L, dims); prev[!mask] <- NA
+per <- vector("list", length(subs))
+for (i in seq_len(15)) {
+  m <- chance + 0.14 * gains[i] * vot + array(rnorm(prod(dims), 0, 0.035), dims)
+  ov <- m[mask]
+  nl <- sort(rnorm(n_null, chance, 0.03) + rgamma(n_null, 2, 400))
+  p_i <- (1 + (n_null - findInterval(ov, nl))) / (n_null + 1)
+  q_i <- p.adjust(p_i, "BH")
+  sig <- array(FALSE, dims); sig[mask] <- q_i < 0.05
+  prev[sig] <- prev[sig] + 1L
+  sl <- m[, , kz]; sl[!mask[, , kz]] <- NaN
+  per[[i]] <- list(
+    fdr = list(threshold = if (any(q_i < 0.05)) round(min(ov[q_i < 0.05]), 4) else NULL, surviving = sum(q_i < 0.05)),
+    centres_hist = as.integer(table(cut(pmin(pmax(ov, 0.1), 0.4999), edges, include.lowest = TRUE))),
+    null_hist = as.integer(table(cut(pmin(pmax(nl, 0.1), 0.4999), edges, include.lowest = TRUE))),
+    slice = jsonlite::base64_enc(writeBin(as.numeric(sl), raw(), size = 4)))
+}
+subj_slice <- lapply(per, function(x) x$slice)
 subj <- lapply(seq_along(subs), function(i) {
   list(id = subs[i], loso_roi = round(chance + 0.075 * gains[i] + rnorm(1, 0, 0.018), 4),
        status = "done", seconds = round(runif(1, 380, 560)), n_trials = 144L, kept = 144L - rbinom(1, 144, 0.1),
-       slice = subj_slice[[i]])
+       slice = subj_slice[[i]], fdr = per[[i]]$fdr, centres_hist = per[[i]]$centres_hist, null_hist = per[[i]]$null_hist)
 })
 subj[[7]]$status <- "stale"; subj[[16]]$status <- "missing"; subj[[16]]$loso_roi <- NULL
 
@@ -197,7 +211,8 @@ save_json(list(dims = dims, spacing = c(4, 4, 4), template = jsonlite::base64_en
 save_json(list(
   analysis = "decode_category", metric = "Accuracy", chance = chance, classes = 4L, metrics = c("Accuracy", "AUC"),
   null = list(kind = "searchlight_permutation", permutations = nperm, values = null_vals, centres_sampled = 0.1,
-              n_null = n_null, p_floor = signif(1 / (n_null + 1), 3), correction = "fdr",
+              n_null = n_null, p_floor_pooled = signif(1 / (n_null + 1), 3), p_resolution = round(1 / (nperm + 1), 4), correction = "fdr",
+              level = "subject", adjust = "binned by searchlight size (number of voxels), so edge searchlights are compared with equally small ones",
               hist = list(edges = edges, counts = null_hist),
               description = "pooled searchlight permutation null, adjusted by searchlight size; not a voxelwise exact test"),
   centres = list(n = n_centres, values = round(sample(obs, min(6000, length(obs))), 4),
@@ -208,7 +223,8 @@ save_json(list(
                test = NULL, note = "rmvpadsl 0.1 computes no group-level test; these are per-subject values"),
   peak = list(ijk = as.integer(arrayInd(peak_idx, dims)) - 1L, value = round(grp[peak_idx], 4)),
   subjects = subj,
-  maps = list(group_mean = vol(grp), group_p = vol(pmap)),
+  maps = list(group_mean = vol(grp), prevalence = vol(prev)),
+  hist_edges = edges,
   sidecar = list(rmvpa_dsl = "0.1", rmvpa_version = "0.1.3", rmvpadsl_version = "0.1.0.9000", analysis = "decode_category",
                  subject = "01", verb = "decode", model_class = "mvpa_model",
                  inference = list(test = "permutation", permutations = nperm, shuffle = "within_run", null_method = "adjusted",
@@ -222,6 +238,7 @@ save_json(list(analysis = "rsa_animacy", metric = "t", chance = 0, metrics = c("
                            description = "joint null of no association with any predictor; per-predictor maps have no conditional test"),
                maps = list(animacy = vol(anim_t), category = vol(cat_t), time = vol(time_t))), "results-rsa_animacy.json")
 save_json(list(analysis = "transfer_memory", metric = "Accuracy", chance = chance, regions = xfer_tab, subjects = subs,
+               atlas = list(file = "atlas/space-MNI152NLin2009cAsym_atlas-demo_dseg.nii.gz", md5 = unname(tools::md5sum(file.path(root, "atlas", "space-MNI152NLin2009cAsym_atlas-demo_dseg.nii.gz")))),
                null = list(kind = "none", description = "none: descriptive only (no permutation path in rMVPA for this analysis)")),
           "results-transfer_memory.json")
 cat("Wrote", out, "\n")

@@ -13,7 +13,8 @@ export function hot(t) {
   return HOT[i].map((c, k) => Math.round(c + f * (HOT[i + 1][k] - c)));
 }
 
-function paint(cv, nx, ny, tplAt, valAt, { threshold, top, floor }) {
+// mode "count": integer counts (e.g. subjects significant); 0 shows the template.
+function paint(cv, nx, ny, tplAt, valAt, { threshold, top, floor, mode }) {
   cv.width = nx; cv.height = ny;
   const ctx = cv.getContext("2d");
   const img = ctx.createImageData(nx, ny);
@@ -23,7 +24,10 @@ function paint(cv, nx, ny, tplAt, valAt, { threshold, top, floor }) {
       const g = tplAt(i, j);
       let c = [g, g, g];
       const v = valAt(i, j);
-      if (v === v) {
+      if (v === v && mode === "count") {
+        if (v >= 2) c = hot((v - 2) / Math.max(1, top - 2));
+        else if (v >= 1) c = [g + 0.3 * (212 - g), g + 0.3 * (73 - g), g + 0.3 * (44 - g)];
+      } else if (v === v && threshold != null) {
         if (v >= threshold) c = hot((v - threshold) / Math.max(1e-9, top - threshold));
         else if (floor != null && v > floor) {
           const a = 0.45 * Math.min(1, (v - floor) / Math.max(1e-9, threshold - floor));
@@ -36,12 +40,12 @@ function paint(cv, nx, ny, tplAt, valAt, { threshold, top, floor }) {
   ctx.putImageData(img, 0, 0);
 }
 
-export function Slices({ template, map, dims, threshold, top, floor, slices }) {
+export function Slices({ template, map, dims, threshold, top, floor, slices, mode }) {
   return (
     <div className="slices lr" style={{ gridTemplateColumns: `repeat(${slices.length}, minmax(0, 1fr))` }}>
       {slices.map((k) => (
         <div key={k}>
-          <VolSlice template={template} map={map} dims={dims} k={k} threshold={threshold} top={top} floor={floor} />
+          <VolSlice template={template} map={map} dims={dims} k={k} threshold={threshold} top={top} floor={floor} mode={mode} />
           <div className="z">z {k}</div>
         </div>
       ))}
@@ -54,7 +58,7 @@ function VolSlice({ template, map, dims, k, ...opts }) {
   useEffect(() => {
     const [nx, ny] = dims;
     paint(ref.current, nx, ny, (i, j) => template[i + nx * (j + ny * k)], (i, j) => (map ? map[i + nx * (j + ny * k)] : NaN), opts);
-  }, [template, map, dims, k, opts.threshold, opts.top, opts.floor]);
+  }, [template, map, dims, k, opts.threshold, opts.top, opts.floor, opts.mode]);
   return <canvas ref={ref} />;
 }
 

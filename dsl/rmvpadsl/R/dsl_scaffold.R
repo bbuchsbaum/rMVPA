@@ -46,6 +46,13 @@ rmvpa_check <- function(project = ".", analyses = NULL, subjects = NULL, quiet =
       add(a, "", "warning", sprintf("inference.permutations = %d: p-values cannot go below %.4f; use at least 1000",
                                     inf$permutations, 1 / (inf$permutations + 1)))
     }
+    if (identical(spec$inference_support$kind, "searchlight_permutation") && identical(inf$test, "permutation") &&
+        inf$permutations < 1000) {
+      add(a, "", "warning", sprintf(paste0(
+        "inference.permutations = %d: centres within one permutation are correlated, so the pooled null resolves ",
+        "p only to about %.4f; use at least 1000 before reporting FDR-corrected maps"),
+        inf$permutations, 1 / (inf$permutations + 1)))
+    }
     if (identical(inf$test, "none")) add(a, "", "ok", paste("inference:", spec$inference_support$description))
     for (pk in .dsl_required_packages(spec$verb, spec$config[[spec$verb]])) {
       if (!requireNamespace(pk, quietly = TRUE)) {
