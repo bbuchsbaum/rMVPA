@@ -60,7 +60,7 @@ export function useRegionalData(res, tpl) {
       const sAtlas = new SurfaceAtlas({ name: res.atlas.name, template: surf.template, regions: volAtlas.regions, left: mesh.left.labels, right: mesh.right.labels });
       const p = sAtlas.project(pv, NaN);
       const rel = (a) => Float32Array.from(a, (v) => v - res.chance);
-      surface = { mesh, projected: { left: rel(p.left), right: rel(p.right) }, template: surf.template, source: surf.source, exact: surf.exact !== false };
+      surface = { mesh, projected: { left: rel(p.left), right: rel(p.right) }, template: surf.template, source: surf.source, exact: surf.exact !== false, tag: surf.tag };
     }
     // Six axial slices spread over the labelled extent.
     const plane = dims[0] * dims[1];
@@ -125,7 +125,11 @@ function ParcelDetail({ sel, hom, chance, subjects, domain, width = 1060 }) {
       {rows.map((r, i) => (
         <g key={r.index} transform={`translate(0, ${m.t + i * rowH})`}>
           <text x={m.l - 12} y={rowH / 2 + 4} textAnchor="end" style={{ fontWeight: i === 0 ? 600 : 400 }}>{hemiTag(r)}{r.name}</text>
-          {r.values.map((v, j) => <circle key={j} cx={x(v)} cy={rowH / 2} r={3} fill={r.hemisphere === "left" ? "var(--ink)" : "var(--surface)"} stroke="var(--ink)" strokeWidth={r.hemisphere === "left" ? 0 : 1} opacity={0.55}><title>sub-{subjects[j]} {v.toFixed(3)}</title></circle>)}
+          {r.values.map((v, j) => {
+            const sig = Array.isArray(r.pfdr) && typeof r.pfdr[j] === "number" && r.pfdr[j] < 0.05;
+            const lh = r.hemisphere === "left";
+            return <circle key={j} cx={x(v)} cy={rowH / 2} r={3} fill={sig ? (lh ? "var(--warm)" : "var(--surface)") : lh ? "var(--ink)" : "var(--surface)"} stroke={sig ? "var(--warm)" : "var(--ink)"} strokeWidth={lh ? 0 : 1.2} opacity={sig ? 0.95 : 0.55}><title>sub-{subjects[j]} {v.toFixed(3)}{Array.isArray(r.pfdr) && typeof r.pfdr[j] === "number" ? ` · own FDR p ${r.pfdr[j].toFixed(3)}` : ""}</title></circle>;
+          })}
           <line x1={x(r.lo)} x2={x(r.hi)} y1={rowH / 2} y2={rowH / 2} stroke="var(--ink)" strokeWidth={2} />
           <line x1={x(r.mean)} x2={x(r.mean)} y1={rowH / 2 - 7} y2={rowH / 2 + 7} stroke="var(--ink)" strokeWidth={2.5} />
           <text x={width - m.r + 12} y={rowH / 2 + 4} className="tnum">{r.mean.toFixed(3)} <tspan style={{ fill: "var(--ink-3)" }}>95% CI {r.lo.toFixed(3)}–{r.hi.toFixed(3)}</tspan></text>
@@ -177,10 +181,13 @@ export function RegionsView({ a, res, tpl, picker, onReload, Provenance, used, e
   const direction = a.verb === "transfer" ? `, trained on ${ex("transfer.train_set")}, tested once on ${ex("transfer.test_set")}` : ` (${a.verb})`;
   const what = res.metric === "Accuracy" ? "accuracy" : res.metric;
   const tested = res.null && res.null.kind !== "none";
+  const perSubject = stats.some((s) => Array.isArray(s.pfdr));
+  const nSig = (s) => (Array.isArray(s.pfdr) ? s.pfdr.filter((p) => typeof p === "number" && p < 0.05).length : null);
+  const anySig = perSubject ? stats.filter((s) => nSig(s) > 0).length : 0;
   return (
     <div className="page plain">
       <h1>{a.name}</h1>
-      <p className="lede">{res.metric} by parcel{direction}. Atlas: {res.atlas.name}. {res.chance_source ? <>Chance {res.chance}: {res.chance_source}. </> : <>Reference {res.chance}. </>}{tested ? <>Per-parcel tests are in the region tables; this page describes the values.</> : <><b>Descriptive only:</b> {(res.null?.description || "no test was run").replace(/^none:\s*/, "")}.</>}</p>
+      <p className="lede">{res.metric} by parcel{direction}. Atlas: {res.atlas.name}. {res.chance_source ? <>Chance {res.chance}: {res.chance_source}. </> : <>Reference {res.chance}. </>}{tested ? <><b>Inference is per subject:</b> each subject's parcels are tested against that subject's own exact permutation null ({res.null.permutations} relabellings; FDR across parcels, family-wise p also saved). Views across subjects are descriptive.</> : <><b>Descriptive only:</b> {(res.null?.description || "no test was run").replace(/^none:\s*/, "")}.</>}</p>
       <Provenance a={a} res={res} used={used} excluded={excluded} extra={<div><dt>atlas</dt><dd>{res.atlas.short || res.atlas.name}{res.atlas.md5 ? ` · md5 ${res.atlas.md5.slice(0, 8)}` : ""}</dd></div>} />
 
       <section className="fig">
@@ -188,7 +195,7 @@ export function RegionsView({ a, res, tpl, picker, onReload, Provenance, used, e
           <h2>Mean {what} of {res.subjects.length} subjects in each parcel</h2>
           <div className="head-tools">
           {view === "slices" && picker}
-          {view === "cortex" && data.surface?.exact === false && <span className="tag-approx" title="volumetric atlas sampled at fsaverage5 mid-thickness">approximate projection</span>}
+          {view === "cortex" && data.surface?.exact === false && <span className="tag-approx" title={data.surface.source}>{data.surface.tag || "approximate projection"}</span>}
           <div className="seg">
             <button className={view === "cortex" ? "on" : ""} onClick={() => setView("cortex")} disabled={!cortexPossible} title={cortexPossible ? "" : offer?.reason || "no cortical surface for this atlas"}>Cortex</button>
             <button className={view === "slices" ? "on" : ""} onClick={() => setView("slices")}>Slices</button>
@@ -207,7 +214,9 @@ export function RegionsView({ a, res, tpl, picker, onReload, Provenance, used, e
           <p className="fig-caption" style={{ margin: 0 }}>
             Each parcel takes one colour: the mean over subjects, blue below chance and red above; within ±0.01 of chance stays neutral. Click a parcel to see its subjects and its homologue (both outlined).
             {view === "cortex"
-              ? (data.surface?.exact === false
+              ? (data.surface?.tag === "sampled"
+                ? <> Shown on {data.surface.template}'s own cortical surface (fMRIPrep pial, {data.surface.template} anatomy). Each vertex takes the atlas label at its mid-thickness position, in the same T1w space as the analysis; the colours are group means drawn on this one subject. Unlabelled vertices stay grey.</>
+                : data.surface?.exact === false
                 ? <> Shown on {data.surface.template} (pial, sulcal shading). <b>Approximate:</b> each vertex takes the volumetric atlas's label at its mid-thickness position, and fsaverage is close to, not the same as, MNI152; the analysis itself ran on the volumetric atlas. Unlabelled vertices stay grey.</>
                 : <> Shown on {data.surface?.template} (pial, sulcal shading) with the atlas's surface labels; the analysis itself ran on the volumetric atlas in the data space. Medial wall uncoloured.</>)
               : <> The volumetric atlas the analysis used, resampled to the studio template for display.</>}
@@ -221,14 +230,14 @@ export function RegionsView({ a, res, tpl, picker, onReload, Provenance, used, e
         {selected ? <>
           <div className="fig-head"><h2>{names[selected.index]} <span className="origin">{selected.network ? `${selected.network} network · ` : ""}parcel {selected.index}</span></h2><button className="fix" onClick={() => setSel(null)}>Clear</button></div>
           <ParcelDetail sel={selected} hom={homologue} chance={res.chance} subjects={res.subjects} domain={domain} />
-          <p className="fig-caption">Every subject's {what} in this parcel and its homologue; the tick is the mean and the bar its 95% t-interval. If you chose this parcel because it looked strong, its interval is optimistic.</p>
+          <p className="fig-caption">Every subject's {what} in this parcel and its homologue; the tick is the mean and the bar its 95% t-interval.{perSubject ? <> Red dots: subjects whose own test of the parcel survives FDR (q &lt; .05): <b>{nSig(selected)} of {selected.pfdr.length}</b> here{homologue ? `, ${nSig(homologue)} in the homologue` : ""}. A count of per-subject decisions, not a group test.</> : null} If you chose this parcel because it looked strong, its interval is optimistic.</p>
         </> : <div className="empty-detail"><b>No parcel selected.</b> Click a parcel on the brain or a dot below to see every subject's {what} there and in its homologue. The studio does not open on the strongest parcel, so the first one you see is your choice.</div>}
       </section>
 
       <section className="fig">
         <div className="fig-head"><h2>All {stats.length} parcels{stats.some((s) => s.network) ? ", by network" : ""}{res.atlas.n_parcels > stats.length ? <span className="origin"> · {stats.length} of the atlas's {res.atlas.n_parcels} have values; the rest lie outside the analysis mask</span> : null}</h2><span className="origin">LH ● · RH ○ · grey tick: {stats.some((s) => s.network) ? "network" : "overall"} mean · click a dot to select</span></div>
         <NetworkStrip stats={stats} chance={res.chance} selected={selected?.index} homologue={homologue?.index} onSelect={setSel} hover={hover} setHover={setHover} domain={domain} />
-        <p className="fig-caption"><b>{above} of {stats.length}</b> parcels have a 95% interval entirely above chance. With per-parcel intervals and no effect anywhere, about {Math.round(stats.length * 0.025)} would by chance. This count is a description, not a test. Same axis as the panel above.</p>
+        <p className="fig-caption">{perSubject ? <><b>{anySig} of {stats.length}</b> parcels survive their own FDR in at least one subject. </> : null}<b>{above} of {stats.length}</b> parcels have a 95% interval entirely above chance. With per-parcel intervals and no effect anywhere, about {Math.round(stats.length * 0.025)} would by chance. This count is a description, not a test. Same axis as the panel above.</p>
       </section>
     </div>
   );

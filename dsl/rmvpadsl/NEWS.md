@@ -1,5 +1,19 @@
 # rmvpadsl (development version)
 
+* Regional analyses get permutation tests when rMVPA has
+  `run_permutation_regional()`: decode and RSA over regions default to
+  `inference: { test: permutation }`, as the searchlight does, with the same
+  shuffle and seed. Each region has its own exact null (only `permutations`,
+  `shuffle` and `correction` apply). `_regions.tsv` gains `<metric>_p`,
+  `_pfdr` and `_pfwer` columns, with matching statmaps. With an older rMVPA
+  the analyses stay descriptive and `check` says what is missing. The studio
+  marks, per parcel, the subjects whose own test survives FDR.
+* Native-space projects: the studio finds the subject's fMRIPrep T1w and
+  cortical surfaces (with bidser when installed, else by scanning
+  `derivatives/*/sub-*/anat`) and draws native atlases on that subject's own
+  surface, sampled at mid-thickness in the shared T1w space and tagged
+  "sampled".
+
 * The studio ships in the package (`inst/app`, one bundle built from
   `dsl/app`). `rmvpa_studio()` (`rmvpa studio`) serves it on 127.0.0.1 with a
   session token and Host/Origin checks; `rmvpa_export_studio()`

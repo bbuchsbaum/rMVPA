@@ -17,6 +17,14 @@
          description = paste0("pooled searchlight permutation null (run_permutation_searchlight), ",
                               "adjusted by searchlight size; not a voxelwise exact test", extra))
   }
+  # rMVPA >= the release with run_permutation_regional(): per-region exact
+  # permutation tests, sharing permutation_control() with the searchlight.
+  regional <- function(extra = "") {
+    if (!.dsl_has_regional_permutation()) return(none("run_permutation_regional() (a newer rMVPA)"))
+    list(kind = "regional_permutation", missing = NULL,
+         description = paste0("per-region exact permutation null (run_permutation_regional): every region is refitted ",
+                              "under every relabelling; FDR across regions, and family-wise (minP) p-values", extra))
+  }
   model_nperm <- function() {
     list(kind = "model_nperm", missing = NULL,
          description = paste0("model-internal permutations, one p-value per ", if (sl) "centre" else "region",
@@ -24,16 +32,16 @@
   }
 
   switch(verb,
-    decode = if (sl) engine() else none("run_permutation_regional() for regional/whole-brain scopes"),
+    decode = if (sl) engine() else if (roi) regional() else none("a whole-brain permutation path (use regions with a whole-brain mask)"),
     rsa = {
-      if (!sl) return(none("run_permutation_regional() for regional/whole-brain scopes"))
+      if (!sl && !roi) return(none("a whole-brain permutation path (use regions with a whole-brain mask)"))
       if (identical(vb$distance, "crossvalidated_euclidean")) {
         return(none("permute_labels() support for crossvalidated_euclidean RSA"))
       }
       k <- length(vb$predictors) + length(vb$nuisance)
-      if (vb$method %in% c("lm", "rfit") && k > 1L) {
-        engine("; joint null of no association with any predictor (rMVPA refuses per-predictor nulls for regression with more than one predictor), so per-predictor maps have no conditional test")
-      } else engine()
+      joint <- "; joint null of no association with any predictor (rMVPA refuses per-predictor nulls for regression with more than one predictor), so per-predictor maps have no conditional test"
+      wants_joint <- vb$method %in% c("lm", "rfit") && k > 1L
+      if (sl) { if (wants_joint) engine(joint) else engine() } else { if (wants_joint) regional(joint) else regional() }
     },
     rsa_vector = , rsa_feature = if (sl || roi) model_nperm() else none("whole-brain permutations for this model"),
     transfer = none(if (identical(vb$method, "naive") && is.null(vb$link)) {
@@ -43,6 +51,8 @@
     none(sprintf("a permutation method for %s", verb))
   )
 }
+
+.dsl_has_regional_permutation <- function() "run_permutation_regional" %in% getNamespaceExports("rMVPA")
 
 .dsl_resolve_inference <- function(support, user, perm_defaults, dlayer) {
   origins <- character()
@@ -77,6 +87,15 @@
            "Use correction: none and correct the saved p-values downstream.", call. = FALSE)
     }
     base <- tag(list(test = "permutation", permutations = perm_defaults$permutations, correction = "none"), dlayer)
+  } else if (identical(support$kind, "regional_permutation")) {
+    # Each region has its own exact null: the pooled-null keys do not apply.
+    allowed <- c("test", "permutations", "shuffle", "correction")
+    bad <- setdiff(names(user), allowed)
+    if (length(bad)) {
+      stop("inference: ", paste(bad, collapse = ", "), " do not apply to regional permutations (each region has its ",
+           "own exact null; nothing is pooled or binned). Allowed keys: ", paste(allowed, collapse = ", "), ".", call. = FALSE)
+    }
+    base <- tag(perm_defaults[intersect(allowed, names(perm_defaults))], dlayer)
   } else {
     base <- tag(perm_defaults, dlayer)
   }
@@ -89,7 +108,7 @@
 
 # permutation_control() arguments for the searchlight permutation engine.
 .dsl_permutation_control <- function(inf, seed, rsa_joint = FALSE) {
-  permutation_control(
+  args <- list(
     n_perm = as.integer(inf$permutations),
     shuffle = switch(inf$shuffle, within_run = "within_block", inf$shuffle),
     null_method = inf$null_method,
@@ -99,4 +118,5 @@
     seed = seed,
     rsa_null = if (rsa_joint) "joint" else "individual"
   )
+  do.call(permutation_control, Filter(Negate(is.null), args))
 }

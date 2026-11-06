@@ -205,3 +205,46 @@ test_that("approximate projection keeps each hemisphere to its own parcels", {
   expect_equal(rmvpadsl:::.studio_project_atlas(atlas, near_midline, "left"), c(1L, 1L, 1L))
   expect_equal(rmvpadsl:::.studio_project_atlas(atlas, near_midline, "right"), c(2L, 2L, 0L))
 })
+
+test_that("native-space atlases are drawn on the subject's own fMRIPrep surfaces", {
+  dsl_skip_if_missing(); skip_on_cran()
+  dir <- dsl_fixture(subjects = c("01", "02"), space_label = "T1w"); dsl_write_project(dir, space_label = "T1w")
+  dsl_write_analysis(dir, "reg", c("decode: { set: objects, target: category, method: corclass }", "scope:",
+                                   "  regions:", "    atlas: atlas/space-MNI_atlas-two_dseg.nii.gz",
+                                   "    labels: atlas/space-MNI_atlas-two_dseg.tsv"))
+  quiet_dsl(rmvpa_run(dir))
+  src0 <- rmvpadsl:::.studio_source(dir)
+  expect_equal(src0$results("reg")$atlas$surface_option$status, "unavailable")      # no surfaces yet
+  expect_match(src0$results("reg")$atlas$surface_option$reason, "no fMRIPrep surfaces")
+
+  # fMRIPrep-style anat/: a native T1w and small surfaces inside the 12 mm grid,
+  # the left hemisphere over parcel 1 (x < 6 mm), the right over parcel 2.
+  ad <- file.path(dir, "derivatives", "fmriprep", "sub-01", "anat"); dir.create(ad, recursive = TRUE)
+  writeLines('{"Name": "fmriprep", "BIDSVersion": "1.8.0", "DatasetType": "derivative"}', file.path(dir, "derivatives", "fmriprep", "dataset_description.json"))
+  sp <- neuroim2::NeuroSpace(c(6L, 6L, 6L), spacing = c(2, 2, 2))
+  neuroim2::write_vol(neuroim2::NeuroVol(array(stats::runif(216, 10, 200), c(6, 6, 6)), sp), file.path(ad, "sub-01_desc-preproc_T1w.nii.gz"))
+  tri <- matrix(c(1L, 2L, 3L, 1L, 3L, 4L), ncol = 3, byrow = TRUE)
+  mesh <- function(x) cbind(x, c(2, 8, 8, 2), c(2, 2, 8, 8))
+  for (H in c("L", "R")) {
+    x <- if (H == "L") 2 else 8
+    for (k in c("pial", "white")) {
+      freesurferformats::write.fs.surface.gii(file.path(ad, sprintf("sub-01_hemi-%s_%s.surf.gii", H, k)),
+                                              mesh(x + if (k == "pial") 0.5 else -0.5), tri)
+    }
+  }
+  src <- rmvpadsl:::.studio_source(dir)
+  bgs <- vapply(src$backgrounds(), `[[`, "", "id")
+  expect_true("file:derivatives/fmriprep/sub-01/anat/sub-01_desc-preproc_T1w.nii.gz" %in% bgs)   # native T1w, no space entity
+  opt <- src$results("reg")$atlas$surface_option
+  expect_equal(opt$status, "fetch")
+  expect_equal(opt$tag, "sampled")
+  expect_match(opt$label, "sub-01's own cortical surface")
+  expect_true(src$fetch("surface", analysis = "reg")$ok)
+  r <- src$results("reg")
+  expect_match(r$atlas$surface, "^native-01-")
+  s <- src$surface(r$atlas$surface)
+  expect_equal(s$template, "sub-01")
+  lab <- function(h) readBin(jsonlite::base64_dec(s[[h]]$labels), "integer", n = s[[h]]$n)
+  expect_equal(lab("left"), rep(1L, 4))
+  expect_equal(lab("right"), rep(2L, 4))
+})

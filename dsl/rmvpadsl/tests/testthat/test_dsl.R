@@ -95,7 +95,11 @@ test_that("unsupported scopes and nulls are refused with the missing R piece", {
   expect_error(rmvpa_analysis(dir, "rsa_wb"), "whole_brain is not available for rsa")
   dsl_write_analysis(dir, "dec_perm", c("decode: { set: objects, target: category }", "scope:", atlas_line,
                                         "inference: { test: permutation }"))
-  expect_error(rmvpa_analysis(dir, "dec_perm"), "run_permutation_regional")
+  if (rmvpadsl:::.dsl_has_regional_permutation()) {
+    expect_identical(rmvpa_analysis(dir, "dec_perm")$inference_support$kind, "regional_permutation")
+  } else {
+    expect_error(rmvpa_analysis(dir, "dec_perm"), "run_permutation_regional")
+  }
   dsl_write_analysis(dir, "era_perm", c("rsa_era: { train_set: encoding, test_set: retrieval, link: stimulus }",
                                         "scope:", "  searchlight: { radius: 4 }", "inference: { test: permutation }"))
   expect_error(rmvpa_analysis(dir, "era_perm"), "permute_labels\\(\\) method that shuffles ERA")
@@ -188,8 +192,14 @@ test_that("run writes BIDS-named outputs with a sidecar and skips unchanged cell
   tsv <- utils::read.delim(file.path(out, paste0(stem, "_regions.tsv")))
   expect_identical(tsv$name, c("left", "right"))
   side <- jsonlite::fromJSON(file.path(out, paste0(stem, "_rmvpa.json")))
-  expect_identical(side$inference$test, "none")
-  expect_true(side$inference$descriptive_only)
+  if (rmvpadsl:::.dsl_has_regional_permutation()) {
+    # Regions default to the exact per-region permutation test, as the searchlight does.
+    expect_identical(side$inference$test, "permutation")
+    expect_true(all(c("Accuracy_p", "Accuracy_pfdr", "Accuracy_pfwer") %in% names(tsv)))
+  } else {
+    expect_identical(side$inference$test, "none")
+    expect_true(side$inference$descriptive_only)
+  }
   expect_identical(side$chance$Accuracy, 0.5)
   expect_identical(side$chance$AUC, 0L)
   expect_identical(side$lock, "none")
@@ -377,4 +387,27 @@ test_that("the rmvpa CLI dispatches commands and reports errors as status 1", {
   quiet_dsl(st <- rmvpa_cli(c("run", "--project", dir, "--yes")))
   expect_identical(st, 0L)
   expect_output(rmvpa_cli(c("status", "--project", dir)), "done")
+})
+
+test_that("regional permutations write p, FDR and family-wise columns and maps", {
+  dsl_skip_if_missing(); skip_on_cran()
+  skip_if_not(rmvpadsl:::.dsl_has_regional_permutation(), "rMVPA without run_permutation_regional()")
+  dir <- dsl_fixture(subjects = "01"); dsl_write_project(dir)
+  dsl_write_analysis(dir, "rp", c("decode: { set: objects, target: category, method: corclass }", "scope:", atlas_line,
+                                  "inference: { test: permutation, permutations: 19 }"))
+  spec <- rmvpa_analysis(dir, "rp")
+  expect_setequal(names(spec$config$inference), c("test", "permutations", "shuffle", "correction"))
+  dsl_write_analysis(dir, "rp_bad", c("decode: { set: objects, target: category }", "scope:", atlas_line,
+                                      "inference: { test: permutation, subsample: 0.5 }"))
+  expect_error(rmvpa_analysis(dir, "rp_bad"), "do not apply to regional permutations")
+  quiet_dsl(rmvpa_run(dir, "rp"))
+  out <- file.path(dir, "derivatives", "rmvpa", "rp", "sub-01")
+  tsv <- utils::read.delim(list.files(out, "_regions\\.tsv$", full.names = TRUE))
+  expect_true(all(c("Accuracy_p", "Accuracy_pfdr", "Accuracy_pfwer") %in% names(tsv)))
+  expect_true(all(tsv$Accuracy_p >= 1 / 20 & tsv$Accuracy_p <= 1))
+  expect_true(all(tsv$Accuracy_pfwer >= tsv$Accuracy_p))
+  expect_true(any(grepl("_stat-Accuracypfwer_statmap", list.files(out))))
+  side <- jsonlite::fromJSON(list.files(out, "_rmvpa\\.json$", full.names = TRUE))
+  expect_equal(side$inference$p_floor, 1 / 20)
+  expect_match(side$inference$null, "per-region exact permutation")
 })

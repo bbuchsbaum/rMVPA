@@ -9,6 +9,11 @@
 #   schaefer-<n>-<k>     CBIG's own fsaverage5 annotation of a Schaefer-2018 atlas (exact)
 #   project-<md5>        the volumetric atlas sampled at fsaverage5 mid-thickness
 #                        (approximate; only for atlases in an MNI space)
+#   native-<sub>-<md5>   a native-space atlas sampled on that subject's own
+#                        fMRIPrep surfaces (same space, no template warp)
+# Anatomy and native surfaces are located with bidser when it is installed
+# (bids_project(fmriprep = TRUE): search_files(), surface_files()), else by a
+# direct scan of the derivatives folders.
 # Downloads land in tools::R_user_dir("rmvpadsl", "cache") (or $RMVPADSL_CACHE)
 # and happen only when the user asks: the studio's Fetch buttons, or
 # rmvpa_export_studio(fetch = TRUE).
@@ -43,21 +48,62 @@
 
 .studio_tf_file <- function(space) file.path(.studio_cache_dir("templateflow"), .studio_tf_templates[[space]]$file)
 
-# T1w images in the data space for the first subject, in the data's BIDS
-# folder or any other derivatives pipeline (fMRIPrep's anat/ outputs).
-.studio_find_anat <- function(project, data, subject) {
-  roots <- unique(normalizePath(c(if (!is.null(data$bids)) .dsl_resolve_path(data$bids, project$root),
-                                  list.dirs(file.path(project$root, "derivatives"), recursive = FALSE)),
-                                mustWork = FALSE))
-  roots <- roots[dir.exists(roots) & basename(roots) != "rmvpa" & basename(roots) != "rmvpa-draft"]
-  sdirs <- file.path(roots, paste0("sub-", subject))
+# Native spaces: no space entity, or T1w/fsnative. fMRIPrep writes native
+# outputs without a space entity (or space-T1w) and native surfaces in T1w
+# coordinates.
+.studio_native_space <- function(space) is.null(space) || !nzchar(space) || space %in% c("T1w", "fsnative", "native")
+
+.studio_space_matches <- function(entity_space, data_space) {
+  if (.studio_native_space(data_space)) is.null(entity_space) || entity_space %in% c("T1w", "fsnative")
+  else identical(entity_space, data_space)
+}
+
+# BIDS roots that may hold fMRIPrep derivatives: the project itself, and the
+# dataset above the data's derivatives folder.
+.studio_bids_roots <- function(project, data) {
+  r <- project$root
+  if (!is.null(data$bids)) {
+    b <- normalizePath(.dsl_resolve_path(data$bids, project$root), mustWork = FALSE)
+    parts <- strsplit(b, .Platform$file.sep, fixed = TRUE)[[1]]
+    at <- which(parts == "derivatives")
+    if (length(at)) r <- c(r, paste(parts[seq_len(at[length(at)] - 1L)], collapse = .Platform$file.sep))
+  }
+  unique(normalizePath(r[dir.exists(r)], mustWork = FALSE))
+}
+
+.studio_bidser_project <- function(root) {
+  if (!requireNamespace("bidser", quietly = TRUE)) return(NULL)
+  tryCatch(suppressMessages(suppressWarnings(
+    bidser::bids_project(root, fmriprep = TRUE, strict_participants = FALSE))), error = function(e) NULL)
+}
+
+# Anatomical-side files of one subject (T1w images, surfaces, shape maps):
+# through bidser when it can read the dataset, else a direct scan of
+# derivatives/*/sub-<s>/[ses-*/]anat.
+.studio_subject_files <- function(project, data, subject, regex) {
+  roots <- .studio_bids_roots(project, data)
+  for (root in roots) {
+    bp <- .studio_bidser_project(root)
+    if (is.null(bp)) next
+    f <- tryCatch(bidser::search_files(bp, regex = regex, subid = subject, full_path = TRUE, strict = FALSE),
+                  error = function(e) NULL)
+    if (length(f)) return(unique(normalizePath(f)))
+  }
+  dirs <- unique(normalizePath(c(if (!is.null(data$bids)) .dsl_resolve_path(data$bids, project$root),
+                                 unlist(lapply(roots, function(r) list.dirs(file.path(r, "derivatives"), recursive = FALSE)))),
+                               mustWork = FALSE))
+  dirs <- dirs[dir.exists(dirs) & !basename(dirs) %in% c("rmvpa", "rmvpa-draft")]
+  sdirs <- file.path(dirs, paste0("sub-", subject))
   anat <- unlist(lapply(sdirs, function(s) c(file.path(s, "anat"), Sys.glob(file.path(s, "ses-*", "anat")))))
-  f <- unlist(lapply(anat[dir.exists(anat)], list.files, pattern = "_T1w\\.nii(\\.gz)?$", full.names = TRUE))
+  unique(unlist(lapply(anat[dir.exists(anat)], list.files, pattern = regex, full.names = TRUE)))
+}
+
+# T1w images in the data space for the first subject.
+.studio_find_anat <- function(project, data, subject) {
+  f <- .studio_subject_files(project, data, subject, "_T1w\\.nii(\\.gz)?$")
   if (!length(f)) return(character())
   ents <- lapply(f, function(x) .dsl_parse_bids_name(x)$entities)
-  same_space <- vapply(ents, function(e) {
-    if (is.null(data$space)) is.null(e$space) else identical(e$space, data$space)
-  }, TRUE)
+  same_space <- vapply(ents, function(e) .studio_space_matches(e$space, data$space), TRUE)
   f <- f[same_space]; ents <- ents[same_space]
   if (!length(f)) return(character())
   rank <- vapply(ents, function(e) if (identical(e$desc, "preproc")) 0L else if (is.null(e$desc)) 1L else 2L, 1L)
@@ -150,9 +196,27 @@
                 atlas_md5 = md5))
   }
   space <- spec$data$space %||% ""
+  if (.studio_native_space(space)) {
+    s1 <- .dsl_subjects(spec$data, project$root)[1]
+    ns <- .studio_native_surfaces(project, spec$data, s1)
+    if (!is.null(ns)) {
+      cached <- file.path(.studio_cache_dir("projected"), sprintf("native-%s-%s.rds", s1, md5))
+      return(list(id = sprintf("native-%s-%s", s1, md5), template = sprintf("sub-%s", s1), exact = FALSE, tag = "sampled",
+                  status = if (file.exists(cached)) "ready" else "fetch", size = "computed here",
+                  label = sprintf("sub-%s's own cortical surface", s1),
+                  source = paste0("sub-", s1, "'s pial and white surfaces from fMRIPrep (", ns$found_by, "). Each vertex takes ",
+                                  "the atlas label at its mid-thickness position; atlas and surface share the subject's ",
+                                  "T1w space, so no template warp is involved, but labels near parcel borders follow ",
+                                  "the volume's voxels. Values are the group means drawn on this one subject's anatomy."),
+                  atlas_md5 = md5, subject = s1, files = ns))
+    }
+    return(list(id = NULL, status = "unavailable", exact = FALSE,
+                reason = sprintf(paste("The atlas is in the native (T1w) space and no fMRIPrep surfaces were found for sub-%s",
+                                       "(sub-%s_hemi-L_pial.surf.gii and _white.surf.gii in an anat/ folder)."), s1, s1)))
+  }
   if (grepl("^MNI", space)) {
     ready <- have_fs5 && file.exists(file.path(.studio_cache_dir("projected"), paste0(md5, ".rds")))
-    return(list(id = paste0("project-", md5), template = "fsaverage5", exact = FALSE,
+    return(list(id = paste0("project-", md5), template = "fsaverage5", exact = FALSE, tag = "approximate projection",
                 status = if (ready) "ready" else "fetch", size = if (have_fs5) "computed here" else "2.6 MB",
                 label = "Approximate projection onto fsaverage5",
                 source = paste("fsaverage5 meshes from TemplateFlow; each vertex takes the atlas label at its",
@@ -163,6 +227,36 @@
   list(id = NULL, status = "unavailable", exact = FALSE,
        reason = sprintf("The atlas is in space '%s'. The studio knows how to put only Schaefer-2018 or MNI-space atlases on a cortical surface.",
                         if (nzchar(space)) space else "unknown"))
+}
+
+# fMRIPrep surfaces of one subject: pial and white per hemisphere (required),
+# sulc (optional; shading is flat without it).
+.studio_native_surfaces <- function(project, data, subject) {
+  f <- .studio_subject_files(project, data, subject, "_hemi-[LR]_.*(pial|white|smoothwm|midthickness)\\.surf\\.gii$|_hemi-[LR]_.*sulc\\.shape\\.gii$")
+  if (!length(f)) return(NULL)
+  pick <- function(H, kind) {
+    hit <- f[grepl(sprintf("_hemi-%s_", H), basename(f)) & grepl(sprintf("_%s\\.(surf|shape)\\.gii$", kind), basename(f))]
+    if (length(hit)) hit[1] else NULL
+  }
+  out <- list()
+  for (H in c("L", "R")) {
+    out[[paste0(H, "_pial")]] <- pick(H, "pial")
+    out[[paste0(H, "_white")]] <- pick(H, "white") %||% pick(H, "smoothwm")
+    out[[paste0(H, "_sulc")]] <- pick(H, "sulc")
+  }
+  if (any(vapply(c("L_pial", "L_white", "R_pial", "R_white"), function(k) is.null(out[[k]]), TRUE))) return(NULL)
+  out$found_by <- if (requireNamespace("bidser", quietly = TRUE)) "located with bidser" else "found in the derivatives folders"
+  out
+}
+
+.studio_read_native <- function(files) {
+  hemi <- function(H) {
+    pial <- gifti::read_gifti(files[[paste0(H, "_pial")]])$data
+    white <- gifti::read_gifti(files[[paste0(H, "_white")]])$data
+    sulc <- if (!is.null(files[[paste0(H, "_sulc")]])) as.numeric(gifti::read_gifti(files[[paste0(H, "_sulc")]])$data[[1]]) else rep(0, nrow(pial$pointset))
+    list(pos = pial$pointset, faces = pial$triangle, white = white$pointset, sulc = sulc)
+  }
+  list(left = hemi("L"), right = hemi("R"))
 }
 
 .studio_read_fs5 <- function() {
@@ -186,7 +280,7 @@
 # under the vertex, else the most common label among voxels within 2. A
 # hemisphere only takes parcels whose centre lies on its side (or within 4 mm
 # of the midline), so medial vertices do not borrow the other side's parcels.
-.studio_project_atlas <- function(atlas, mid, side = c("left", "right")) {
+.studio_project_atlas <- function(atlas, mid, side = c("left", "right"), midline = 0) {
   side <- match.arg(side)
   sp <- neuroim2::space(atlas)
   a <- as.array(atlas)
@@ -197,7 +291,7 @@
   vox <- which(round(a) > 0, arr.ind = TRUE)
   cx <- tapply(neuroim2::grid_to_coord(sp, vox)[, 1], as.integer(round(a[vox])), mean)
   allowed <- integer(max(ids, 0L) + 1L)
-  allowed[as.integer(names(cx)) + 1L] <- as.integer(if (side == "left") cx <= 4 else cx >= -4)
+  allowed[as.integer(names(cx)) + 1L] <- as.integer(if (side == "left") cx <= midline + 4 else cx >= midline - 4)
   look <- function(gg) {
     ok <- rowSums(gg >= 1) == 3 & gg[, 1] <= d[1] & gg[, 2] <= d[2] & gg[, 3] <= d[3]
     v <- integer(nrow(gg)); v[ok] <- as.integer(round(a[gg[ok, , drop = FALSE]]))
@@ -219,17 +313,33 @@
   hemi <- function(h, l) list(n = nrow(fs5[[h]]$pos), positions = .studio_f32(t(fs5[[h]]$pos)),
                               faces = .studio_i32(t(fs5[[h]]$faces)), sulc = .studio_f32(fs5[[h]]$sulc),
                               labels = .studio_i32(l))
-  list(id = opt$id, template = "fsaverage5", mesh = "pial", exact = opt$exact, source = opt$source,
+  list(id = opt$id, template = "fsaverage5", mesh = "pial", exact = opt$exact, tag = opt$tag, source = opt$source,
        atlas_md5 = opt$atlas_md5, left = hemi("left", labels$left), right = hemi("right", labels$right))
 }
 
 # Builds (fetching what is missing when `fetch`) the surface for an option.
 .studio_surface_build <- function(project, spec, opt, fetch = FALSE) {
   if (identical(opt$status, "unavailable")) stop(opt$reason, call. = FALSE)
-  if (fetch) .studio_fetch_fs5() else if (!all(file.exists(.studio_fs5_paths()))) stop("fsaverage5 is not fetched yet", call. = FALSE)
-  fs5 <- .studio_read_fs5()
   rg <- spec$config$scope$regions
   afile <- .dsl_resolve_path(rg$atlas, project$root)
+  if (startsWith(opt$id, "native-")) {
+    mesh <- .studio_read_native(opt$files)
+    cached <- file.path(.studio_cache_dir("projected"), sprintf("native-%s-%s.rds", opt$subject, opt$atlas_md5))
+    labels <- if (file.exists(cached)) readRDS(cached) else {
+      atlas <- neuroim2::read_vol(afile)
+      # Midline from the subject's own surfaces (scanner x need not be 0 there).
+      midline <- (max(mesh$left$pos[, 1]) + min(mesh$right$pos[, 1])) / 2
+      l <- lapply(c(left = "left", right = "right"), function(h)
+        .studio_project_atlas(atlas, (mesh[[h]]$pos + mesh[[h]]$white) / 2, h, midline = midline))
+      saveRDS(l, cached)
+      l
+    }
+    out <- .studio_surface_payload(opt, mesh, labels)
+    out$template <- opt$template
+    return(out)
+  }
+  if (fetch) .studio_fetch_fs5() else if (!all(file.exists(.studio_fs5_paths()))) stop("fsaverage5 is not fetched yet", call. = FALSE)
+  fs5 <- .studio_read_fs5()
   if (startsWith(opt$id, "schaefer-")) {
     lt <- if (!is.null(rg$labels)) .dsl_read_table(.dsl_resolve_path(rg$labels, project$root)) else NULL
     sc <- .studio_schaefer_of(afile, lt)

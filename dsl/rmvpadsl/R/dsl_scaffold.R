@@ -39,9 +39,10 @@ rmvpa_check <- function(project = ".", analyses = NULL, subjects = NULL, quiet =
     subs <- tryCatch(subjects %||% .dsl_subjects(spec$data, project$root),
                      error = function(e) { add(a, "", "error", conditionMessage(e)); character() })
     inf <- spec$config$inference
-    perms <- if (identical(inf$test, "permutation") && identical(spec$inference_support$kind, "searchlight_permutation")) inf$permutations else 0
+    perms <- if (identical(inf$test, "permutation") &&
+                 spec$inference_support$kind %in% c("searchlight_permutation", "regional_permutation")) inf$permutations else 0
     passes <- passes + length(subs) * (1 + perms)
-    if (identical(spec$inference_support$kind, "model_nperm") && identical(inf$test, "permutation") &&
+    if (spec$inference_support$kind %in% c("model_nperm", "regional_permutation") && identical(inf$test, "permutation") &&
         inf$permutations < 1000) {
       add(a, "", "warning", sprintf("inference.permutations = %d: p-values cannot go below %.4f; use at least 1000",
                                     inf$permutations, 1 / (inf$permutations + 1)))

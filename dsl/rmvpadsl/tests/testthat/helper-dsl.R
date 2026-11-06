@@ -31,7 +31,7 @@ dsl_write_betas <- function(path_stem, design, space, signal_col, mask_arr, seed
   utils::write.table(design, paste0(path_stem, ".tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
 }
 
-dsl_fixture <- function(dir = tempfile("rmvpa-dsl-"), subjects = c("01", "02"), nrun = 4L) {
+dsl_fixture <- function(dir = tempfile("rmvpa-dsl-"), subjects = c("01", "02"), nrun = 4L, space_label = "MNI") {
   dims <- c(6L, 6L, 6L)
   space <- neuroim2::NeuroSpace(dims, spacing = c(2, 2, 2))
   mask_arr <- array(1, dims)
@@ -43,16 +43,16 @@ dsl_fixture <- function(dir = tempfile("rmvpa-dsl-"), subjects = c("01", "02"), 
     fdir <- file.path(bids, paste0("sub-", s), "func")
     dir.create(fdir, recursive = TRUE, showWarnings = FALSE)
     neuroim2::write_vol(neuroim2::NeuroVol(mask_arr, space),
-                        file.path(fdir, sprintf("sub-%s_space-MNI_desc-brain_mask.nii.gz", s)))
+                        file.path(fdir, sprintf("sub-%s_space-%s_desc-brain_mask.nii.gz", s, space_label)))
     for (r in seq_len(nrun)) {
       d <- data.frame(stimulus = stims, category = category,
                       response = rep(c("hit", "hit", "hit", "miss"), 2), stringsAsFactors = FALSE)
-      dsl_write_betas(file.path(fdir, sprintf("sub-%s_task-objects_run-%d_space-MNI_desc-lss_betas", s, r)),
+      dsl_write_betas(file.path(fdir, sprintf("sub-%s_task-objects_run-%d_space-%s_desc-lss_betas", s, r, space_label)),
                       d, space, "category", mask_arr, seed = 100 * si + r)
       for (ph in c("encoding", "retrieval")) {
         dm <- data.frame(stimulus = stims, category = category, phase = ph, stringsAsFactors = FALSE)
-        dsl_write_betas(file.path(fdir, sprintf("sub-%s_task-memory_acq-%s_run-%d_space-MNI_desc-lss_betas",
-                                                s, ph, r)),
+        dsl_write_betas(file.path(fdir, sprintf("sub-%s_task-memory_acq-%s_run-%d_space-%s_desc-lss_betas",
+                                                s, ph, r, space_label)),
                         dm, space, "category", mask_arr, seed = 1000 * si + 10 * r + nchar(ph))
       }
     }
@@ -77,12 +77,12 @@ dsl_fixture <- function(dir = tempfile("rmvpa-dsl-"), subjects = c("01", "02"), 
   dir
 }
 
-dsl_write_project <- function(dir, extra_sets = TRUE, assert = "classes_in_every_fold") {
+dsl_write_project <- function(dir, extra_sets = TRUE, assert = "classes_in_every_fold", space_label = "MNI") {
   lines <- c(
     'rmvpa: "0.1"',
     "data:",
     "  bids: derivatives/lss",
-    "  space: MNI",
+    paste0("  space: ", space_label),
     "  mask: brain",
     "  sets:",
     "    objects: { task: objects, desc: lss }"

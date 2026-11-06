@@ -171,6 +171,11 @@ rmvpa_compile <- function(project = ".", analysis, subject) {
   if (kind == "regions") {
     atlas <- neuroim2::read_vol(.dsl_resolve_path(cfg$scope$regions$atlas, spec$project$root))
     res <- run_regional(ms, region_mask = atlas, backend = backend, compute_performance = TRUE)
+    if (!draft && identical(spec$inference_support$kind, "regional_permutation") && identical(inf$test, "permutation")) {
+      pc <- .dsl_permutation_control(inf, seed = cfg$run$seed, rsa_joint = cell$rsa_joint)
+      perm <- rMVPA::run_permutation_regional(ms, atlas, observed = res, perm_ctrl = pc)
+      attr(res, "rmvpa_permutation") <- perm
+    }
     pt <- res$performance_table
     if (inherits(res, "regional_mvpa_result") && (is.null(pt) || ncol(pt) <= 1L)) {
       stop("every region failed, so there are no results to write. Inspect the per-region errors with ",
@@ -255,6 +260,25 @@ rmvpa_compile <- function(project = ".", analysis, subject) {
       lt <- .dsl_read_table(.dsl_resolve_path(labels, spec$project$root))
       names(lt)[1] <- "roinum"
       pt <- merge(lt, pt, by = "roinum", all.y = TRUE)
+    }
+    perm <- attr(result, "rmvpa_permutation")
+    if (!is.null(perm)) {
+      # One p, FDR and family-wise column per tested metric, beside its value.
+      for (m in perm$metrics) {
+        t <- perm$table[perm$table$metric == m, ]
+        lab <- .dsl_stat_label(m)
+        at <- match(pt$roinum, t$roinum)
+        pt[[paste0(lab, "_p")]] <- t$p[at]
+        pt[[paste0(lab, "_pfdr")]] <- t$p_adj[at]
+        pt[[paste0(lab, "_pfwer")]] <- t$p_fwer[at]
+        maps <- c(p = "p", pfdr = "p_adj", pfwer = "p_fwer")
+        for (suffix in names(maps)) {
+          v <- perm$vol_results[[m]][[maps[[suffix]]]]
+          if (inherits(v, "NeuroVol")) {
+            written <- c(written, .dsl_write_vol(v, file.path(dir, sprintf("%s_stat-%s%s_statmap.nii.gz", prefix, lab, suffix))))
+          }
+        }
+      }
     }
     written <- c(written, .dsl_write_table(pt, file.path(dir, sprintf("%s_regions.tsv", prefix))))
     if (!is.null(result$vol_results)) {

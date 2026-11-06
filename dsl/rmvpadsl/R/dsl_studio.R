@@ -288,6 +288,10 @@
     if (grepl("(^|[_ ])(LH|lh|L)([_ ]|$)|^left|_left$|^Left", n)) "left"
     else if (grepl("(^|[_ ])(RH|rh|R)([_ ]|$)|^right|_right$|^Right", n)) "right" else NULL
   }
+  col_of <- function(r, nm) {
+    if (!all(vapply(tabs, function(t) nm %in% names(t), TRUE))) return(NULL)
+    vapply(tabs, function(t) { v <- t[[nm]][match(r, t$roinum)]; if (length(v) && is.finite(v)) signif(v, 4) else NA_real_ }, 1)
+  }
   regions <- lapply(ids, function(r) {
     li <- if (!is.null(lt)) match(r, lt[[1]]) else NA
     full <- if (!is.na(li) && !is.null(lname)) as.character(lname[li]) else paste("region", r)
@@ -297,7 +301,11 @@
     net <- if (!is.na(li) && !is.null(col("network"))) as.character(col("network")[li])
            else if (grepl("^[0-9]+Networks_[LR]H_", full)) sub("^[0-9]+Networks_[LR]H_([A-Za-z]+)_.*$", "\\1", full) else NULL
     list(index = r, name = short, full = full, hemisphere = hemi, network = net,
-         values = vapply(tabs, function(t) { v <- t[[metric]][match(r, t$roinum)]; if (length(v) && is.finite(v)) round(v, 4) else NA_real_ }, 1))
+         values = vapply(tabs, function(t) { v <- t[[metric]][match(r, t$roinum)]; if (length(v) && is.finite(v)) round(v, 4) else NA_real_ }, 1),
+         # Each subject's own test of this parcel (rmvpa run with a regional
+         # permutation null): FDR across that subject's parcels, and family-wise.
+         pfdr = col_of(r, paste0(.dsl_stat_label(metric), "_pfdr")),
+         pfwer = col_of(r, paste0(.dsl_stat_label(metric), "_pfwer")))
   })
   lab <- .studio_on_grid(neuroim2::read_vol(afile), grid$space)
   lab[!is.finite(lab)] <- 0
@@ -311,9 +319,11 @@
        atlas = list(name = .studio_atlas_name(afile, lt), short = .studio_atlas_name(afile, lt, short = TRUE), file = rg$atlas, md5 = md5,
                     n_parcels = if (!is.null(lt)) nrow(lt) else length(all_ids),
                     surface = if (identical(opt$status, "ready")) opt$id else NULL,
-                    surface_option = opt[intersect(c("id", "template", "exact", "status", "label", "source", "size", "reason"), names(opt))]),
+                    surface_option = opt[intersect(c("id", "template", "exact", "tag", "status", "label", "source", "size", "reason"), names(opt))]),
        labels = .studio_i32(round(lab)),
        null = list(kind = if (identical(inf$test, "permutation")) spec$inference_support$kind else "none",
+                   permutations = if (identical(inf$test, "permutation")) inf$permutations else NULL,
+                   p_floor = inf$p_floor, correction = inf$correction,
                    description = inf$null %||% spec$inference_support$description),
        sidecar = have[[1]]$sidecar)
 }

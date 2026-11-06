@@ -240,13 +240,28 @@ finds next to your data (fMRIPrep's `anat/` outputs) or the analysis mask, and
 for an MNI data space it offers the TemplateFlow template, fetched when you
 pick it. Regional results can also be drawn on the cortex: Schaefer-2018
 atlases exactly (CBIG's own fsaverage5 labels), other MNI-space atlases
-approximately, marked as such. Downloads are cached in
+approximately, marked as such, and native-space atlases on the subject's own
+fMRIPrep surfaces (found with bidser when it is installed). Downloads are cached in
 `tools::R_user_dir("rmvpadsl", "cache")`.
 
 An export holds result maps and summaries but no beta images; send the
 folder, or put it on any static host. `rmvpa export --fetch` (or
 `rmvpa_export_studio(fetch = TRUE)`) first fetches the template and cortical
 surfaces, so the export carries them.
+
+# Regional permutation tests
+
+With an rMVPA that has `run_permutation_regional()`, regional decode and RSA
+analyses are tested like searchlights: the same `permutation_control()`
+relabellings, but every region is refitted under every permutation, so each
+region gets its own exact null and nothing is pooled. The region table holds
+`<metric>_p`, `<metric>_pfdr` (Benjamini-Hochberg across the subject's
+regions) and `<metric>_pfwer` (single-step minP, family-wise). As for
+searchlights, inference is per subject; the smallest p is 1/(permutations + 1).
+
+```yaml
+inference: { permutations: 1000, shuffle: within_run, correction: fdr }
+```
 
 # Preregistration
 
@@ -283,7 +298,7 @@ unchanged.
 
 * Trial-wise ITEM decoding needs TR-level time series, which the beta-series
   data model does not describe.
-* Permutation nulls for regions and whole brain need
-  `run_permutation_regional()` first.
+* Whole-brain permutation nulls: use `regions` with a whole-brain mask as the
+  atlas (one region) to get the regional test.
 * Group-level tests on the chance-centred per-subject maps are also left for
   later.
