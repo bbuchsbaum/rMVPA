@@ -234,11 +234,19 @@ rmvpa studio                       # serve on 127.0.0.1 and open the browser
 rmvpa export studio-snapshot       # or write a folder that opens from disk
 ```
 
-The server needs the httpuv package and listens on 127.0.0.1 only; the
-address it prints carries a session token. An export holds result maps and
-summaries but no beta images; send the folder, or put it on any static host.
-`rmvpa_studio(background = "anat.nii.gz")` draws slices over an anatomical
-image instead of the mask.
+The server listens on 127.0.0.1 only; the address it prints carries a session
+token. You never name an image: the studio draws the slices over a T1w it
+finds next to your data (fMRIPrep's `anat/` outputs) or the analysis mask, and
+for an MNI data space it offers the TemplateFlow template, fetched when you
+pick it. Regional results can also be drawn on the cortex: Schaefer-2018
+atlases exactly (CBIG's own fsaverage5 labels), other MNI-space atlases
+approximately, marked as such. Downloads are cached in
+`tools::R_user_dir("rmvpadsl", "cache")`.
+
+An export holds result maps and summaries but no beta images; send the
+folder, or put it on any static host. `rmvpa export --fetch` (or
+`rmvpa_export_studio(fetch = TRUE)`) first fetches the template and cortical
+surfaces, so the export carries them.
 
 # Preregistration
 

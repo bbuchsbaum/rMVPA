@@ -28,11 +28,26 @@ function get(key, url) {
 
 const q = encodeURIComponent;
 const EX = source === "example";
+const EXAMPLE_BACKGROUNDS = [{ id: "example", label: "MNI template (neuroim2, 4 mm)", status: "ready", default: true }];
 export const api = {
   project: () => get("project", EX ? "./example/project.json" : "api/project"),
-  template: () => get("template", EX ? "./example/template.json" : "api/template"),
+  // What can be drawn under the slices; an export carries only the one it used.
+  backgrounds: () => (EX ? Promise.resolve(EXAMPLE_BACKGROUNDS) : get("backgrounds", "api/backgrounds")),
+  template: (bg) => (EX || DATA ? get("template", EX ? "./example/template.json" : null)
+    : get(`template/${bg || ""}`, `api/template${bg ? `?background=${q(bg)}` : ""}`)),
   results: (name) => get(`results/${name}`, EX ? `./example/results-${name}.json` : `api/results?analysis=${q(name)}`),
-  surface: (template) => get(`surface/${template}`, EX ? `./example/surface-${template}.json` : `api/surface?template=${q(template)}`),
+  surface: (id) => get(`surface/${id}`, EX ? `./example/surface-${id}.json` : `api/surface?id=${q(id)}`),
+  // Asks the studio server to download (or compute) an asset it offered, then
+  // forgets cached answers that may change because of it.
+  canFetch: source === "server",
+  fetch: async (body) => {
+    if (source !== "server") throw new Error("Fetching needs the studio server: run `rmvpa studio`, or export with fetch = TRUE.");
+    const r = await fetch("api/fetch", { method: "POST", headers: { "Content-Type": "application/json", "X-Rmvpa-Token": TOKEN }, body: JSON.stringify(body) });
+    const out = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(out.error || `fetch failed (${r.status})`);
+    for (const k of [...cache.keys()]) if (k === "backgrounds" || k.startsWith("results/")) cache.delete(k);
+    return out;
+  },
 };
 
 export function decodeF32(b64) {

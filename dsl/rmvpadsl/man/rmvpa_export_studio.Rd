@@ -11,6 +11,7 @@ rmvpa_export_studio(
   background = NULL,
   surfaces = NULL,
   k = 3L,
+  fetch = FALSE,
   overwrite = FALSE
 )
 }
@@ -21,17 +22,24 @@ rmvpa_export_studio(
 
 \item{analyses}{Analyses to include; all by default.}
 
-\item{background}{Optional image used as the grey background of every
-slice (an anatomical in the data space, say); resampled to the grid of the
-first subject's mask. Without it the mask itself is drawn.}
+\item{background}{Optional image to draw under every slice, overriding
+what the studio finds. Usually not needed: the studio offers the analysis
+mask, any T1w image in the data space next to the data (fMRIPrep's
+\verb{anat/} outputs, say), and the TemplateFlow template for an MNI data
+space, which it fetches when you pick it.}
 
-\item{surfaces}{Optional studio surface files (JSON: fsaverage meshes with
-per-vertex parcel ids, as written by \code{dsl/app/fixture/make-regions.R}).
-Regional results on an atlas whose md5 matches a file's \code{atlas_md5} are
-also drawn on that cortical surface.}
+\item{surfaces}{Optional studio surface files (JSON, as written by
+\code{dsl/app/fixture/make-regions.R}). Usually not needed: for a Schaefer-2018
+atlas the studio fetches CBIG's fsaverage5 annotation, and for other
+MNI-space atlases it offers an approximate projection onto fsaverage5.}
 
 \item{k}{Subjects (other than the one shown) that must survive their own FDR
 for a centre to enter a subject's leave-one-subject-out region.}
+
+\item{fetch}{Download what the export would otherwise leave out: the
+TemplateFlow template as the slice background (when the project has no
+anatomical image of its own) and the cortical surface of each regional
+analysis. Without it, the export uses what is already cached.}
 
 \item{overwrite}{Replace \code{dir} if it already holds files.}
 }

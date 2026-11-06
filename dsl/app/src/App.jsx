@@ -3,6 +3,8 @@ import { api, source, decodeF32, decodeU8 } from "./api.js";
 import { Slices, PlaneSlice, COUNT_BINS } from "./brain.jsx";
 import { SubjectNull, SubjectStrip, AccuracyKey, CountKey, ACC } from "./charts.jsx";
 import { RegionsView } from "./regions.jsx";
+import { GlobalView } from "./global.jsx";
+import { BackgroundPicker, useBackground } from "./assets.jsx";
 
 const VERBS = {
   decode: "Predict a label or value", transfer: "Train on one set, test on another",
@@ -52,6 +54,7 @@ export default function App() {
   const [runHover, setRunHover] = useState(false);
   const hash = useHash();
   const [failed, setFailed] = useState(null);
+  const [bg, setBg] = useBackground();
   useEffect(() => { api.project().then(setProject).catch((e) => setFailed(e.message)); }, []);
   if (!project) return <div className="app"><div className="header"><div className="wordmark">rmvpa <span>studio</span></div></div>{failed && <div className="page"><p className="lede">Could not read the project: {failed}</p></div>}</div>;
 
@@ -84,7 +87,7 @@ export default function App() {
         <Nav project={project} current={name} kind={kind} blocked={blocked} />
         <main className="main">
           {kind === "a" && analysis ? <AnalysisView project={project} a={analysis} />
-            : kind === "r" && analysis ? <ResultsView project={project} a={analysis} />
+            : kind === "r" && analysis ? <ResultsView project={project} a={analysis} bg={bg} setBg={setBg} />
             : <ProjectView project={project} blocked={blocked} runHover={runHover} />}
         </main>
       </div>
@@ -268,7 +271,7 @@ function Provenance({ a, res, used, excluded, extra }) {
   );
 }
 
-function ResultsView({ project, a }) {
+function ResultsView({ project, a, bg, setBg }) {
   const [res, setRes] = useState(null);
   const [tpl, setTpl] = useState(null);
   const [hover, setHover] = useState(null);
@@ -277,7 +280,10 @@ function ResultsView({ project, a }) {
   const [view, setView] = useState(null);
   const [tileOrder, setTileOrder] = useState("id");
   const [sel, setSel] = useState(null);
-  useEffect(() => { setRes(null); api.results(a.name).then(setRes).catch(() => setRes({ missing: true })); api.template().then(setTpl); }, [a.name]);
+  const [reload, setReload] = useState(0);
+  useEffect(() => { setRes(null); api.results(a.name).then(setRes).catch(() => setRes({ missing: true })); }, [a.name, reload]);
+  // A background that is gone (or not fetched) falls back to the default.
+  useEffect(() => { api.template(bg).then(setTpl).catch(() => api.template().then(setTpl)); }, [bg]);
   const vol = useMemo(() => (tpl ? { dims: tpl.dims, template: decodeU8(tpl.template) } : null), [tpl]);
   const maps = useMemo(() => (res?.maps ? Object.fromEntries(Object.entries(res.maps).map(([k, v]) => [k, decodeF32(v)])) : {}), [res]);
   const planes = useMemo(() => Object.fromEntries((res?.subjects || []).filter((s) => typeof s.slice === "string").map((s) => [s.id, decodeF32(s.slice)])), [res]);
@@ -301,7 +307,9 @@ function ResultsView({ project, a }) {
   const excluded = a.cells.filter((c) => !inN(c.subject)).map((c) => `sub-${c.subject} (${c.status === "missing" ? "not run" : c.status})`);
   const n = a.cells.filter((c) => inN(c.subject)).length;
 
-  if (res.regions) return <RegionsView a={a} res={res} Provenance={Provenance} used={n} excluded={excluded} />;
+  const picker = <BackgroundPicker value={tpl.background?.id || bg} onChange={setBg} />;
+  if (res.regions) return <RegionsView a={a} res={res} tpl={tpl} picker={picker} onReload={() => setReload((k) => k + 1)} Provenance={Provenance} used={n} excluded={excluded} />;
+  if (res.global) return <GlobalView a={a} res={res} Provenance={Provenance} used={n} excluded={excluded} />;
   if (!res.subjects || !res.maps?.group_mean) return <div className="page"><h1>{a.name}</h1><p className="lede">{res.note || "The studio has no view for these results yet."}</p></div>;
   const tested = Boolean(res.maps.prevalence);
   const shown = tested ? (view || "count") : "mean";
@@ -342,13 +350,17 @@ function ResultsView({ project, a }) {
       <section className="fig">
         <div className="fig-head">
           <h2>{shown === "count" ? `How many of the ${nRan} subjects are significant at each centre` : `Mean ${what} of ${nRan} subjects`}</h2>
-          {tested && <div className="seg">
-            <button className={shown === "count" ? "on" : ""} onClick={() => setView("count")}>Subjects significant</button>
-            <button className={shown === "mean" ? "on" : ""} onClick={() => setView("mean")}>Mean {what}</button>
-          </div>}
+          <div className="head-tools">
+            {picker}
+            {tested && <div className="seg">
+              <button className={shown === "count" ? "on" : ""} onClick={() => setView("count")}>Subjects significant</button>
+              <button className={shown === "mean" ? "on" : ""} onClick={() => setView("mean")}>Mean {what}</button>
+            </div>}
+          </div>
         </div>
         {shown === "count"
-          ? <Slices template={vol.template} map={prev} dims={vol.dims} mode="count" top={tops} slices={slices} />
+          ? <>{tops === 0 && <p className="nothing" role="status"><b>No centre survives its own FDR (q &lt; .05) in any of the {nRan} subjects.</b> The slices below are blank for that reason, not because data are missing.{provisional ? ` With ${res.null.permutations} permutations p resolves only to about ${res.null.p_resolution}.` : ""}</p>}
+            <Slices template={vol.template} map={prev} dims={vol.dims} mode="count" top={tops} slices={slices} /></>
           : <Slices template={vol.template} map={maps.group_mean} dims={vol.dims} threshold={res.chance} top={top} slices={slices} />}
         <div className="subhead">
           <p className="fig-caption" style={{ margin: 0 }}>{shown === "count"
@@ -356,6 +368,7 @@ function ResultsView({ project, a }) {
             : <>Descriptive. Continuous from {res.classes ? "chance" : "the reference"} ({res.chance}) to {top.toFixed(2)}; no threshold is implied.</>}</p>
           {shown === "count" ? <CountKey bins={COUNT_BINS} /> : <AccuracyKey chance={res.chance} domain={[domain[0], Math.max(top, res.chance + 1e-6)]} label="" />}
         </div>
+
       </section>
 
       {(hasNull(selected) || ranked) && <section className="fig">

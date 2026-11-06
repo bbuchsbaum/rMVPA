@@ -294,3 +294,21 @@ kbd { font: 11px var(--mono); padding: 1px 5px; border-radius: 4px; border: 1px 
 .ptag { position: absolute; transform: translate(-50%, -140%); font: 600 10.5px var(--sans); color: var(--ink); background: color-mix(in srgb, var(--paper) 85%, transparent); padding: 0 4px; border-radius: 3px; white-space: nowrap; pointer-events: none; }
 .empty-detail { padding: 14px 0; color: var(--ink-2); max-width: 90ch; }
 .empty-detail b { color: var(--ink); }
+
+/* Background picker and the cortex offer (src/assets.jsx) */
+.bg-pick { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-2); flex-wrap: wrap; }
+.bg-label { color: var(--ink-3); }
+.bg-only { color: var(--ink-2); }
+.select.small { height: 26px; font-size: 12px; padding: 0 6px; max-width: 420px; }
+.bg-note { color: var(--ink-3); font-size: 12px; max-width: 520px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bg-note.bad { color: var(--warm); white-space: normal; }
+.offer { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 28px 24px; border: 1px dashed var(--line-2); border-radius: 8px; min-height: 150px; }
+.offer p { margin: 6px 0 0; color: var(--ink-2); max-width: 680px; line-height: 1.45; }
+.tag-approx { margin-left: 8px; font-size: 11px; padding: 1px 6px; border-radius: 4px; background: #f6e7c8; color: #7a5a12; }
+.head-tools { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.nothing { margin: 0 0 10px; padding: 8px 12px; background: var(--surface); border-left: 3px solid var(--ink-3); color: var(--ink-2); max-width: 90ch; }
+.nothing b { color: var(--ink); }
+table.values { border-collapse: collapse; font-size: 13px; }
+table.values th, table.values td { padding: 4px 18px 4px 0; text-align: right; border-bottom: 1px solid var(--line); }
+table.values th:first-child, table.values td:first-child { text-align: left; }
+table.values th { color: var(--ink-3); font-weight: 500; }

@@ -22,12 +22,14 @@ Imports:
     jsonlite,
     digest,
     future,
+    freesurferformats,
+    gifti,
+    httpuv,
     methods,
     stats,
     tools,
     utils
 Suggests:
-    httpuv,
     testthat (>= 3.0.0),
     futile.logger,
     knitr,
@@ -51,3 +53,4 @@ Collate:
     'dsl_scaffold.R'
     'dsl_cli.R'
     'dsl_studio.R'
+    'dsl_studio_assets.R'

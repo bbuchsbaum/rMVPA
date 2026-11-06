@@ -5,6 +5,18 @@
   session token and Host/Origin checks; `rmvpa_export_studio()`
   (`rmvpa export <dir>`) writes it with the project's results to a folder
   that opens from disk with no R or server. Both read rmvpa_run() outputs only.
+* The studio finds or fetches the images it draws, so none has to be named.
+  Under the slices it offers the analysis mask, any T1w in the data space next
+  to the data (fMRIPrep `anat/`), and for MNI spaces the TemplateFlow template,
+  fetched when picked. Regional results go on fsaverage5: exactly for
+  Schaefer-2018 atlases (CBIG's own annotation, recognised by file name or
+  label table), approximately for other MNI-space atlases (sampled at
+  mid-thickness, each hemisphere kept to its own parcels, and labelled
+  approximate). Downloads happen only on the user's click (or
+  `rmvpa_export_studio(fetch = TRUE)`) and are cached in
+  `tools::R_user_dir("rmvpadsl", "cache")`.
+* The studio has a whole-brain view, and httpuv, gifti and freesurferformats
+  are now imported, so `rmvpa studio` works after a plain install.
 * Searchlight permutation runs also write the pooled null as 1001 quantiles
   (`*_stat-<metric>_null.tsv`), so its distribution can be redrawn.
 

@@ -7,6 +7,7 @@ import { VolumeAtlas, SurfaceAtlas, ParcelValues } from "neuroatlasjs";
 import { api, decodeU8 } from "./api.js";
 import { ParcelSlices, diverge } from "./brain.jsx";
 import { meanCI, ticks } from "./charts.jsx";
+import { SurfaceOffer } from "./assets.jsx";
 
 const CortexViews = React.lazy(() => import("./surface.jsx"));
 
@@ -27,11 +28,9 @@ function groupsOf(stats) {
   return [...known, ...nets.filter((k) => !known.some(([kk]) => kk === k)).map((k) => [k, k])];
 }
 
-export function useRegionalData(res) {
-  const [tpl, setTpl] = useState(null);
+export function useRegionalData(res, tpl) {
   const [surf, setSurf] = useState(null);
   const surfName = res?.atlas?.surface;
-  useEffect(() => { api.template().then(setTpl); }, []);
   useEffect(() => {
     setSurf(null);
     if (surfName) api.surface(surfName).then(setSurf).catch(() => setSurf(false)); else setSurf(false);
@@ -49,16 +48,19 @@ export function useRegionalData(res) {
     const stats = res.regions.map((r) => ({ ...r, ...meanCI(r.values.filter((v) => typeof v === "number")) }));
     const pv = new ParcelValues(volAtlas.regions, stats.map((s) => ({ id: s.index, value: s.mean })));
     let surface = null;
+    // Vertices of parcels this analysis has no value for are left uncoloured.
+    const ids = new Set(res.regions.map((r) => r.index));
+    const known = (l) => l.map((v) => (ids.has(v) ? v : 0));
     if (surf) {
       const hemi = (h) => ({
         positions: new Float32Array(b64(surf[h].positions)), faces: new Uint32Array(b64(surf[h].faces)),
-        sulc: new Float32Array(b64(surf[h].sulc)), labels: new Int32Array(b64(surf[h].labels)),
+        sulc: new Float32Array(b64(surf[h].sulc)), labels: known(new Int32Array(b64(surf[h].labels))),
       });
       const mesh = { left: hemi("left"), right: hemi("right") };
       const sAtlas = new SurfaceAtlas({ name: res.atlas.name, template: surf.template, regions: volAtlas.regions, left: mesh.left.labels, right: mesh.right.labels });
       const p = sAtlas.project(pv, NaN);
       const rel = (a) => Float32Array.from(a, (v) => v - res.chance);
-      surface = { mesh, projected: { left: rel(p.left), right: rel(p.right) }, template: surf.template, source: surf.source };
+      surface = { mesh, projected: { left: rel(p.left), right: rel(p.right) }, template: surf.template, source: surf.source, exact: surf.exact !== false };
     }
     // Six axial slices spread over the labelled extent.
     const plane = dims[0] * dims[1];
@@ -147,14 +149,16 @@ function DivergingKey({ chance, span, deadzone }) {
   );
 }
 
-export function RegionsView({ a, res, Provenance, used, excluded }) {
-  const data = useRegionalData(res);
+export function RegionsView({ a, res, tpl, picker, onReload, Provenance, used, excluded }) {
+  const data = useRegionalData(res, tpl);
   const [viewPick, setView] = useState("cortex");
   const [sel, setSel] = useState(null);
   const [hover, setHover] = useState(null);
   if (!data) return <div className="page">Loading…</div>;
   const { stats } = data;
-  const view = data.surface ? viewPick : "slices";
+  const offer = res.atlas.surface_option;
+  const cortexPossible = Boolean(data.surface) || (offer && offer.status !== "unavailable");
+  const view = cortexPossible ? viewPick : "slices";
   const byId = new Map(stats.map((s) => [s.index, s]));
   const selected = sel != null ? byId.get(sel) : null;
   const homologue = selected?.hemisphere ? stats.find((s) => s.name === selected.name && s.hemisphere && s.hemisphere !== selected.hemisphere) : null;
@@ -182,27 +186,35 @@ export function RegionsView({ a, res, Provenance, used, excluded }) {
       <section className="fig">
         <div className="fig-head">
           <h2>Mean {what} of {res.subjects.length} subjects in each parcel</h2>
+          <div className="head-tools">
+          {view === "slices" && picker}
+          {view === "cortex" && data.surface?.exact === false && <span className="tag-approx" title="volumetric atlas sampled at fsaverage5 mid-thickness">approximate projection</span>}
           <div className="seg">
-            <button className={view === "cortex" ? "on" : ""} onClick={() => setView("cortex")} disabled={!data.surface}>Cortex</button>
+            <button className={view === "cortex" ? "on" : ""} onClick={() => setView("cortex")} disabled={!cortexPossible} title={cortexPossible ? "" : offer?.reason || "no cortical surface for this atlas"}>Cortex</button>
             <button className={view === "slices" ? "on" : ""} onClick={() => setView("slices")}>Slices</button>
           </div>
+          </div>
         </div>
-        {view === "cortex" && data.surface ? (
+        {view === "cortex" && !data.surface ? <SurfaceOffer option={offer} analysis={a.name} onReady={onReload} />
+        : view === "cortex" && data.surface ? (
           <Suspense fallback={<div className="cortex-wait">Drawing the cortex…</div>}>
             <CortexViews surface={data.surface.mesh} projected={data.surface.projected} selected={marked} span={span} deadzone={deadzone} onPick={pick} />
           </Suspense>
         ) : (
           <ParcelSlices template={data.template} values={data.voxelMeans} labels={data.labels} dims={data.dims} center={res.chance} span={span} deadzone={deadzone} slices={slices} selected={marked} names={names} onPick={pick} />
         )}
-        <div className="subhead">
+        {!(view === "cortex" && !data.surface) && <div className="subhead">
           <p className="fig-caption" style={{ margin: 0 }}>
             Each parcel takes one colour: the mean over subjects, blue below chance and red above; within ±0.01 of chance stays neutral. Click a parcel to see its subjects and its homologue (both outlined).
             {view === "cortex"
-              ? <> Shown on {data.surface?.template} (pial, sulcal shading) with the atlas's surface labels; the analysis itself ran on the volumetric atlas in the data space. Medial wall uncoloured.</>
+              ? (data.surface?.exact === false
+                ? <> Shown on {data.surface.template} (pial, sulcal shading). <b>Approximate:</b> each vertex takes the volumetric atlas's label at its mid-thickness position, and fsaverage is close to, not the same as, MNI152; the analysis itself ran on the volumetric atlas. Unlabelled vertices stay grey.</>
+                : <> Shown on {data.surface?.template} (pial, sulcal shading) with the atlas's surface labels; the analysis itself ran on the volumetric atlas in the data space. Medial wall uncoloured.</>)
               : <> The volumetric atlas the analysis used, resampled to the studio template for display.</>}
           </p>
           <DivergingKey chance={res.chance} span={span} deadzone={deadzone} />
-        </div>
+        </div>}
+
       </section>
 
       <section className="fig">
@@ -214,7 +226,7 @@ export function RegionsView({ a, res, Provenance, used, excluded }) {
       </section>
 
       <section className="fig">
-        <div className="fig-head"><h2>All {stats.length} parcels{stats.some((s) => s.network) ? ", by network" : ""}</h2><span className="origin">LH ● · RH ○ · grey tick: {stats.some((s) => s.network) ? "network" : "overall"} mean · click a dot to select</span></div>
+        <div className="fig-head"><h2>All {stats.length} parcels{stats.some((s) => s.network) ? ", by network" : ""}{res.atlas.n_parcels > stats.length ? <span className="origin"> · {stats.length} of the atlas's {res.atlas.n_parcels} have values; the rest lie outside the analysis mask</span> : null}</h2><span className="origin">LH ● · RH ○ · grey tick: {stats.some((s) => s.network) ? "network" : "overall"} mean · click a dot to select</span></div>
         <NetworkStrip stats={stats} chance={res.chance} selected={selected?.index} homologue={homologue?.index} onSelect={setSel} hover={hover} setHover={setHover} domain={domain} />
         <p className="fig-caption"><b>{above} of {stats.length}</b> parcels have a 95% interval entirely above chance. With per-parcel intervals and no effect anywhere, about {Math.round(stats.length * 0.025)} would by chance. This count is a description, not a test. Same axis as the panel above.</p>
       </section>

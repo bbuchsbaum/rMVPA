@@ -44,7 +44,8 @@ function paint(cv, nx, ny, tplAt, valAt, opts, labelAt) {
     for (let i = 0; i < nx; i++) {
       const p = ((ny - 1 - j) * nx + i) * 4;
       const g = tplAt(i, j);
-      let c = [g, g, g];
+      // Outside the head is paper, not black: the ground should not outweigh the data.
+      let c = g < 8 ? [245, 245, 242] : [g, g, g];
       const v = valAt(i, j);
       if (mode === "diverge") {
         // Paper ground, faint anatomy, parcel colour, ink outline with a paper halo.

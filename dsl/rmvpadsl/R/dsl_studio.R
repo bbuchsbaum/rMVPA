@@ -4,9 +4,10 @@
 # Both read the same payloads, built here from a project and its outputs on
 # disk (the app's src/api.js documents how it finds them):
 #   project   analyses, explain rows, check findings, cell status
-#   template  the display grid: dims, affine and a grey background
+#   backgrounds   what can be drawn under the slices (dsl_studio_assets.R)
+#   template  the display grid: dims, affine and the chosen background
 #   results/<analysis>   per-subject maps or region tables, summarised
-#   surface/<template>   optional cortical meshes with per-vertex parcel ids
+#   surface/<id>  cortical meshes with per-vertex parcel ids (dsl_studio_assets.R)
 #
 # Nothing here fits a model. Results come from rmvpa_run()'s outputs only.
 
@@ -114,31 +115,29 @@
 
 # ---- template -----------------------------------------------------------------
 
-# The display grid is the first subject's mask. The grey background is
-# `background` (any image; resampled to that grid) or else the mask itself.
-.studio_grid <- function(project, background = NULL) {
+# The display grid is the first subject's mask; backgrounds are resampled to it.
+.studio_grid <- function(project) {
   data <- utils::modifyList(.dsl_defaults(project$version)$data, project$config$data)
   s1 <- .dsl_subjects(data, project$root)[1]
   mask <- neuroim2::read_vol(.dsl_mask_file(data, s1, project$root))
-  sp <- neuroim2::space(mask)
-  m <- as.array(mask) > 0
-  bg <- if (is.null(background)) {
-    ifelse(m, 150, 0)
-  } else {
-    b <- .studio_on_grid(neuroim2::read_vol(.dsl_resolve_path(background, project$root)), sp)
-    b[!is.finite(b)] <- 0
-    hi <- stats::quantile(b[b > 0], 0.995, names = FALSE)
-    if (!is.finite(hi) || hi <= 0) hi <- max(b, 1)
-    pmin(255, round(255 * pmax(b, 0) / hi))
-  }
-  list(space = sp, mask = m, bg = bg)
+  list(space = neuroim2::space(mask), mask = as.array(mask) > 0)
 }
 
-.studio_template <- function(project, grid) {
+.studio_bg_values <- function(grid, b) {
+  if (identical(b$id, "mask")) return(ifelse(grid$mask, 150, 0))
+  v <- .studio_on_grid(neuroim2::read_vol(b$path), grid$space)
+  v[!is.finite(v)] <- 0
+  hi <- stats::quantile(v[v > 0], 0.995, names = FALSE)
+  if (!is.finite(hi) || hi <= 0) hi <- max(v, 1)
+  pmin(255, round(255 * pmax(v, 0) / hi))
+}
+
+.studio_template <- function(project, grid, b) {
   A <- neuroim2::trans(grid$space)
   list(dims = dim(grid$space)[1:3], spacing = neuroim2::spacing(grid$space)[1:3],
        affine = lapply(1:4, function(i) unname(A[i, ])), space = project$config$data$space,
-       template = jsonlite::base64_enc(as.raw(as.integer(grid$bg))),
+       background = b[intersect(c("id", "label", "source"), names(b))],
+       template = jsonlite::base64_enc(as.raw(as.integer(.studio_bg_values(grid, b)))),
        mask = jsonlite::base64_enc(as.raw(as.integer(grid$mask))))
 }
 
@@ -212,7 +211,16 @@
   lo <- min(chance, stats::quantile(vals, 0.001, names = FALSE)); hi <- max(stats::quantile(vals, 0.999, names = FALSE), chance)
   pad <- 0.05 * (hi - lo + 1e-9); lo <- lo - pad; hi <- hi + pad
   if (metric == "Accuracy") { lo <- max(lo, 0); hi <- min(hi, 1) }
-  edges <- seq(lo, hi, length.out = 101L)
+  # Bins: about sqrt(centres), between 20 and 100, so small maps are not spiky.
+  nb <- max(20L, min(100L, as.integer(round(sqrt(sum(m))))))
+  edges <- seq(lo, hi, length.out = nb + 1L)
+  # A metric on a lattice (accuracy over n test trials moves in steps of 1/n)
+  # gets one bin per step, centred on it, instead of empty bins between steps.
+  u <- sort(unique(round(vals, 6)))
+  step <- if (length(u) > 2) min(diff(u)) else 0
+  if (step > (hi - lo) / nb && step > 0 && all(abs(vals / step - round(vals / step)) < 1e-4)) {
+    edges <- seq(floor(lo / step) * step - step / 2, ceiling(hi / step) * step + step / 2, by = step)
+  }
   sig_done <- if (tested) lapply(per[done], `[[`, "sig") else list()
   subjects <- lapply(seq_along(per), function(i) {
     p <- per[[i]]; c <- p$cell
@@ -254,7 +262,7 @@
        subjects = subjects, maps = maps, hist_edges = signif(edges, 6), sidecar = have[[1]]$sidecar)
 }
 
-.studio_regional <- function(spec, cells, grid, surfaces) {
+.studio_regional <- function(spec, cells, grid, opt) {
   have <- Filter(function(c) identical(c$status, "done") && !is.null(c$sidecar), cells)
   if (!length(have)) return(NULL)
   tabs <- lapply(have, function(c) {
@@ -293,27 +301,64 @@
   })
   lab <- .studio_on_grid(neuroim2::read_vol(afile), grid$space)
   lab[!is.finite(lab)] <- 0
+  all_ids <- setdiff(unique(round(lab)), 0)
+  lab[!round(lab) %in% ids] <- 0   # parcels the analysis has no value for (outside the mask) are not drawn
   md5 <- unname(tools::md5sum(afile))
-  surf <- Filter(function(s) identical(s$atlas_md5, md5), surfaces)
   inf <- have[[1]]$sidecar$inference
   list(analysis = spec$name, metric = metric, chance = chance, classes = chance_tab$classes,
        chance_source = if (!is.null(chance_tab$classes) && identical(metric, "Accuracy")) sprintf("1 / %d classes", chance_tab$classes) else NULL,
        subjects = vapply(have, `[[`, "", "id"), regions = regions,
-       atlas = list(name = basename(afile), short = sub("\\.nii(\\.gz)?$", "", basename(afile)), file = rg$atlas, md5 = md5,
-                    surface = if (length(surf)) surf[[1]]$template else NULL),
+       atlas = list(name = .studio_atlas_name(afile, lt), short = .studio_atlas_name(afile, lt, short = TRUE), file = rg$atlas, md5 = md5,
+                    n_parcels = if (!is.null(lt)) nrow(lt) else length(all_ids),
+                    surface = if (identical(opt$status, "ready")) opt$id else NULL,
+                    surface_option = opt[intersect(c("id", "template", "exact", "status", "label", "source", "size", "reason"), names(opt))]),
        labels = .studio_i32(round(lab)),
        null = list(kind = if (identical(inf$test, "permutation")) spec$inference_support$kind else "none",
                    description = inf$null %||% spec$inference_support$description),
        sidecar = have[[1]]$sidecar)
 }
 
-.studio_results <- function(project, name, grid, k = 3L, surfaces = list()) {
+.studio_global <- function(spec, cells) {
+  have <- Filter(function(c) identical(c$status, "done") && !is.null(c$sidecar), cells)
+  tabs <- lapply(have, function(c) {
+    f <- list.files(c$dir, pattern = "_global\\.tsv$", full.names = TRUE)
+    if (length(f)) .dsl_read_table(f[1]) else NULL
+  })
+  ok <- !vapply(tabs, is.null, TRUE)
+  have <- have[ok]; tabs <- tabs[ok]
+  if (!length(have)) return(NULL)
+  num <- names(tabs[[1]])[vapply(tabs[[1]], is.numeric, TRUE)]
+  if (!length(num)) return(NULL)
+  chance_tab <- have[[1]]$sidecar$chance
+  metric <- if ("Accuracy" %in% num) "Accuracy" else num[1]
+  inf <- have[[1]]$sidecar$inference
+  list(analysis = spec$name, global = TRUE, metric = metric, metrics = num,
+       chance = chance_tab[[metric]] %||% 0, classes = chance_tab$classes,
+       chance_source = if (!is.null(chance_tab$classes) && identical(metric, "Accuracy")) sprintf("1 / %d classes", chance_tab$classes) else NULL,
+       subjects = lapply(seq_along(have), function(i) list(id = have[[i]]$id,
+         values = stats::setNames(lapply(num, function(m) { v <- tabs[[i]][[m]][1]; if (is.finite(v)) round(v, 4) else NULL }), num))),
+       null = list(kind = if (identical(inf$test, "permutation")) spec$inference_support$kind else "none",
+                   description = inf$null %||% spec$inference_support$description),
+       sidecar = have[[1]]$sidecar)
+}
+
+# A readable atlas name: Schaefer's own, else the BIDS atlas-/desc- entities.
+.studio_atlas_name <- function(afile, lt, short = FALSE) {
+  sc <- .studio_schaefer_of(afile, lt)
+  if (!is.null(sc)) return(if (short) sprintf("Schaefer-%d", sc$n) else sprintf("Schaefer-2018, %d parcels, %d networks", sc$n, sc$k))
+  e <- .dsl_parse_bids_name(afile)$entities
+  if (!is.null(e$atlas)) return(paste(c(e$atlas, if (!short) e$desc), collapse = " "))
+  sub("\\.nii(\\.gz)?$", "", basename(afile))
+}
+
+.studio_results <- function(project, name, grid, k = 3L, surface_option = function(spec) NULL) {
   if (!name %in% names(project$analyses)) stop("no analysis named '", name, "'", call. = FALSE)
   spec <- rmvpa_analysis(project, name)
   cells <- .studio_cells(project, spec)
   out <- switch(spec$scope_kind,
                 searchlight = .studio_searchlight(spec, cells, grid, k),
-                regions = .studio_regional(spec, cells, grid, surfaces),
+                regions = .studio_regional(spec, cells, grid, surface_option(spec)),
+                whole_brain = .studio_global(spec, cells),
                 list(analysis = name, note = sprintf("The studio has no view for %s results yet; see %s.",
                                                      spec$scope_kind, .studio_tilde(.dsl_out_dir(spec)))))
   out %||% list(missing = TRUE)
@@ -331,30 +376,87 @@
   stats::setNames(out, vapply(out, `[[`, "", "template"))
 }
 
-# Everything the app can ask for, keyed as in src/api.js.
+# Everything the app can ask for, keyed as in src/api.js. `background` (a
+# path) and `surfaces` (studio surface files) are optional overrides; without
+# them the studio offers what it finds in the project or can fetch.
 .studio_source <- function(project, background = NULL, surfaces = NULL, k = 3L) {
   if (!inherits(project, "rmvpa_project")) project <- rmvpa_project(project)
   .dsl_require_json()
-  surf <- .studio_read_surfaces(surfaces %||% character())
+  given_surf <- .studio_read_surfaces(surfaces %||% character())
   grid <- NULL
-  get_grid <- function() { if (is.null(grid)) grid <<- .studio_grid(project, background); grid }
+  get_grid <- function() { if (is.null(grid)) grid <<- .studio_grid(project); grid }
   cache <- new.env(parent = emptyenv())
   stamp <- function(name) {
     spec <- rmvpa_analysis(project, name)
     f <- list.files(.dsl_out_dir(spec), recursive = TRUE, all.files = TRUE, full.names = TRUE)
     paste(c(f, format(file.mtime(f), "%s")), collapse = "|")
   }
+  backgrounds <- function() {
+    bs <- .studio_backgrounds(project)
+    if (!is.null(background)) {
+      for (i in seq_along(bs)) bs[[i]]$default <- FALSE
+      bs <- c(list(list(id = "given", label = basename(background), source = background, status = "ready",
+                        default = TRUE, path = .dsl_resolve_path(background, project$root))), bs)
+    }
+    bs
+  }
+  pick_bg <- function(id) {
+    bs <- backgrounds()
+    b <- if (is.null(id) || !nzchar(id)) Find(function(x) isTRUE(x$default), bs) else Find(function(x) identical(x$id, id), bs)
+    if (is.null(b)) stop("no background '", id, "'", call. = FALSE)
+    if (!identical(b$status, "ready")) stop("background '", id, "' is not fetched yet", call. = FALSE)
+    b
+  }
+  option <- function(spec) .studio_surface_option(project, spec, given_surf)
+  surface_for <- function(id) {
+    g <- Find(function(s) identical(paste0("given-", s$atlas_md5), id), given_surf)
+    if (!is.null(g)) return(g)
+    for (a in names(rmvpa_project(project$file)$analyses)) {
+      spec <- tryCatch(rmvpa_analysis(project, a), error = function(e) NULL)
+      if (is.null(spec) || !identical(spec$scope_kind, "regions")) next
+      opt <- option(spec)
+      if (identical(opt$id, id)) return(list(spec = spec, opt = opt))
+    }
+    stop("no surface '", id, "'", call. = FALSE)
+  }
+  surface <- function(id, fetch = FALSE) {
+    key <- paste0("surface:", id)
+    if (!is.null(cache[[key]])) return(cache[[key]])
+    hit <- surface_for(id)
+    if (is.null(hit$opt)) return(hit)
+    if (!fetch && !identical(hit$opt$status, "ready")) stop("surface '", id, "' is not fetched yet", call. = FALSE)
+    cache[[key]] <- .studio_surface_build(project, hit$spec, hit$opt, fetch = fetch)
+  }
   list(
     project = function() .studio_project(rmvpa_project(project$file)),
-    template = function() .studio_template(project, get_grid()),
-    results = function(name) {
-      key <- digest::digest(c(name, stamp(name)))
-      if (is.null(cache[[key]])) cache[[key]] <- .studio_results(project, name, get_grid(), k, surf)
+    backgrounds = function() lapply(backgrounds(), function(b) b[setdiff(names(b), "path")]),
+    template = function(bg = NULL) {
+      b <- pick_bg(bg)
+      key <- paste0("template:", b$id)
+      if (is.null(cache[[key]])) cache[[key]] <- .studio_template(project, get_grid(), b)
       cache[[key]]
     },
-    surface = function(template) {
-      if (is.null(surf[[template]])) stop("no surface '", template, "' was given to the studio", call. = FALSE)
-      surf[[template]]
+    results = function(name) {
+      spec <- rmvpa_analysis(project, name)
+      opt_state <- if (identical(spec$scope_kind, "regions")) option(spec)$status else ""
+      key <- digest::digest(c(name, stamp(name), opt_state))
+      if (is.null(cache[[key]])) cache[[key]] <- .studio_results(project, name, get_grid(), k, option)
+      cache[[key]]
+    },
+    surface = surface,
+    # Fetches (downloads, or computes) one asset the app offered.
+    fetch = function(kind, id = NULL, analysis = NULL) {
+      if (identical(kind, "background")) {
+        .studio_fetch_background(project, id)
+        return(list(ok = TRUE, backgrounds = lapply(backgrounds(), function(b) b[setdiff(names(b), "path")])))
+      }
+      if (identical(kind, "surface")) {
+        spec <- rmvpa_analysis(project, analysis %||% "")
+        opt <- option(spec)
+        surface(opt$id, fetch = TRUE)
+        return(list(ok = TRUE, surface = opt$id))
+      }
+      stop("unknown fetch kind '", kind, "'", call. = FALSE)
     },
     analyses = function() names(rmvpa_project(project$file)$analyses)
   )
@@ -416,7 +518,13 @@
     if (!(req$HTTP_HOST %||% "") %in% hosts) return(.studio_reply(403L, "Forbidden: unexpected Host header."))
     origin <- req$HTTP_ORIGIN
     if (!is.null(origin) && !origin %in% origins) return(.studio_reply(403L, "Forbidden: cross-origin request."))
-    if (!req$REQUEST_METHOD %in% c("GET", "HEAD")) return(.studio_reply(405L, "Method not allowed."))
+    method <- req$REQUEST_METHOD %||% "GET"
+    # The only POST is /api/fetch (downloads an asset the page offered); it
+    # needs the token header and a JSON body, so a form on another site
+    # cannot trigger it.
+    if (!(method %in% c("GET", "HEAD") || (identical(method, "POST") && identical(path, "/api/fetch")))) {
+      return(.studio_reply(405L, "Method not allowed."))
+    }
     q <- .studio_query(req$QUERY_STRING)
     if (path %in% c("/", "/index.html")) {
       if (!.studio_const_eq(q$token, token)) {
@@ -428,9 +536,18 @@
       if (!.studio_const_eq(req$HTTP_X_RMVPA_TOKEN, token)) return(.studio_reply(403L, "Forbidden: missing session token."))
       res <- tryCatch(switch(sub("^/api/", "", path),
                              project = source$project(),
-                             template = source$template(),
+                             backgrounds = source$backgrounds(),
+                             template = source$template(q$background),
                              results = source$results(q$analysis %||% ""),
-                             surface = source$surface(q$template %||% ""),
+                             surface = source$surface(q$id %||% ""),
+                             fetch = {
+                               if (!identical(method, "POST") || !grepl("^application/json", req$CONTENT_TYPE %||% "")) {
+                                 stop("fetch needs a POST with a JSON body", call. = FALSE)
+                               }
+                               body <- req$rook.input$read(65536L)
+                               b <- jsonlite::fromJSON(rawToChar(body), simplifyVector = TRUE)
+                               source$fetch(b$kind %||% "", id = b$id, analysis = b$analysis)
+                             },
                              structure(list(), class = "studio_404")),
                       error = function(e) structure(list(message = conditionMessage(e)), class = "studio_error"))
       if (inherits(res, "studio_404")) return(.studio_reply(404L, "Not found."))
@@ -463,13 +580,15 @@
 #' @param project An `rmvpa_project` or a project path.
 #' @param port Port to listen on; a free one by default.
 #' @param launch Open the studio in the browser.
-#' @param background Optional image used as the grey background of every
-#'   slice (an anatomical in the data space, say); resampled to the grid of the
-#'   first subject's mask. Without it the mask itself is drawn.
-#' @param surfaces Optional studio surface files (JSON: fsaverage meshes with
-#'   per-vertex parcel ids, as written by `dsl/app/fixture/make-regions.R`).
-#'   Regional results on an atlas whose md5 matches a file's `atlas_md5` are
-#'   also drawn on that cortical surface.
+#' @param background Optional image to draw under every slice, overriding
+#'   what the studio finds. Usually not needed: the studio offers the analysis
+#'   mask, any T1w image in the data space next to the data (fMRIPrep's
+#'   `anat/` outputs, say), and the TemplateFlow template for an MNI data
+#'   space, which it fetches when you pick it.
+#' @param surfaces Optional studio surface files (JSON, as written by
+#'   `dsl/app/fixture/make-regions.R`). Usually not needed: for a Schaefer-2018
+#'   atlas the studio fetches CBIG's fsaverage5 annotation, and for other
+#'   MNI-space atlases it offers an approximate projection onto fsaverage5.
 #' @param k Subjects (other than the one shown) that must survive their own FDR
 #'   for a centre to enter a subject's leave-one-subject-out region.
 #' @param block Keep serving until interrupted. The default does so outside
@@ -479,9 +598,6 @@
 #' @export
 rmvpa_studio <- function(project = ".", port = NULL, launch = interactive(), background = NULL,
                          surfaces = NULL, k = 3L, block = !interactive()) {
-  if (!requireNamespace("httpuv", quietly = TRUE)) {
-    stop("The studio server needs the 'httpuv' package: install.packages(\"httpuv\")", call. = FALSE)
-  }
   if (!inherits(project, "rmvpa_project")) project <- rmvpa_project(project)
   app <- .studio_app_dir()
   port <- as.integer(port %||% httpuv::randomPort(min = 7700L, max = 7999L))
@@ -530,11 +646,15 @@ print.rmvpa_studio <- function(x, ...) {
 #' @inheritParams rmvpa_studio
 #' @param dir Folder to write; created if needed.
 #' @param analyses Analyses to include; all by default.
+#' @param fetch Download what the export would otherwise leave out: the
+#'   TemplateFlow template as the slice background (when the project has no
+#'   anatomical image of its own) and the cortical surface of each regional
+#'   analysis. Without it, the export uses what is already cached.
 #' @param overwrite Replace `dir` if it already holds files.
 #' @return The path of the exported `index.html`, invisibly.
 #' @export
 rmvpa_export_studio <- function(project = ".", dir, analyses = NULL, background = NULL, surfaces = NULL,
-                                k = 3L, overwrite = FALSE) {
+                                k = 3L, fetch = FALSE, overwrite = FALSE) {
   if (!inherits(project, "rmvpa_project")) project <- rmvpa_project(project)
   app <- .studio_app_dir()
   if (dir.exists(dir) && length(list.files(dir, all.files = TRUE, no.. = TRUE))) {
@@ -549,13 +669,27 @@ rmvpa_export_studio <- function(project = ".", dir, analyses = NULL, background 
   proj <- src$project()
   proj$exported <- format(Sys.time(), "%Y-%m-%d %H:%M %Z")
   payload$project <- proj
-  payload$template <- src$template()
+  bgs <- src$backgrounds()
+  if (fetch && is.null(background)) {
+    tf <- Find(function(b) startsWith(b$id, "templateflow:") && identical(b$status, "fetch"), bgs)
+    if (!is.null(tf) && !any(vapply(bgs, function(b) startsWith(b$id, "file:"), TRUE))) {
+      tryCatch(src$fetch("background", id = tf$id), error = function(e) warning(conditionMessage(e), call. = FALSE))
+      bgs <- src$backgrounds()
+      for (i in seq_along(bgs)) bgs[[i]]$default <- identical(bgs[[i]]$id, tf$id)
+    }
+  }
+  bg <- Find(function(b) isTRUE(b$default) && identical(b$status, "ready"), bgs) %||% bgs[[1]]
+  payload$template <- src$template(bg$id)
+  bg$default <- TRUE
+  payload$backgrounds <- list(bg)
   analyses <- analyses %||% src$analyses()
   for (a in analyses) {
+    if (fetch) tryCatch(if (identical(rmvpa_analysis(project, a)$scope_kind, "regions")) src$fetch("surface", analysis = a),
+                        error = function(e) message(a, ": no cortical surface (", conditionMessage(e), ")"))
     r <- tryCatch(src$results(a), error = function(e) { warning(a, ": ", conditionMessage(e), call. = FALSE); NULL })
     if (!is.null(r) && !isTRUE(r$missing)) payload[[paste0("results/", a)]] <- r
-    tpl <- r$atlas$surface
-    if (!is.null(tpl) && is.null(payload[[paste0("surface/", tpl)]])) payload[[paste0("surface/", tpl)]] <- src$surface(tpl)
+    sid <- r$atlas$surface
+    if (!is.null(sid) && is.null(payload[[paste0("surface/", sid)]])) payload[[paste0("surface/", sid)]] <- src$surface(sid)
   }
   tags <- character()
   for (key in names(payload)) {
