@@ -257,7 +257,10 @@ relabellings, but every region is refitted under every permutation, so each
 region gets its own exact null and nothing is pooled. The region table holds
 `<metric>_p`, `<metric>_pfdr` (Benjamini-Hochberg across the subject's
 regions) and `<metric>_pfwer` (single-step minP, family-wise). As for
-searchlights, inference is per subject; the smallest p is 1/(permutations + 1).
+searchlights, inference is per subject; the smallest p is 1/(permutations + 1),
+so regions default to 1000 permutations (with 100, no parcel of a 100-parcel
+atlas can pass FDR). Correlation and naive Bayes classifiers use rMVPA's
+prepared engine; a 111-parcel analysis takes about half a minute per subject.
 
 ```yaml
 inference: { permutations: 1000, shuffle: within_run, correction: fdr }

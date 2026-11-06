@@ -96,6 +96,12 @@
            "own exact null; nothing is pooled or binned). Allowed keys: ", paste(allowed, collapse = ", "), ".", call. = FALSE)
     }
     base <- tag(perm_defaults[intersect(allowed, names(perm_defaults))], dlayer)
+    # Exact per-region nulls resolve p only to 1/(permutations + 1), and FDR or
+    # family-wise correction over many regions needs that floor well below
+    # .05 / regions; the pooled searchlight null does not. So regions default
+    # to 1000 relabellings (cheap on the prepared engine).
+    base$permutations <- 1000L
+    origins[["inference.permutations"]] <- paste(dlayer, "(regions: exact per-region null)")
   } else {
     base <- tag(perm_defaults, dlayer)
   }

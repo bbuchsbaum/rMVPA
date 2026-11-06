@@ -4,7 +4,9 @@
   `run_permutation_regional()`: decode and RSA over regions default to
   `inference: { test: permutation }`, as the searchlight does, with the same
   shuffle and seed. Each region has its own exact null (only `permutations`,
-  `shuffle` and `correction` apply). `_regions.tsv` gains `<metric>_p`,
+  `shuffle` and `correction` apply), and they default to 1000 permutations:
+  an exact per-region null resolves p only to 1/(permutations + 1), which
+  must sit well below .05 / regions for FDR or family-wise correction. `_regions.tsv` gains `<metric>_p`,
   `_pfdr` and `_pfwer` columns, with matching statmaps. With an older rMVPA
   the analyses stay descriptive and `check` says what is missing. The studio
   marks, per parcel, the subjects whose own test survives FDR.
