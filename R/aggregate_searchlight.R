@@ -130,6 +130,25 @@
   list(S = S, centers = centers, mask_indices = mask_indices)
 }
 
+#' Region membership in the form .aggregate_prepare() takes for spheres
+#'
+#' `vox_sets` are voxel (grid) indices per region and `ids` the region ids;
+#' rows of S are regions and columns the dataset's mask voxels.
+#' @keywords internal
+#' @noRd
+.aggregate_region_neighbourhoods <- function(ds, vox_sets, ids) {
+  mask_indices <- ds$mask_indices
+  if (is.null(mask_indices)) mask_indices <- compute_mask_indices(ds$mask)
+  cols <- lapply(vox_sets, function(v) { cc <- match(v, mask_indices); unique(cc[!is.na(cc)]) })
+  S <- Matrix::sparseMatrix(
+    i = rep.int(seq_along(cols), lengths(cols)),
+    j = unlist(cols, use.names = FALSE),
+    x = 1,
+    dims = c(length(cols), length(mask_indices))
+  )
+  list(S = S, centers = ids, mask_indices = mask_indices, cols = cols)
+}
+
 #' Mann-Whitney AUC for each column of `score` (ties count one half), the
 #' value yardstick::roc_auc_vec() returns with event_level = "second".
 #' @keywords internal
@@ -414,10 +433,13 @@
 #' permutation test reuses them for every permutation.
 #' @keywords internal
 #' @noRd
-.aggregate_prepare <- function(model_spec, radius, centers = NULL, block_size = 4000L) {
+.aggregate_prepare <- function(model_spec, radius, centers = NULL, block_size = 4000L,
+                               neighbourhoods = NULL) {
   ds <- model_spec$dataset
   y_all <- y_train(model_spec)
-  nb <- .aggregate_neighbourhoods(ds, radius)
+  # `neighbourhoods` (from .aggregate_region_neighbourhoods()) replaces the
+  # spheres with arbitrary voxel sets, e.g. the regions of a regional analysis.
+  nb <- neighbourhoods %||% .aggregate_neighbourhoods(ds, radius)
   if (!is.null(centers)) {
     keep <- match(centers, nb$centers)
     keep <- keep[!is.na(keep)]
@@ -451,6 +473,7 @@
     kind = attr(model_spec$performance, "rmvpa_perf_kind", exact = TRUE),
     class_metrics = isTRUE(attr(model_spec$performance, "rmvpa_class_metrics", exact = TRUE)),
     generic_cols = function(centre_ids) {
+      if (!is.null(nb$cols)) return(nb$cols[match(centre_ids, nb$centers)])
       missing <- setdiff(as.character(centre_ids), ls(cache))
       if (length(missing)) {
         cols <- .engine_sphere_cols_aligned(ds, radius, as.integer(missing), nb$mask_indices)

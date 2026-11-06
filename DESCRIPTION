@@ -147,6 +147,7 @@ Collate:
     'feature_rsa_da_model.R'
     'validate_analysis.R'
     'permutation_searchlight.R'
+    'permutation_regional.R'
     'api_lifecycle.R'
     'workflow_api.R'
 RoxygenNote: 7.3.3
