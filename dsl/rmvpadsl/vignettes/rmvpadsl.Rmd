@@ -1,0 +1,307 @@
+---
+title: "The rmvpa Analysis Language"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{The rmvpa Analysis Language}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(eval = FALSE)
+```
+
+# Overview
+
+The rmvpadsl package and its `rmvpa` command describe a whole study in
+small YAML files. A
+**project file**, `rmvpa.yml`, names the data once. Each file under
+`analyses/` describes one analysis with one **verb** (`decode`, `rsa`,
+`transfer`, ...), a **scope** (searchlight, regions or whole brain), and
+anything that differs from the defaults. Every analysis compiles to an
+ordinary rMVPA `model_spec` and runs through `run_searchlight()`,
+`run_regional()` or `run_global()`.
+
+Install the command once with `rmvpadsl::install_rmvpa_command("~/.local/bin")`.
+
+```bash
+rmvpa new derivatives/lss --target category   # writes rmvpa.yml and analyses/decode_category.yml
+rmvpa draft                                   # one subject, quick, no permutations
+rmvpa run                                     # checks, then runs every subject x analysis
+```
+
+The same steps from R:
+
+```{r}
+rmvpa_new("derivatives/lss", target = "category")
+rmvpa_run(".", draft = TRUE)
+rmvpa_run(".")
+```
+
+# The project file
+
+```yaml
+rmvpa: "0.1"
+data:
+  bids: derivatives/lss
+  space: MNI152NLin2009cAsym
+  mask: brain
+  sets:
+    objects:
+      task: objects
+      keep: { response: { in: [hit, correct_rejection] } }
+    encoding:  { task: memory, acq: encoding }
+    retrieval: { task: memory, acq: retrieval }
+folds:
+  by: run
+  assert: [classes_in_every_fold]
+run:
+  workers: 8
+  seed: 20261104
+```
+
+* `data.bids` is a BIDS-derivatives folder holding beta series. For subject
+  `XX` and a set, the beta images are the files under `sub-XX/` whose names
+  carry the set's entities and `space-<space>` and end in `_betas.nii.gz`.
+  Each image has a design table with the same name ending in `_betas.tsv`,
+  one row per volume. Several matching files (one per run) are concatenated
+  in run order, and a `run` column is added from the `run-` entity.
+* Instead of `bids`, `data.files` gives explicit templates, for example
+  `betas: betas/sub-{subject}_task-{task}_betas.nii.gz`.
+* `data.mask` is a `desc-` label (`brain` finds `*_desc-brain_mask.nii.gz`)
+  or a path.
+* Each **set** selects beta series by BIDS entities. `keep` filters design
+  rows before any folds are built. It accepts only equality or `{in: [...]}`.
+* All file paths except `extends` are relative to the project root.
+
+# Analysis files
+
+```yaml
+# analyses/decode_category.yml
+extends: ../rmvpa.yml
+decode:
+  set: objects
+  target: category
+scope:
+  searchlight: { radius: 6 }
+```
+
+`set:` can be left out when the project defines a single set. Each key has
+exactly one form; there are no shorthands, and unknown keys are errors with a
+suggestion:
+
+```
+analyses/decode_category.yml: decode.targte: unknown key 'targte'; did you mean 'target'?
+```
+
+`rmvpa explain decode_category` prints the resolved analysis, with every
+default filled in and each value tagged by its origin. The output is itself a
+valid analysis file:
+
+```yaml
+extends: ../rmvpa.yml
+decode:
+  method: sda_notune                           # default@0.1
+  set: objects                                 # analysis
+  target: category                             # analysis
+folds:
+  by: run                                      # project
+  scheme: leave_one_out                        # default@0.1
+  assert: [classes_in_every_fold]              # project
+scope:
+  searchlight:
+    sampling: standard                         # default@0.1
+    iterations: 4                              # default@0.1
+    radius: 6                                  # analysis
+inference:
+  test: permutation                            # default@0.1
+  permutations: 100                            # default@0.1
+  ...
+```
+
+Inheritance has one rule: maps merge key by key, and a scalar or list in the
+analysis replaces the project value. `~` removes an inherited key. `explain`
+lists each replaced list and each removal.
+
+# Verbs
+
+A verb fixes which keys an analysis takes. `method:` picks the algorithm from
+a closed list. `rmvpa verbs` prints the table.
+
+| Verb | Required keys | `method` | Compiles to | Scopes |
+|---|---|---|---|---|
+| `decode` | target | a registered classifier (`rmvpa classifiers`) | `mvpa_model` | all |
+| `transfer` | train_set, test_set, target | naive, remap_rrr, subspace_alignment, or a classifier | `naive_xdec_model`, `remap_rrr_model`, `subspace_alignment_model`, `mvpa_model` | searchlight, regions |
+| `rsa` | item, predictors | pearson, spearman, lm, rfit | `rsa_design` + `rsa_model` | searchlight, regions |
+| `rsa_vector` | item, distances | pearson, spearman | `vector_rsa_model` | searchlight, regions |
+| `rsa_contrast` | item, contrasts | average, L2_norm, crossnobis | `msreve_design` + `contrast_rsa_model` | searchlight |
+| `rsa_feature` | item, feature_spaces | pls, pca, glmnet, ridge | `feature_rsa_model` | searchlight, regions |
+| `rsa_era` | train_set, test_set, link | similarity, partition | `era_rsa_model`, `era_partition_model` | searchlight, regions |
+| `rsa_connect` | item, seed_region | | `repnet_model` | searchlight, regions |
+| `rsa_mediate` | item, predictor, outcome | | `repmed_model` | searchlight, regions |
+| `encode` | item, feature_spaces | banded_ridge | `banded_ridge_model` | whole_brain (voxelwise) |
+| `pattern` | target | | `pattern_model` | all |
+| `manova` | terms | | `manova_model` | searchlight, regions |
+| `custom` | r_file | | your `build_spec(dataset, design, config)` | all |
+
+Shared role names mean the same thing in every verb:
+
+* `target`: the design column to predict.
+* `item`: the design column naming the stimulus that indexes RDM and
+  feature-table rows.
+* `link`: the column that pairs rows across two sets.
+* `predictors` and `nuisance`: named RDM tables (CSV or TSV, item names in
+  the first column).
+
+RDMs and feature tables are written per item. For `rsa` they are expanded to
+trial level, because `rsa_model` compares trial patterns.
+
+# Inference
+
+The language never invents a null. The default for each verb and scope is
+the null that rMVPA actually computes:
+
+| Analysis | searchlight | regions | whole_brain |
+|---|---|---|---|
+| `decode` | pooled permutation null, adjusted by searchlight size, FDR over centres | none | none |
+| `rsa` | permutation; joint null with regression and more than one predictor | none | none |
+| `rsa_vector`, `rsa_feature` | model-internal permutations, uncorrected | model-internal, uncorrected | none |
+| everything else | none | none | none |
+
+"none" means the outputs are stamped *descriptive only*. Writing
+`inference: { test: permutation }` for one of those cells is an error that
+names the missing R piece. Searchlight permutations default to 100 (rMVPA's
+own default is 5). `rmvpa check` warns when model-internal permutations are
+below 1000.
+
+# Checking, running and re-running
+
+* `rmvpa check` validates every file. Then for each subject it finds the input
+  files, reads the design tables (not the images), checks referenced columns,
+  runs the fold assertions, compares the atlas grid with the mask, and
+  estimates the number of passes. It fits nothing.
+* `rmvpa run` always checks first. It asks before a large run (pass `--yes`
+  to skip the prompt) and then runs each subject x analysis cell.
+* A cell re-runs only when the hash of its resolved analysis or its input
+  files changes. `rmvpa status` shows `done`, `stale` or `missing` for every
+  cell.
+* `rmvpa draft` runs the first subject with a one-iteration randomized
+  searchlight and no permutations, into `derivatives/rmvpa-draft/`.
+
+Fold assertions come from a closed list:
+
+| Assertion | Applies to |
+|---|---|
+| `classes_in_every_fold` | decode, transfer, pattern |
+| `no_item_across_folds` | verbs with `item` |
+| `one_run_per_fold` | all |
+| `train_test_disjoint_runs` | transfer, rsa_era |
+
+An assertion that does not apply to a verb is an error. Repeated stimuli
+across runs are common and legitimate, so `rmvpa new` writes only
+`classes_in_every_fold`.
+
+# Outputs and provenance
+
+Results go to `derivatives/rmvpa/<analysis>/sub-<label>/`:
+
+```
+sub-01_task-objects_space-MNI_desc-decodecategory_stat-Accuracy_statmap.nii.gz
+sub-01_task-objects_space-MNI_desc-decodecategory_stat-Accuracyp_statmap.nii.gz
+sub-01_task-objects_space-MNI_desc-decodecategory_regions.tsv      # regions scope
+sub-01_task-objects_space-MNI_desc-decodecategory_rmvpa.json      # sidecar
+```
+
+The JSON sidecar records:
+
+* the resolved analysis and its hash, and the DSL and rMVPA versions;
+* the null actually used, with every permutation setting and the smallest
+  attainable p;
+* chance levels (AUC is reported chance-centred, so its chance is 0);
+* fold assertions, and rows before and after `keep`;
+* the MD5 of every input file;
+* lock status, and whether the run was a draft.
+
+# The studio
+
+`rmvpa studio` opens a browser view of the project: the analyses with each
+value's origin, what `check` reports, the status of every cell, and the
+results `run` wrote (per-subject searchlight maps against their own nulls,
+regional values on atlas slices). It reads outputs only.
+
+```sh
+rmvpa studio                       # serve on 127.0.0.1 and open the browser
+rmvpa export studio-snapshot       # or write a folder that opens from disk
+```
+
+The server listens on 127.0.0.1 only; the address it prints carries a session
+token. You never name an image: the studio draws the slices over a T1w it
+finds next to your data (fMRIPrep's `anat/` outputs) or the analysis mask, and
+for an MNI data space it offers the TemplateFlow template, fetched when you
+pick it. Regional results can also be drawn on the cortex: Schaefer-2018
+atlases exactly (CBIG's own fsaverage5 labels), other MNI-space atlases
+approximately, marked as such, and native-space atlases on the subject's own
+fMRIPrep surfaces (found with bidser when it is installed). Downloads are cached in
+`tools::R_user_dir("rmvpadsl", "cache")`.
+
+An export holds result maps and summaries but no beta images; send the
+folder, or put it on any static host. `rmvpa export --fetch` (or
+`rmvpa_export_studio(fetch = TRUE)`) first fetches the template and cortical
+surfaces, so the export carries them.
+
+# Regional permutation tests
+
+With an rMVPA that has `run_permutation_regional()`, regional decode and RSA
+analyses are tested like searchlights: the same `permutation_control()`
+relabellings, but every region is refitted under every permutation, so each
+region gets its own exact null and nothing is pooled. The region table holds
+`<metric>_p`, `<metric>_pfdr` (Benjamini-Hochberg across the subject's
+regions) and `<metric>_pfwer` (single-step minP, family-wise). As for
+searchlights, inference is per subject; the smallest p is 1/(permutations + 1),
+so regions default to 1000 permutations (with 100, no parcel of a 100-parcel
+atlas can pass FDR). Correlation and naive Bayes classifiers use rMVPA's
+prepared engine; a 111-parcel analysis takes about half a minute per subject.
+
+```yaml
+inference: { permutations: 1000, shuffle: within_run, correction: fdr }
+```
+
+# Preregistration
+
+`rmvpa lock` appends the hash of each resolved analysis to `rmvpa.lock`. The
+file is append-only. Later outputs are stamped `lock: match`, `mismatch` or
+`none`. Locking is optional and does not affect caching.
+
+# Escape hatch
+
+For anything the verbs do not cover, `custom:` sources an R file. Its
+builder, `build_spec(dataset, design, config)`, receives the loaded
+`mvpa_dataset` and the train design table, and must return a `model_spec`:
+
+```yaml
+extends: ../rmvpa.yml
+custom:
+  set: objects
+  r_file: specs/build_spec.R
+scope:
+  regions: { atlas: atlas/space-MNI_atlas-Schaefer200_dseg.nii.gz }
+```
+
+`rmvpa_compile(".", "decode_category", "01")` returns the compiled
+`model_spec` for one subject, so you can inspect or run it by hand.
+
+# Migrating from rmvpa-searchlight and rmvpa-regional
+
+`rmvpa migrate old_config.yaml --dir new_project` converts a single-set config
+for the old commands into a project with explicit file paths and one
+analysis. rMVPA's own `rmvpa-searchlight` and `rmvpa-regional` keep working
+unchanged.
+
+# Not in DSL 0.1
+
+* Trial-wise ITEM decoding needs TR-level time series, which the beta-series
+  data model does not describe.
+* Whole-brain permutation nulls: use `regions` with a whole-brain mask as the
+  atlas (one region) to get the regional test.
+* Group-level tests on the chance-centred per-subject maps are also left for
+  later.

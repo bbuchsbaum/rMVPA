@@ -1,0 +1,58 @@
+# The rmvpa analysis language and its studio (dsl/), which live outside the
+# rMVPA package. Two gates:
+#   1. the studio bundle committed in dsl/rmvpadsl/inst/app is what
+#      `npm run build` produces from dsl/app (so installs need no Node);
+#   2. rmvpadsl's tests pass against this checkout's rMVPA.
+on:
+  push:
+    branches: [main, master]
+    paths: ["dsl/**", "R/**", ".github/workflows/dsl.yaml"]
+  pull_request:
+    paths: ["dsl/**", "R/**", ".github/workflows/dsl.yaml"]
+
+name: dsl
+
+jobs:
+  studio-bundle:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dsl/app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: dsl/app/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - name: Committed bundle is up to date
+        run: |
+          if ! git diff --exit-code --stat -- ../rmvpadsl/inst/app || [ -n "$(git status --porcelain -- ../rmvpadsl/inst/app)" ]; then
+            echo "::error::dsl/rmvpadsl/inst/app is stale. Run 'npm ci && npm run build' in dsl/app and commit the result."
+            exit 1
+          fi
+
+  rmvpadsl:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      NOT_CRAN: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          working-directory: dsl/rmvpadsl
+          extra-packages: |
+            local::../..
+            any::httpuv
+            any::curl
+            any::rcmdcheck
+          needs: check
+      - name: Test rmvpadsl
+        working-directory: dsl/rmvpadsl
+        run: Rscript -e 'testthat::test_local(".", stop_on_failure = TRUE)'

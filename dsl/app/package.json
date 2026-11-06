@@ -1,0 +1,22 @@
+{
+  "name": "rmvpa-studio",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:example": "vite build --mode example"
+  },
+  "dependencies": {
+    "neuroatlasjs": "github:bbuchsbaum/neuroatlasjs#9050d48efdb4e138df8d3b4a3e39ac2d77182d2e",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "surfview": "^3.1.0",
+    "three": "^0.185.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "4.3.4",
+    "vite": "5.4.11"
+  }
+}
