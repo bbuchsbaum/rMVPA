@@ -146,6 +146,13 @@ feature_decode_model <- function(dataset,
     ...
   )
   spec$metric_names <- .fdm_metric_names(spec)
+  clash <- unique(spec$metric_names[duplicated(spec$metric_names)])
+  if (length(clash)) {
+    # e.g. a set named "manner_partial" next to the partial score of "manner"
+    stop("feature_decode_model: set, family and contrast names produce ",
+         "duplicate metric names (", paste(clash, collapse = ", "),
+         "); rename them.", call. = FALSE)
+  }
   spec
 }
 

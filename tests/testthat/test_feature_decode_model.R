@@ -146,6 +146,20 @@ test_that("feature_decode_model validates inputs and reports unusable regions", 
   expect_error(feature_decode_model(f$dataset, no_blocks, outer_crossval = 6L),
                "random row-wise CV is unsafe")
 
+  # a set whose name collides with another set's partial metric
+  clash <- feature_sets_design(
+    feature_sets(f$X, by_set(c("manner", "manner_partial", "acoustic", "lexical"))),
+    block_var_train = f$block, time_series = TRUE
+  )
+  expect_error(
+    feature_decode_model(f$dataset, clash, outer_crossval = 6L, partial = TRUE),
+    "duplicate metric names \\(manner_partial_r2, manner_partial_cor\\)"
+  )
+  expect_s3_class(
+    feature_decode_model(f$dataset, clash, outer_crossval = 6L),
+    "feature_decode_model"
+  )
+
   model <- build(tune_crossval = 2L, alphas = c(1, 100))
   flat <- f$Y
   flat[, f$left] <- 1
