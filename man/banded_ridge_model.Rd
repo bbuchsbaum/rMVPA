@@ -32,7 +32,7 @@ banded_ridge_model(
   seed = 1L,
   memory_limit_mb = 1024,
   nuisance = NULL,
-  nuisance_fit = c("within", "train")
+  nuisance_fit = c("train", "within")
 )
 }
 \arguments{
@@ -159,15 +159,21 @@ penalized and never contribute to the predictions, so all reported
 accuracies, including leave-band-out delta R2, describe variance in the
 nuisance-residualized held-out responses.}
 
-\item{nuisance_fit}{How held-out rows are residualized. `"within"` (default)
-fits the nuisance coefficients on the held-out rows themselves, so nothing
-is carried between training and held-out data and nothing is extrapolated;
-each held-out split then needs more rows than nuisance regressors.
-`"train"` applies the training-fit coefficients to the held-out rows. That
-suits exchangeable observations, but with drift-like regressors and
-contiguous held-out blocks the extrapolated fit dominates features and
-responses alike and inflates accuracy; a warning is given when the
-held-out rows lie outside the range of the training rows.}
+\item{nuisance_fit}{How held-out rows are residualized.
+`"train"` (default) applies the coefficients fitted on the training rows,
+so the transformation is fixed before the held-out rows are seen. This
+requires the held-out nuisance rows to lie within the range of the
+training rows. With drift-like regressors and contiguous held-out blocks
+they do not, the extrapolated fit would dominate features and responses
+alike and inflate accuracy, and the model stops with an error.
+`"within"` fits the nuisance coefficients on the held-out rows themselves.
+Nothing is carried between training and held-out data and nothing is
+extrapolated, but a held-out row's transformation then depends on the
+other rows of its assessment set, so the reported accuracy is conditional
+on each held-out block and is not the accuracy of a frozen
+training-derived pipeline. Each held-out split needs more rows than
+nuisance regressors. The mode used is recorded in
+`result$provenance$nuisance_fit`.}
 }
 \value{
 A `banded_ridge_model` specification for `run_banded_ridge()`.

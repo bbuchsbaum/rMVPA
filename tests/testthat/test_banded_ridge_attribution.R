@@ -538,7 +538,8 @@ test_that("banded_ridge_model applies nuisance regressors to full and reduced mo
   build <- function(nuisance) {
     banded_ridge_model(
       .bra_test_dataset(Y), design, outer_crossval = 4L, candidates = candidates,
-      delta_sets = "all", nuisance = nuisance, seed = 3L
+      delta_sets = "all", nuisance = nuisance, nuisance_fit = "within",
+      seed = 3L
     )
   }
   with_nuisance <- suppressWarnings(run_banded_ridge(build(N)))
@@ -548,6 +549,13 @@ test_that("banded_ridge_model applies nuisance regressors to full and reduced mo
   expect_lt(abs(effects$delta_cv_r2_b[[1L]]), 0.05)
   expect_gt(effects$delta_cv_r2_b[[2L]], 0.9)
   expect_error(build(N[-1L, , drop = FALSE]), "one row per observation")
+  expect_identical(with_nuisance$provenance$nuisance_fit, "within")
+  # training-only is the default; a single mild drift stays within range
+  default <- banded_ridge_model(.bra_test_dataset(Y), design, outer_crossval = 4L,
+                                candidates = candidates, nuisance = N, seed = 3L)
+  expect_identical(attr(default$nuisance, "fit"), "train")
+  expect_identical(suppressWarnings(run_banded_ridge(default))$provenance$nuisance_fit,
+                   "train")
 })
 
 test_that("banded_ridge_weights refits on all rows with each response's modal candidate", {
@@ -565,7 +573,8 @@ test_that("banded_ridge_weights refits on all rows with each response's modal ca
   )
   model <- banded_ridge_model(
     .bra_test_dataset(Y), design, outer_crossval = 5L, tune_crossval = 2L,
-    candidates = candidates, nuisance = N, seed = 2L
+    candidates = candidates, nuisance = N, nuisance_fit = "within",
+    seed = 2L
   )
   result <- suppressWarnings(run_banded_ridge(model))
 
@@ -616,6 +625,7 @@ test_that("families drive grouped drop-out, contrast weights and the shift null"
   model <- banded_ridge_model(
     .bra_test_dataset(Y), design, outer_crossval = 6L, tune_crossval = 2L,
     candidates = candidates, delta_sets = "families", nuisance = N,
+    nuisance_fit = "within",
     return_predictions = TRUE, purge = 2L, seed = 4L
   )
   expect_identical(model$delta_sets, c(sets, "phonology"))
@@ -649,7 +659,8 @@ test_that("families drive grouped drop-out, contrast weights and the shift null"
 
   no_pred <- banded_ridge_model(
     .bra_test_dataset(Y), design, outer_crossval = 6L, tune_crossval = 2L,
-    candidates = candidates, nuisance = N, purge = 2L
+    candidates = candidates, nuisance = N, nuisance_fit = "within",
+    purge = 2L
   )
   expect_error(banded_ridge_null(no_pred, suppressWarnings(run_banded_ridge(no_pred))),
                "return_predictions = TRUE")
@@ -677,11 +688,15 @@ test_that("retained dual weights describe the nuisance-residualized fit", {
   for (solver in c("dual_kernel", "svd_primal")) {
     model <- banded_ridge_model(
       .bra_test_dataset(Y), design, outer_crossval = 4L, candidates = candidates,
-      nuisance = N, weight_retention = "dual", solver = solver, seed = 3L
+      nuisance = N, nuisance_fit = "within", weight_retention = "dual",
+      solver = solver, seed = 3L
     )
     result <- suppressWarnings(run_banded_ridge(model))
     fold <- model$outer_folds[[1L]]
-    split <- rMVPA:::.brt_split_data(X, Y, fold$train, fold$test, N)
+    split <- rMVPA:::.brt_split_data(
+      X, Y, fold$train, fold$test,
+      rMVPA:::.brt_validate_nuisance(N, n, fit = "within")
+    )
     reference <- rMVPA:::.banded_ridge_fit_dual_path(
       split$X[split$train, ], split$Y[split$train, ], alphas = 0.5,
       theta = c(a = 0.5, b = 0.5), groups = sets, recover_primal = FALSE

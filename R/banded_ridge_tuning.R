@@ -519,8 +519,8 @@
 # held-out rows are to be residualized (see .brt_split_data()).
 .brt_validate_nuisance <- function(nuisance, n, context = "nuisance", fit = NULL) {
   if (is.null(nuisance)) return(NULL)
-  fit <- fit %||% attr(nuisance, "fit") %||% "within"
-  fit <- match.arg(fit, c("within", "train"))
+  fit <- fit %||% attr(nuisance, "fit") %||% "train"
+  fit <- match.arg(fit, c("train", "within"))
   if (is.data.frame(nuisance)) nuisance <- as.matrix(nuisance)
   if (is.numeric(nuisance) && is.null(dim(nuisance))) {
     nuisance <- matrix(nuisance, ncol = 1L)
@@ -563,13 +563,20 @@
 #
 # `nuisance` (scan-level regressors such as motion and drift, plus an
 # intercept) is regressed out of X and Y. The training rows always use
-# coefficients fitted on the training rows. The held-out rows use, by default
-# (`fit = "within"`), coefficients fitted on the held-out rows themselves:
-# nothing is carried between the two sets, and nothing is extrapolated. With
-# `fit = "train"` the training coefficients are applied to the held-out rows,
-# which is appropriate for exchangeable observations but not for drift-like
-# regressors and contiguous held-out blocks, where the extrapolated nuisance
-# fit dominates both sides and inflates accuracy.
+# coefficients fitted on the training rows.
+#
+# With `fit = "train"` (default) those same coefficients are applied to the
+# held-out rows, so the transformation is frozen before the held-out rows are
+# seen. That is only meaningful while the held-out nuisance rows lie within the
+# range of the training rows. With drift-like regressors and a contiguous
+# held-out block they do not: the extrapolated nuisance fit dominates features
+# and responses alike and manufactures accuracy. The split is refused then.
+#
+# With `fit = "within"` the held-out rows use coefficients fitted on the
+# held-out rows themselves. Nothing is carried between the two sets and
+# nothing is extrapolated, but the transformation of a held-out row now depends
+# on the other rows of its assessment set: accuracy is conditional on the
+# held-out block, not that of a frozen training-derived pipeline.
 #
 # `covariates` are regressed out afterwards with training-fit coefficients;
 # they are for stimulus-level predictors whose held-out values lie within the
@@ -592,16 +599,20 @@
   if (!is.null(covariates)) parts$C <- stack(covariates)
 
   if (!is.null(nuisance)) {
-    fit <- attr(nuisance, "fit") %||% "within"
+    fit <- attr(nuisance, "fit") %||% "train"
     z <- cbind(rep(1, length(rows)), nuisance[rows, , drop = FALSE])
     if (fit == "train" && length(test)) {
       leverage <- .brt_heldout_leverage(z[tr, , drop = FALSE], z[held, , drop = FALSE])
       if (leverage > 1) {
-        warning(
+        stop(
           "nuisance_fit = 'train': held-out nuisance rows lie outside the ",
           "range of the training rows (largest leverage ",
-          format(signif(leverage, 3)), "); extrapolated nuisance fits ",
-          "inflate accuracy. Use nuisance_fit = 'within'.", call. = FALSE
+          format(signif(leverage, 3)), "), so applying the training-fit ",
+          "nuisance coefficients would extrapolate and inflate accuracy. ",
+          "This is expected for drift-like regressors with contiguous ",
+          "held-out blocks. Use nuisance_fit = 'within' to residualize each ",
+          "held-out block with its own fit (accuracy is then conditional on ",
+          "the held-out block), or remove such regressors.", call. = FALSE
         )
       }
     }
@@ -968,6 +979,7 @@
     predictions = oof,
     performance = .banded_ridge_score(oof_observed, oof),
     observed = if (adjusted) oof_observed else NULL,
+    nuisance_fit = if (is.null(nuisance)) NA_character_ else attr(nuisance, "fit"),
     n_nuisance = if (is.null(nuisance)) 0L else ncol(nuisance),
     fold_performance = fold_performance,
     selections = do.call(rbind, selection_rows),

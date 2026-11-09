@@ -2,19 +2,24 @@
 
 * **Correctness fix:** nuisance regressors in `banded_ridge_model()` and
   `feature_decode_model()` no longer inflate accuracy for time series. The
-  nuisance coefficients fitted on the training rows were applied to the
+  nuisance coefficients fitted on the training rows are applied to the
   held-out rows. With drift-like regressors and contiguous held-out blocks that
   is an extrapolation: the extrapolated fit dominated features and responses
   alike, and pure-noise responses reached held-out correlations above 0.9.
-  Held-out rows are now residualized with coefficients fitted on the held-out
-  rows themselves (`nuisance_fit = "within"`, the new default), so nothing is
-  carried between training and held-out data and nothing is extrapolated. Each
-  held-out split then needs more rows than nuisance regressors. The previous
-  behaviour is available as `nuisance_fit = "train"` for exchangeable
-  observations and warns when held-out rows lie outside the range of the
-  training rows. In `feature_decode_model(partial = TRUE)` the other feature
-  columns are still removed with training-fit coefficients; only scan-level
-  nuisance follows `nuisance_fit`.
+  - The default, `nuisance_fit = "train"`, is unchanged in what it computes but
+    now stops with an error when held-out nuisance rows lie outside the range
+    of the training rows (largest leverage above one).
+  - `nuisance_fit = "within"` residualizes each held-out split with
+    coefficients fitted on that split. Nothing is carried between training and
+    held-out data and nothing is extrapolated. A held-out row's transformation
+    then depends on the other rows of its assessment set, so the accuracy is
+    conditional on each held-out block and is not that of a frozen
+    training-derived pipeline; choose it deliberately. Each held-out split
+    needs more rows than nuisance regressors.
+  - The mode is recorded in `result$provenance$nuisance_fit`.
+  - In `feature_decode_model(partial = TRUE)` the other feature columns are
+    removed with training-fit coefficients; only scan-level nuisance follows
+    `nuisance_fit`.
 
 * **Continuous encoding models.** `banded_ridge_model()` gains what a
   time-resolved naturalistic analysis needs:
