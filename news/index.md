@@ -29,6 +29,23 @@
   - A temporal `purge` without declared blocks now yields contiguous
     folds instead of random row-wise folds.
 
+- **New model:
+  [`feature_decode_model()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_decode_model.md).**
+  The pattern-level complement of
+  [`banded_ridge_model()`](https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_model.md):
+  within each region or searchlight it predicts the feature columns of a
+  [`feature_sets_design()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_sets_design.md)
+  from the local activity pattern and reports held-out accuracy for
+  every set, family and contrast declared on the feature sets, optional
+  partial accuracies (other features regressed out of pattern and
+  targets inside each training split) and optional time-shift
+  permutation p-values. It reuses the banded-ridge cross-validation,
+  purge, nuisance handling and solvers, and runs through
+  [`run_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/run_searchlight.md)
+  and
+  [`run_regional()`](https://bbuchsbaum.github.io/rMVPA/reference/run_regional-methods.md)
+  unchanged.
+
 - **Correctness fix:** statistical maps no longer hold 0 at voxels that
   have no test result
   ([\#130](https://github.com/bbuchsbaum/rMVPA/issues/130)).

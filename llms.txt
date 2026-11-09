@@ -286,6 +286,10 @@ All functions exported by rMVPA
 - [`extract_weights()`](https://bbuchsbaum.github.io/rMVPA/reference/extract_weights.md)
   : Extract Raw Model Weights
 
+- [`feature_decode_model()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_decode_model.md)
+  : Feature decoding model: predict a feature space from activity
+  patterns
+
 - [`feature_rsa_connectivity()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_rsa_connectivity.md)
   : Compute ROI-by-ROI Representational Connectivity from Feature RSA
   Predictions

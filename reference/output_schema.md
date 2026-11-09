@@ -49,6 +49,9 @@ output_schema(model)
 
 # S3 method for class 'subspace_alignment_model'
 output_schema(model)
+
+# S3 method for class 'feature_decode_model'
+output_schema(model)
 ```
 
 ## Arguments

@@ -83,12 +83,12 @@ A tibble with one row per ROI and columns:
     neuroim2::space(sample$dataset$mask)
   )
   res <- run_regional(mdl, region_mask)
-#> INFO [2026-11-09 22:35:15] 
+#> INFO [2026-11-09 22:45:33] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 2
 #> - Processed: 2
 #> - Skipped: 0
-#> INFO [2026-11-09 22:35:15] run_regional: 2 ROIs processed (success=2, errors=0)
+#> INFO [2026-11-09 22:45:33] run_regional: 2 ROIs processed (success=2, errors=0)
   preds <- feature_rsa_predictions(res)
   dim(preds$predicted[[1]])
 #> [1] 24 34

@@ -54,6 +54,9 @@ fit_roi(model, roi_data, context, ...)
 # S3 method for class 'subspace_alignment_model'
 fit_roi(model, roi_data, context, ...)
 
+# S3 method for class 'feature_decode_model'
+fit_roi(model, roi_data, context, ...)
+
 # S3 method for class 'feature_rsa_da_model'
 fit_roi(model, roi_data, context, ...)
 ```
