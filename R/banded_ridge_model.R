@@ -610,7 +610,11 @@
 #' @param theta_method One of `"grid"`, `"fixed"`, or `"random"`. The default
 #'   constructs a small, deterministic simplex grid.
 #' @param theta Fixed named simplex vector/matrix for `theta_method = "fixed"`.
-#' @param theta_grid_points Grid resolution for simplex grid candidates.
+#' @param theta_grid_points Grid resolution for simplex grid candidates. A grid
+#'   with fewer than `n_bands + 1` points has no candidate in which every band
+#'   is active, so the equal-weight point is added automatically. With more
+#'   than about three bands prefer `theta_method = "random"`, which samples the
+#'   interior of the simplex.
 #' @param n_theta Number of deterministic random simplex points.
 #' @param metric Inner selection metric; MSE is the default estimand.
 #' @param alpha_scope,theta_scope `"response"`, `"shared"`/`"roi"`, or

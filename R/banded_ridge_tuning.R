@@ -183,7 +183,16 @@
       cbind(x, recurse(remaining - x, dimensions - 1L))
     }))
   }
-  recurse(denominator, n_groups) / denominator
+  grid <- recurse(denominator, n_groups) / denominator
+  # A grid with fewer intervals than bands has no point at which every band is
+  # active (three points over three or more bands activate at most two). The
+  # "full" model would then never contain all bands, and leave-band-out
+  # comparisons would be made against a model that already lacks bands. Always
+  # offer the equal-weight point in that case.
+  if (!any(rowSums(grid > 0) == n_groups)) {
+    grid <- rbind(grid, rep(1 / n_groups, n_groups))
+  }
+  grid
 }
 
 .brt_theta_matrix <- function(theta, group_names, context = "theta") {

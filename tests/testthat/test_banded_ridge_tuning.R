@@ -95,9 +95,11 @@ test_that("candidate manifests cover fixed, grid, and deterministic random simpl
     c("a", "b", "c"), c(0, 2), method = "grid", grid_points = 3L
   )
   expect_s3_class(grid, "banded_ridge_candidates")
-  expect_equal(length(grid$alpha), 12L)
-  expect_equal(rowSums(grid$theta), rep(1, 12), tolerance = 0)
+  # six boundary points plus the equal-weight point, at two alphas
+  expect_equal(length(grid$alpha), 14L)
+  expect_equal(rowSums(grid$theta), rep(1, 14), tolerance = 1e-12)
   expect_true(any(grid$theta == 0))
+  expect_true(any(rowSums(grid$theta > 0) == 3L))
   expect_identical(grid$candidate_id, sort(grid$candidate_id)[order(
     match(sort(grid$candidate_id), grid$candidate_id)
   )])
@@ -694,4 +696,19 @@ test_that("theta-free Gram reuse and cache eviction leave nested dual results un
   expect_identical(length(nothing$entries), 0L)
   expect_gt(nothing$oversize_count, 0L)
   expect_identical(nothing$decomposition_count, total_fit_calls)
+})
+
+test_that("simplex grids always offer a candidate with every band active", {
+  for (g in 2:7) {
+    for (points in 2:4) {
+      grid <- rMVPA:::.brt_simplex_grid(g, points)
+      expect_equal(rowSums(grid), rep(1, nrow(grid)), tolerance = 1e-12)
+      expect_true(any(rowSums(grid > 0) == g),
+                  info = sprintf("bands = %d, grid_points = %d", g, points))
+      expect_false(anyDuplicated(round(grid, 12)) > 0)
+    }
+  }
+  # grids that already contain an interior point are unchanged
+  expect_equal(nrow(rMVPA:::.brt_simplex_grid(2L, 3L)), 3L)
+  expect_equal(nrow(rMVPA:::.brt_simplex_grid(3L, 4L)), 10L)
 })
