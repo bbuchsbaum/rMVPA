@@ -101,11 +101,9 @@ banded_ridge_weights <- function(model,
     for (cc in unique(chosen[batch])) {
       columns <- which(chosen[batch] == cc)
       args <- .brt_candidate_args(candidates, cc)
-      fit <- .banded_ridge_fit_direct(
-        X, Y[, columns, drop = FALSE], groups = groups,
-        alpha = args$alpha, theta = args$theta
-      )
-      weights[, batch[columns]] <- fit[[field]]
+      weights[, batch[columns]] <- .brw_refit(
+        model$solver, X, Y[, columns, drop = FALSE], groups, args
+      )[[field]]
     }
   }
   if (is.null(rownames(weights))) {
@@ -131,6 +129,22 @@ banded_ridge_weights <- function(model,
            crossprod(contrasts, weights)
          }),
     class = c("banded_ridge_weights", "list")
+  )
+}
+
+# One full-data fit with the model's own solver, so a feature matrix the model
+# handles in dual form is never turned into a features-by-features system.
+.brw_refit <- function(solver, X, Y, groups, args) {
+  switch(solver,
+    svd_primal = .banded_ridge_fit_svd_path(
+      X, Y, alphas = args$alpha, theta = args$theta, groups = groups
+    )$fits[[1L]],
+    dual_kernel = .banded_ridge_fit_dual_path(
+      X, Y, alphas = args$alpha, theta = args$theta, groups = groups,
+      recover_primal = TRUE
+    )$fits[[1L]],
+    .banded_ridge_fit_direct(X, Y, groups = groups, alpha = args$alpha,
+                             theta = args$theta)
   )
 }
 

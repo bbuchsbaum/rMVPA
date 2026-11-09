@@ -659,3 +659,68 @@ test_that("families drive grouped drop-out, contrast weights and the shift null"
                                   candidates = candidates, delta_sets = "families"),
                "requires feature_sets\\(families")
 })
+
+test_that("retained dual weights describe the nuisance-residualized fit", {
+  set.seed(8405L)
+  n <- 48L
+  block <- rep(1:4, each = 12L)
+  N <- cbind(drift = seq(-1, 1, length.out = n))
+  X <- cbind(rnorm(n) + 2 * N[, 1L], rnorm(n), rnorm(n))
+  Y <- cbind(X[, 1L] + 6 * N[, 1L] + rnorm(n, sd = 0.1),
+             X[, 2L] - X[, 3L] + rnorm(n, sd = 0.1))
+  sets <- c("a", "b", "b")
+  fs <- feature_sets(X, by_set(sets, order = c("a", "b")))
+  design <- feature_sets_design(fs, block_var_train = block, time_series = TRUE)
+  candidates <- rMVPA:::.banded_ridge_candidates(
+    c("a", "b"), 0.5, method = "fixed", theta = c(a = 0.5, b = 0.5)
+  )
+  for (solver in c("dual_kernel", "svd_primal")) {
+    model <- banded_ridge_model(
+      .bra_test_dataset(Y), design, outer_crossval = 4L, candidates = candidates,
+      nuisance = N, weight_retention = "dual", solver = solver, seed = 3L
+    )
+    result <- suppressWarnings(run_banded_ridge(model))
+    fold <- model$outer_folds[[1L]]
+    split <- rMVPA:::.brt_split_data(X, Y, fold$train, fold$test, N)
+    reference <- rMVPA:::.banded_ridge_fit_dual_path(
+      split$X[split$train, ], split$Y[split$train, ], alphas = 0.5,
+      theta = c(a = 0.5, b = 0.5), groups = sets, recover_primal = FALSE
+    )$fits[[1L]]$dual_weights
+    for (jj in 1:2) {
+      kept <- result$weights[[jj]][[fold$id]]
+      expect_equal(as.numeric(kept$dual_weights), as.numeric(reference[, jj]),
+                   tolerance = 1e-8, info = solver)
+      expect_identical(kept$train, fold$train)
+    }
+  }
+})
+
+test_that("banded_ridge_weights gives the same weights with every solver", {
+  set.seed(8506L)
+  n <- 40L
+  block <- rep(1:4, each = 10L)
+  # more features than rows, the case the dual solver exists for
+  X <- matrix(rnorm(n * 60L), n, 60L, dimnames = list(NULL, paste0("f", 1:60)))
+  Y <- cbind(X[, 1L] - X[, 31L] + rnorm(n, sd = 0.2), rnorm(n))
+  sets <- rep(c("a", "b"), each = 30L)
+  design <- feature_sets_design(feature_sets(X, by_set(sets)),
+                                block_var_train = block, time_series = TRUE)
+  candidates <- rMVPA:::.banded_ridge_candidates(
+    c("a", "b"), c(1, 10), method = "fixed", theta = c(a = 0.5, b = 0.5)
+  )
+  weights <- lapply(c(direct = "direct", svd = "svd_primal", dual = "dual_kernel"),
+                    function(solver) {
+    model <- banded_ridge_model(
+      .bra_test_dataset(Y), design, outer_crossval = 4L, tune_crossval = 2L,
+      candidates = candidates, solver = solver, seed = 6L
+    )
+    expect_identical(model$solver, solver)
+    result <- suppressWarnings(run_banded_ridge(model))
+    list(std = banded_ridge_weights(model, result)$weights,
+         raw = banded_ridge_weights(model, result, standardized = FALSE)$weights)
+  })
+  for (kind in c("std", "raw")) {
+    expect_equal(weights$svd[[kind]], weights$direct[[kind]], tolerance = 1e-8)
+    expect_equal(weights$dual[[kind]], weights$direct[[kind]], tolerance = 1e-8)
+  }
+})
