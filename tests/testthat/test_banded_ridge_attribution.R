@@ -463,3 +463,61 @@ test_that("dual leave-one-band-out models share band Grams with the full model",
   expect_identical(sum(manifest$cache_evictions_added), 0L)
   expect_gt(dual$result$provenance$solver_band_kernel_hits, 0L)
 })
+
+test_that("a named delta_sets list drops groups of bands together", {
+  blocks <- 3L
+  grid <- expand.grid(z = c(-1, 1), u = c(-1, 1), w = c(-1, 1))
+  X <- as.matrix(grid[rep(seq_len(nrow(grid)), blocks), ])
+  block <- rep(seq_len(blocks), each = nrow(grid))
+  Y <- cbind(2 * X[, "z"] + X[, "u"], X[, "w"])
+  bands <- c("a", "b", "c")
+
+  grouped <- .bra_test_problem(
+    X, Y, bands, blocks_train = block,
+    delta_sets = list(ab = c("a", "b"), a = "a", b = "b")
+  )
+  single <- .bra_test_problem(
+    X, Y, bands, blocks_train = block, delta_sets = c("a", "b")
+  )
+  lobo <- grouped$result$predictive_leave_one_band_out
+  effects <- lobo$effects
+
+  expect_identical(grouped$model$delta_sets, c("ab", "a", "b"))
+  expect_identical(lobo$provenance$band_members,
+                   list(ab = c("a", "b"), a = "a", b = "b"))
+  expect_setequal(names(lobo$maps),
+                  paste0("delta_cv_r2_", c("ab", "a", "b")))
+
+  # single-band entries of a list are the ordinary leave-one-band-out effects
+  single_effects <- single$result$predictive_leave_one_band_out$effects
+  expect_equal(effects$delta_cv_r2_a, single_effects$delta_cv_r2_a,
+               tolerance = 1e-12)
+  expect_equal(effects$delta_cv_r2_b, single_effects$delta_cv_r2_b,
+               tolerance = 1e-12)
+
+  # response 1 is carried entirely by a and b, response 2 entirely by c
+  full_r2 <- grouped$result$metrics$r2
+  expect_equal(full_r2, c(1, 1), tolerance = 1e-8)
+  expect_equal(effects$delta_cv_r2_ab[[1L]],
+               full_r2[[1L]] - lobo$reduced_performance$ab$r2[[1L]],
+               tolerance = 1e-12)
+  expect_gte(effects$delta_cv_r2_ab[[1L]], 1 - 1e-8)
+  expect_gt(effects$delta_cv_r2_ab[[1L]],
+            max(effects$delta_cv_r2_a[[1L]], effects$delta_cv_r2_b[[1L]]))
+  expect_equal(effects$delta_cv_r2_ab[[2L]], 0, tolerance = 1e-8)
+
+  # orthogonal bands: the joint effect is the sum of the separate effects
+  expect_equal(effects$delta_cv_r2_ab[[1L]],
+               effects$delta_cv_r2_a[[1L]] + effects$delta_cv_r2_b[[1L]],
+               tolerance = 1e-8)
+
+  bad <- function(sets, pattern) {
+    expect_error(.bra_test_problem(X, Y, bands, blocks_train = block,
+                                   delta_sets = sets), pattern)
+  }
+  bad(list(c("a", "b")), "unique non-empty names")
+  bad(list(x = c("a", "nope")), "unknown feature bands")
+  bad(list(x = c("a", "b", "c")), "cannot drop every feature band")
+  bad(list(a = c("a", "b")), "named after a feature band")
+  bad(list(x = character()), "unique feature-band names")
+})

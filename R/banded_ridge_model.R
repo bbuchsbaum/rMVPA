@@ -621,8 +621,12 @@
 #'   `"fixed"` selection constraints.
 #' @param fixed_alpha,fixed_theta Values required by corresponding fixed scopes.
 #' @param delta_sets Optional feature-band names, or `"all"`, for independently
-#'   retuned predictive leave-one-band-out outer-OOF delta R2. `NULL` (the
-#'   default) performs no reduced-model work.
+#'   retuned predictive leave-one-band-out outer-OOF delta R2. A named list of
+#'   band-name vectors drops each entry's bands together, for example
+#'   `list(phonology = c("manner", "place", "voicing"), manner = "manner")`,
+#'   giving the unique contribution of a family of bands next to that of its
+#'   members; results are labelled by the list names. `NULL` (the default)
+#'   performs no reduced-model work.
 #' @param purge Non-negative temporal gap (in rows) around validation/test
 #'   rows. Training rows within the gap are dropped when folds are constructed
 #'   from an integer count or a `cross_validation` object; explicit fold lists
@@ -778,12 +782,13 @@ banded_ridge_model <- function(dataset,
     tune_crossval, outer_folds, n, blocks, as.integer(purge), as.integer(seed),
     n_available = length(available)
   )
-  delta_sets <- .bra_validate_delta_sets(delta_sets, group_names)
+  delta_members <- .bra_delta_members(delta_sets, group_names)
+  delta_sets <- names(delta_members)
   reduced_candidates <- setNames(lapply(delta_sets, function(band) {
-    .bra_reduced_candidates(candidates, band)
+    .bra_reduced_candidates(candidates, delta_members[[band]])
   }), delta_sets)
   reduced_fixed_theta <- setNames(lapply(delta_sets, function(band) {
-    .bra_reduced_fixed_theta(fixed_theta, group_names, band)
+    .bra_reduced_fixed_theta(fixed_theta, group_names, delta_members[[band]])
   }), delta_sets)
   active_ids <- .brm_active_ids(dataset)
   plan <- .banded_ridge_solver_plan(
@@ -840,7 +845,8 @@ banded_ridge_model <- function(dataset,
     selectable_alphas = sort(unique(candidates$alpha[available])),
     alpha_scope = alpha_scope, theta_scope = theta_scope,
     fixed_alpha = fixed_alpha, fixed_theta = fixed_theta,
-    delta_sets = delta_sets, reduced_candidates = reduced_candidates,
+    delta_sets = delta_sets, delta_members = delta_members,
+    reduced_candidates = reduced_candidates,
     reduced_fixed_theta = reduced_fixed_theta,
     purge = as.integer(purge), solver = resolved_solver, solver_plan = plan,
     target_batch_size = target_batch_size, weight_retention = weight_retention,
@@ -989,7 +995,9 @@ run_banded_ridge <- function(model,
     if (model$retain_diagnostics) diagnostics[[bb]] <- nested$outer_results
 
     for (band in delta_bands) {
-      keep <- groups != band
+      dropped <- model$delta_members[[band]]
+      if (is.null(dropped)) dropped <- band
+      keep <- !groups %in% dropped
       reduced_x <- X[, keep, drop = FALSE]
       reduced_groups <- groups[keep]
       reduced_manifest <- model$reduced_candidates[[band]]
@@ -1131,6 +1139,7 @@ run_banded_ridge <- function(model,
       candidate_manifests = model$reduced_candidates,
       provenance = list(
         requested_bands = delta_bands,
+        band_members = model$delta_members,
         conceptual_model_count = 1L + length(delta_bands),
         matched_outer_fold_ids = vapply(
           model$outer_folds, `[[`, character(1), "id"
