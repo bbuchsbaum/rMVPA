@@ -32,6 +32,9 @@ A list of class `banded_ridge_weights` with
   \item{hyperparameters}{One row per response: the selected candidate, its
     `alpha` and band weights, and in how many outer folds it was chosen.}
   \item{standardized}{The `standardized` argument.}
+  \item{contrast_weights}{Contrasts-by-responses matrix: the weights
+    projected onto the contrasts declared in `feature_sets(contrasts = )`,
+    or `NULL` when none were declared.}
 }
 If the model has nuisance regressors they are regressed out of features and
 responses (with an intercept) before the refit.

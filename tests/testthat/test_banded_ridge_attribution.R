@@ -593,3 +593,69 @@ test_that("banded_ridge_weights refits on all rows with each response's modal ca
   expect_error(banded_ridge_weights(model, list()), "run_banded_ridge")
   expect_error(banded_ridge_weights(list(), result), "banded_ridge_model")
 })
+
+test_that("families drive grouped drop-out, contrast weights and the shift null", {
+  set.seed(7304L)
+  n <- 120L
+  block <- rep(1:6, each = 20L)
+  ar <- function() as.numeric(stats::filter(rnorm(n), 0.6, "recursive"))
+  X <- cbind(m1 = ar(), p1 = ar(), v1 = ar(), ac = ar())
+  N <- cbind(drift = seq(-1, 1, length.out = n))
+  Y <- cbind(X[, "m1"] - X[, "p1"] + 3 * N[, 1L] + 0.3 * rnorm(n),   # phonology
+             ar())                                                   # nothing
+  sets <- c("manner", "place", "voicing", "acoustic")
+  fs <- feature_sets(
+    X, by_set(sets),
+    families = list(phonology = c("manner", "place", "voicing")),
+    contrasts = list(manner_vs_place = c(m1 = 1, p1 = -1))
+  )
+  design <- feature_sets_design(fs, block_var_train = block, time_series = TRUE)
+  candidates <- rMVPA:::.banded_ridge_candidates(
+    sets, c(0.01, 1), method = "fixed", theta = setNames(rep(0.25, 4), sets)
+  )
+  model <- banded_ridge_model(
+    .bra_test_dataset(Y), design, outer_crossval = 6L, tune_crossval = 2L,
+    candidates = candidates, delta_sets = "families", nuisance = N,
+    return_predictions = TRUE, purge = 2L, seed = 4L
+  )
+  expect_identical(model$delta_sets, c(sets, "phonology"))
+  result <- suppressWarnings(run_banded_ridge(model))
+  effects <- result$predictive_leave_one_band_out$effects
+  expect_gt(effects$delta_cv_r2_phonology[[1L]], 0.7)
+  expect_gt(effects$delta_cv_r2_phonology[[1L]],
+            max(effects$delta_cv_r2_manner[[1L]], effects$delta_cv_r2_place[[1L]]))
+  expect_lt(abs(effects$delta_cv_r2_acoustic[[1L]]), 0.05)
+
+  expect_identical(dim(result$observed), dim(result$predictions))
+  expect_equal(rMVPA:::.banded_ridge_score(result$observed, result$predictions)$r2,
+               result$metrics$r2, tolerance = 1e-12)
+
+  w <- banded_ridge_weights(model, result, standardized = FALSE)
+  expect_identical(dim(w$contrast_weights), c(1L, 2L))
+  expect_equal(w$contrast_weights[1L, 1L],
+               w$weights["m1", 1L] - w$weights["p1", 1L], tolerance = 1e-12)
+  expect_gt(w$contrast_weights[1L, 1L], 1.5)
+
+  null <- banded_ridge_null(model, result, n_perm = 199L, min_shift = 10L, seed = 9L)
+  expect_identical(null$voxel_index, model$active_response_ids)
+  expect_lt(null$p_value[[1L]], 0.01)
+  expect_gt(null$p_value[[2L]], 0.05)
+  expect_gt(null$z[[1L]], 3)
+  expect_identical(null, banded_ridge_null(model, result, n_perm = 199L,
+                                           min_shift = 10L, seed = 9L))
+  r2_null <- banded_ridge_null(model, result, n_perm = 49L, metric = "r2",
+                               strategy = "block_shuffle", seed = 2L)
+  expect_lt(r2_null$p_value[[1L]], 0.05)
+
+  no_pred <- banded_ridge_model(
+    .bra_test_dataset(Y), design, outer_crossval = 6L, tune_crossval = 2L,
+    candidates = candidates, nuisance = N, purge = 2L
+  )
+  expect_error(banded_ridge_null(no_pred, suppressWarnings(run_banded_ridge(no_pred))),
+               "return_predictions = TRUE")
+  plain <- feature_sets_design(feature_sets(X, by_set(sets)),
+                               block_var_train = block, time_series = TRUE)
+  expect_error(banded_ridge_model(.bra_test_dataset(Y), plain, outer_crossval = 6L,
+                                  candidates = candidates, delta_sets = "families"),
+               "requires feature_sets\\(families")
+})

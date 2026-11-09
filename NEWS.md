@@ -1,5 +1,26 @@
 # rMVPA (development version)
 
+* **Continuous encoding models.** `banded_ridge_model()` gains what a
+  time-resolved naturalistic analysis needs:
+  - **Correctness fix:** the default simplex grid (`theta_grid_points = 3`)
+    activated at most two bands in any candidate, so with three or more bands
+    the full model never contained every band and leave-band-out delta R2
+    compared the wrong models. Grids without an interior point now include the
+    equal-weight point.
+  - `nuisance =` regresses nuisance columns (with an intercept) out of features
+    and responses inside every inner and outer split, using training rows only.
+  - `delta_sets` accepts a named list of band vectors to drop groups of bands
+    together, and `"families"` to use the families declared in
+    `feature_sets(families = )`.
+  - `feature_sets()` gains `families` and `contrasts`, declared once and read
+    by every model.
+  - `banded_ridge_weights()` refits on all rows and returns a
+    features-by-responses weight matrix, with contrast projections.
+  - `banded_ridge_null()` tests held-out accuracy against time-shifted
+    predictions.
+  - A temporal `purge` without declared blocks now yields contiguous folds
+    instead of random row-wise folds.
+
 * **Correctness fix:** statistical maps no longer hold 0 at voxels that have
   no test result (#130). `run_permutation_searchlight()` returned `p_map` and
   `p_adj_map` as dense `NeuroVol`s that were 0 outside the mask, so

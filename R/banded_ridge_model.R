@@ -433,9 +433,12 @@
 .brm_retention_estimate <- function(n, p, v, n_outer,
                                     weight_retention, return_predictions,
                                     retain_diagnostics, n_candidates, inner_v,
-                                    n_delta = 0L, n_groups = 1L) {
+                                    n_delta = 0L, n_groups = 1L,
+                                    retain_observed = FALSE) {
   if (is.na(inner_v)) inner_v <- 0L
-  prediction <- if (return_predictions) 8 * n * v * (1L + n_delta) else 0
+  prediction <- if (return_predictions) {
+    8 * n * v * (1L + n_delta + isTRUE(retain_observed))
+  } else 0
   weights <- switch(weight_retention,
     none = 0,
     primal = 8 * n_outer * p * v,
@@ -625,8 +628,9 @@
 #'   band-name vectors drops each entry's bands together, for example
 #'   `list(phonology = c("manner", "place", "voicing"), manner = "manner")`,
 #'   giving the unique contribution of a family of bands next to that of its
-#'   members; results are labelled by the list names. `NULL` (the default)
-#'   performs no reduced-model work.
+#'   members; results are labelled by the list names. `"families"` requests
+#'   every band plus every family declared in `feature_sets(families = ...)`.
+#'   `NULL` (the default) performs no reduced-model work.
 #' @param nuisance Optional numeric matrix of nuisance regressors (rows =
 #'   observations), for example motion parameters and drift terms. Within every
 #'   inner and outer split an intercept and these columns are regressed out of
@@ -643,7 +647,9 @@
 #' @param solver `"auto"`, `"direct"`, `"svd_primal"`, or `"dual_kernel"`.
 #' @param target_batch_size Maximum responses evaluated together.
 #' @param return_predictions Retain the complete outer out-of-fold prediction
-#'   matrix.
+#'   matrix. With nuisance regressors, the nuisance-residualized held-out
+#'   responses the predictions are scored against are also returned, as
+#'   `observed`.
 #' @param weight_retention Retain no weights, outer-fold primal coefficients, or
 #'   outer-fold dual weights.
 #' @param retain_diagnostics Retain full candidate/fold diagnostics per chunk.
@@ -792,6 +798,19 @@ banded_ridge_model <- function(dataset,
     tune_crossval, outer_folds, n, blocks, as.integer(purge), as.integer(seed),
     n_available = length(available)
   )
+  if (identical(delta_sets, "families")) {
+    families <- design$X_train$families
+    if (!length(families)) {
+      stop("delta_sets = 'families' requires feature_sets(families = ...).",
+           call. = FALSE)
+    }
+    # every band, plus every family that is a proper group of bands
+    proper <- vapply(families, function(members) {
+      length(members) > 1L && length(members) < length(group_names)
+    }, logical(1))
+    delta_sets <- c(stats::setNames(as.list(group_names), group_names),
+                    families[proper])
+  }
   delta_members <- .bra_delta_members(delta_sets, group_names)
   delta_sets <- names(delta_members)
   reduced_candidates <- setNames(lapply(delta_sets, function(band) {
@@ -813,7 +832,8 @@ banded_ridge_model <- function(dataset,
     n, ncol(design$X_train$X), length(active_ids), length(outer_folds),
     weight_retention, return_predictions, retain_diagnostics,
     length(candidates$alpha), tuning$inner_v,
-    n_delta = length(delta_sets), n_groups = length(group_names)
+    n_delta = length(delta_sets), n_groups = length(group_names),
+    retain_observed = !is.null(nuisance)
   )
   if (!is.numeric(max_retained_mb) || length(max_retained_mb) != 1L ||
       !is.finite(max_retained_mb) || max_retained_mb <= 0) {
@@ -831,7 +851,8 @@ banded_ridge_model <- function(dataset,
         n, ncol(design$X_train$X), length(active_ids), length(outer_folds),
         weight_retention, return_predictions, retain_diagnostics,
         length(candidates$alpha), tuning$inner_v,
-        n_delta = length(delta_sets), n_groups = length(group_names)
+        n_delta = length(delta_sets), n_groups = length(group_names),
+    retain_observed = !is.null(nuisance)
       )
     }
     if (retention[["total"]] > max_retained_mb * 1024^2) {
@@ -934,6 +955,9 @@ run_banded_ridge <- function(model,
     matrix(NA_real_, n, v,
            dimnames = list(as.character(seq_len(n)), paste0("voxel_", active_ids)))
   } else NULL
+  observed <- if (model$return_predictions && !is.null(model$nuisance)) {
+    predictions
+  } else NULL
   delta_bands <- model$delta_sets
   reduced_metric_chunks <- setNames(lapply(delta_bands, function(x) {
     vector("list", length(batches))
@@ -1002,6 +1026,9 @@ run_banded_ridge <- function(model,
     selection_rows[[bb]] <- selections
     if (model$return_predictions) {
       predictions[, match(ids, active_ids)] <- nested$predictions
+      if (!is.null(observed)) {
+        observed[, match(ids, active_ids)] <- nested$observed
+      }
     }
     if (model$retain_diagnostics) diagnostics[[bb]] <- nested$outer_results
 
@@ -1193,6 +1220,7 @@ run_banded_ridge <- function(model,
     selection_diagnostics = selection_diagnostics,
     maps = maps,
     predictions = predictions,
+    observed = observed,
     weights = weights,
     diagnostics = diagnostics,
     active_response_ids = active_ids,

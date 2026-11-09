@@ -109,8 +109,9 @@ retuned predictive leave-one-band-out outer-OOF delta R2. A named list of
 band-name vectors drops each entry's bands together, for example
 `list(phonology = c("manner", "place", "voicing"), manner = "manner")`,
 giving the unique contribution of a family of bands next to that of its
-members; results are labelled by the list names. `NULL` (the default)
-performs no reduced-model work.}
+members; results are labelled by the list names. `"families"` requests
+every band plus every family declared in `feature_sets(families = ...)`.
+`NULL` (the default) performs no reduced-model work.}
 
 \item{purge}{Non-negative temporal gap (in rows) around validation/test
 rows. Training rows within the gap are dropped when folds are constructed
@@ -123,7 +124,9 @@ it, never modified.}
 \item{target_batch_size}{Maximum responses evaluated together.}
 
 \item{return_predictions}{Retain the complete outer out-of-fold prediction
-matrix.}
+matrix. With nuisance regressors, the nuisance-residualized held-out
+responses the predictions are scored against are also returned, as
+`observed`.}
 
 \item{weight_retention}{Retain no weights, outer-fold primal coefficients, or
 outer-fold dual weights.}
