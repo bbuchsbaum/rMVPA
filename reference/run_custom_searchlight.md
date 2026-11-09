@@ -163,17 +163,18 @@ association <- function(sl_data, sl_info) {
 # Run the custom searchlight (standard method)
 custom_sl_results <- run_custom_searchlight(dataset_obj, my_sl_stats,
                                             radius = 2, method = "standard")
-#> INFO [2026-10-16 11:46:39] Starting custom searchlight analysis (method: standard, radius: 2 mm)...
-#> INFO [2026-10-16 11:46:39] Preparing 216 standard searchlight spheres...
-#> INFO [2026-10-16 11:46:39] Using automatic searchlight batch size 216 for 216 centers (memory budget 512.0 MiB).
-#> INFO [2026-10-16 11:46:39] 
+#> Warning: future::availableCores() is deprecated. Please use the identical parallelly::availableCores() instead [pkgdown::build_site_github_pages() -> pkgdown::build_site() -> pkgdown::build_site_local() -> pkgdown::build_reference() -> pkgdown::unwrap_purrr_error() -> base::withCallingHandlers() -> purrr::map() -> purrr::map_() -> purrr::with_indexed_errors() -> base::withCallingHandlers() -> purrr::call_with_cleanup() -> pkgdown::.f() -> base::withCallingHandlers() -> pkgdown::data_reference_topic() -> pkgdown::run_examples() -> pkgdown::highlight_examples() -> downlit::evaluate_and_highlight() -> evaluate::evaluate() -> base::withRestarts() -> withRestartList() -> withOneRestart() -> doWithOneRestart() -> withRestartList() -> withOneRestart() -> doWithOneRestart() -> evaluate::with_handlers() -> base::eval() -> eval() -> base::withCallingHandlers() -> base::withVisible() -> base::eval() -> eval() -> rMVPA::run_custom_searchlight() -> rMVPA::.rmvpa_apply_future_plan() -> base::tryCatch() -> tryCatchList() -> tryCatchOne() -> doTryCatch() -> future::availableCores()]
+#> INFO [2026-11-09 22:35:40] Starting custom searchlight analysis (method: standard, radius: 2 mm)...
+#> INFO [2026-11-09 22:35:40] Preparing 216 standard searchlight spheres...
+#> INFO [2026-11-09 22:35:40] Using automatic searchlight batch size 216 for 216 centers (memory budget 512.0 MiB).
+#> INFO [2026-11-09 22:35:40] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 216
 #> - Processed: 216
 #> - Skipped: 0
-#> INFO [2026-10-16 11:46:39] Combining results from standard searchlight...
-#> INFO [2026-10-16 11:46:39] combine_custom_standard: 216 ROIs processed (success=216, errors=0)
-#> INFO [2026-10-16 11:46:39] Finished custom searchlight analysis.
+#> INFO [2026-11-09 22:35:40] Combining results from standard searchlight...
+#> INFO [2026-11-09 22:35:40] combine_custom_standard: 216 ROIs processed (success=216, errors=0)
+#> INFO [2026-11-09 22:35:40] Finished custom searchlight analysis.
 print(custom_sl_results)
 #> 
 #>  Searchlight Analysis Results 
@@ -191,26 +192,26 @@ print(custom_sl_results)
 custom_sl_rand <- run_custom_searchlight(dataset_obj, my_sl_stats,
                                          radius = 2, method = "randomized",
                                          niter = 2)
-#> INFO [2026-10-16 11:46:39] Starting custom searchlight analysis (method: randomized, radius: 2 mm)...
-#> INFO [2026-10-16 11:46:39] Running 2 randomized searchlight iterations...
-#> INFO [2026-10-16 11:46:39] Using automatic searchlight batch size 20 for 20 centers (memory budget 512.0 MiB).
-#> INFO [2026-10-16 11:46:39] 
+#> INFO [2026-11-09 22:35:40] Starting custom searchlight analysis (method: randomized, radius: 2 mm)...
+#> INFO [2026-11-09 22:35:40] Running 2 randomized searchlight iterations...
+#> INFO [2026-11-09 22:35:40] Using automatic searchlight batch size 20 for 20 centers (memory budget 512.0 MiB).
+#> INFO [2026-11-09 22:35:40] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 20
 #> - Processed: 20
 #> - Skipped: 0
-#> INFO [2026-10-16 11:46:39] Using automatic searchlight batch size 19 for 19 centers (memory budget 512.0 MiB).
-#> INFO [2026-10-16 11:46:39] 
+#> INFO [2026-11-09 22:35:40] Using automatic searchlight batch size 19 for 19 centers (memory budget 512.0 MiB).
+#> INFO [2026-11-09 22:35:40] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 19
 #> - Processed: 19
 #> - Skipped: 0
-#> INFO [2026-10-16 11:46:39] Combining results from randomized searchlight (39 total spheres processed)...
-#> INFO [2026-10-16 11:46:39] combine_custom_randomized: 39 ROIs processed (success=39, errors=0)
-#> WARN [2026-10-16 11:46:39] No overlapping indices found for normalization for metric 'mean_signal'.
-#> WARN [2026-10-16 11:46:39] No overlapping indices found for normalization for metric 'sd_signal'.
-#> WARN [2026-10-16 11:46:39] No overlapping indices found for normalization for metric 'n_vox_in_sphere'.
-#> INFO [2026-10-16 11:46:39] Finished custom searchlight analysis.
+#> INFO [2026-11-09 22:35:40] Combining results from randomized searchlight (39 total spheres processed)...
+#> INFO [2026-11-09 22:35:40] combine_custom_randomized: 39 ROIs processed (success=39, errors=0)
+#> WARN [2026-11-09 22:35:41] No overlapping indices found for normalization for metric 'mean_signal'.
+#> WARN [2026-11-09 22:35:41] No overlapping indices found for normalization for metric 'sd_signal'.
+#> WARN [2026-11-09 22:35:41] No overlapping indices found for normalization for metric 'n_vox_in_sphere'.
+#> INFO [2026-11-09 22:35:41] Finished custom searchlight analysis.
 print(custom_sl_rand)
 #> 
 #>  Searchlight Analysis Results 

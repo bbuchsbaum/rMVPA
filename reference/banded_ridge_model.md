@@ -34,7 +34,8 @@ banded_ridge_model(
   max_retained_mb = 1024,
   weight_overflow = c("error", "none"),
   seed = 1L,
-  memory_limit_mb = 1024
+  memory_limit_mb = 1024,
+  nuisance = NULL
 )
 ```
 
@@ -115,7 +116,11 @@ banded_ridge_model(
 
 - theta_grid_points:
 
-  Grid resolution for simplex grid candidates.
+  Grid resolution for simplex grid candidates. A grid with fewer than
+  \`n_bands + 1\` points has no candidate in which every band is active,
+  so the equal-weight point is added automatically. With more than about
+  three bands prefer \`theta_method = "random"\`, which samples the
+  interior of the simplex.
 
 - n_theta:
 
@@ -137,8 +142,14 @@ banded_ridge_model(
 - delta_sets:
 
   Optional feature-band names, or \`"all"\`, for independently retuned
-  predictive leave-one-band-out outer-OOF delta R2. \`NULL\` (the
-  default) performs no reduced-model work.
+  predictive leave-one-band-out outer-OOF delta R2. A named list of
+  band-name vectors drops each entry's bands together, for example
+  \`list(phonology = c("manner", "place", "voicing"), manner =
+  "manner")\`, giving the unique contribution of a family of bands next
+  to that of its members; results are labelled by the list names.
+  \`"families"\` requests every band plus every family declared in
+  \`feature_sets(families = ...)\`. \`NULL\` (the default) performs no
+  reduced-model work.
 
 - purge:
 
@@ -158,7 +169,9 @@ banded_ridge_model(
 
 - return_predictions:
 
-  Retain the complete outer out-of-fold prediction matrix.
+  Retain the complete outer out-of-fold prediction matrix. With nuisance
+  regressors, the nuisance-residualized held-out responses the
+  predictions are scored against are also returned, as \`observed\`.
 
 - weight_retention:
 
@@ -192,6 +205,18 @@ banded_ridge_model(
   recomputed on demand. Results are unchanged at any value; only reuse
   is lost, and provenance reports \`solver_cache_evictions\` and
   \`solver_cache_peak_mb\`.
+
+- nuisance:
+
+  Optional numeric matrix of nuisance regressors (rows = observations),
+  for example motion parameters and drift terms. Within every inner and
+  outer split an intercept and these columns are regressed out of both
+  the features and the responses using coefficients estimated on the
+  training rows only, and the same coefficients are applied to the
+  held-out rows. Nuisance columns are never penalized and never
+  contribute to the predictions, so all reported accuracies, including
+  leave-band-out delta R2, describe variance in the
+  nuisance-residualized held-out responses.
 
 ## Value
 

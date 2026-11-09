@@ -17,7 +17,14 @@ Wrap a predictor representation into a \`feature_sets\` instance.
 ## Usage
 
 ``` r
-feature_sets(x, spec = NULL, set_order = NULL, row_weights = NULL)
+feature_sets(
+  x,
+  spec = NULL,
+  set_order = NULL,
+  row_weights = NULL,
+  families = NULL,
+  contrasts = NULL
+)
 ```
 
 ## Arguments
@@ -42,6 +49,19 @@ feature_sets(x, spec = NULL, set_order = NULL, row_weights = NULL)
 
   Optional numeric vector of length nrow(X), used as observation weights
   by downstream models (default: all 1).
+
+- families:
+
+  Optional named list grouping sets into families, for example
+  \`list(phonology = c("manner", "place", "voicing"))\`. Models report
+  family-level summaries next to set-level ones.
+
+- contrasts:
+
+  Optional contrasts over feature columns: a numeric matrix with one row
+  per column of the feature matrix and one named column per contrast, or
+  a named list of numeric vectors named by feature columns (unnamed
+  features get weight zero).
 
 ## Value
 

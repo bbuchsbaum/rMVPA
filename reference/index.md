@@ -42,6 +42,12 @@ All functions exported by rMVPA
 - [`banded_ridge_model()`](https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_model.md)
   : First-class single-domain banded-ridge encoding model
 
+- [`banded_ridge_null()`](https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_null.md)
+  : Permutation null for banded-ridge prediction accuracy
+
+- [`banded_ridge_weights()`](https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_weights.md)
+  : Refit a banded-ridge model on all rows and return its weight matrix
+
 - [`binary_classification_result()`](https://bbuchsbaum.github.io/rMVPA/reference/binary_classification_result.md)
   : Classification results for binary outcome
 
