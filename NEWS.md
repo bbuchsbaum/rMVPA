@@ -21,6 +21,16 @@
   - A temporal `purge` without declared blocks now yields contiguous folds
     instead of random row-wise folds.
 
+* **New model: `feature_decode_model()`.** The pattern-level complement of
+  `banded_ridge_model()`: within each region or searchlight it predicts the
+  feature columns of a `feature_sets_design()` from the local activity pattern
+  and reports held-out accuracy for every set, family and contrast declared on
+  the feature sets, optional partial accuracies (other features regressed out
+  of pattern and targets inside each training split) and optional time-shift
+  permutation p-values. It reuses the banded-ridge cross-validation, purge,
+  nuisance handling and solvers, and runs through `run_searchlight()` and
+  `run_regional()` unchanged.
+
 * **Correctness fix:** statistical maps no longer hold 0 at voxels that have
   no test result (#130). `run_permutation_searchlight()` returned `p_map` and
   `p_adj_map` as dense `NeuroVol`s that were 0 outside the mask, so

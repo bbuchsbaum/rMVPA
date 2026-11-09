@@ -145,6 +145,7 @@ Collate:
     'banded_ridge_solvers.R'
     'banded_ridge_model.R'
     'banded_ridge_weights.R'
+    'feature_decode_model.R'
     'banded_ridge_da_model.R'
     'feature_rsa_da_model.R'
     'validate_analysis.R'
