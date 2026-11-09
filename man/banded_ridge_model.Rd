@@ -31,7 +31,8 @@ banded_ridge_model(
   weight_overflow = c("error", "none"),
   seed = 1L,
   memory_limit_mb = 1024,
-  nuisance = NULL
+  nuisance = NULL,
+  nuisance_fit = c("within", "train")
 )
 }
 \arguments{
@@ -152,11 +153,21 @@ provenance reports `solver_cache_evictions` and `solver_cache_peak_mb`.}
 \item{nuisance}{Optional numeric matrix of nuisance regressors (rows =
 observations), for example motion parameters and drift terms. Within every
 inner and outer split an intercept and these columns are regressed out of
-both the features and the responses using coefficients estimated on the
-training rows only, and the same coefficients are applied to the held-out
-rows. Nuisance columns are never penalized and never contribute to the
-predictions, so all reported accuracies, including leave-band-out delta
-R2, describe variance in the nuisance-residualized held-out responses.}
+both the features and the responses, separately for the training rows and
+the held-out rows (see `nuisance_fit`). Nuisance columns are never
+penalized and never contribute to the predictions, so all reported
+accuracies, including leave-band-out delta R2, describe variance in the
+nuisance-residualized held-out responses.}
+
+\item{nuisance_fit}{How held-out rows are residualized. `"within"` (default)
+fits the nuisance coefficients on the held-out rows themselves, so nothing
+is carried between training and held-out data and nothing is extrapolated;
+each held-out split then needs more rows than nuisance regressors.
+`"train"` applies the training-fit coefficients to the held-out rows. That
+suits exchangeable observations, but with drift-like regressors and
+contiguous held-out blocks the extrapolated fit dominates features and
+responses alike and inflates accuracy; a warning is given when the
+held-out rows lie outside the range of the training rows.}
 }
 \value{
 A `banded_ridge_model` specification for `run_banded_ridge()`.

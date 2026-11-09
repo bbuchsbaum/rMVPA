@@ -515,9 +515,12 @@
   }, error = function(e) list(ok = FALSE, result = NULL, error = conditionMessage(e)))
 }
 
-# Validate an optional nuisance matrix (rows = observations).
-.brt_validate_nuisance <- function(nuisance, n, context = "nuisance") {
+# Validate an optional nuisance matrix (rows = observations) and record how
+# held-out rows are to be residualized (see .brt_split_data()).
+.brt_validate_nuisance <- function(nuisance, n, context = "nuisance", fit = NULL) {
   if (is.null(nuisance)) return(NULL)
+  fit <- fit %||% attr(nuisance, "fit") %||% "within"
+  fit <- match.arg(fit, c("within", "train"))
   if (is.data.frame(nuisance)) nuisance <- as.matrix(nuisance)
   if (is.numeric(nuisance) && is.null(dim(nuisance))) {
     nuisance <- matrix(nuisance, ncol = 1L)
@@ -528,40 +531,105 @@
          "observation.", call. = FALSE)
   }
   storage.mode(nuisance) <- "double"
+  attr(nuisance, "fit") <- fit
   nuisance
 }
 
-# Data for one train/test split. With nuisance regressors, an intercept plus
-# the nuisance columns are regressed out of X and Y using coefficients
-# estimated on the training rows only; the same coefficients are then applied
-# to the test rows, so nothing about the held-out rows reaches the fit. The
-# returned matrices hold the training rows followed by the test rows, and
-# `observed` is the held-out response the predictions are scored against.
-.brt_split_data <- function(X, Y, train, test, nuisance = NULL) {
-  if (is.null(nuisance)) {
+# Regress `z_fit` out of `m_fit` and apply the fitted coefficients to
+# (`z_apply`, `m_apply`). Aliased columns contribute nothing.
+.brt_remove <- function(z_fit, m_fit, z_apply = z_fit, m_apply = m_fit,
+                        what = "a training split") {
+  qr_z <- qr(z_fit)
+  if (nrow(z_fit) - qr_z$rank < 2L) {
+    stop("nuisance regressors leave fewer than two residual degrees of ",
+         "freedom in ", what, ".", call. = FALSE)
+  }
+  beta <- qr.coef(qr_z, m_fit)
+  beta[is.na(beta)] <- 0
+  m_apply - z_apply %*% beta
+}
+
+# Largest leverage of the held-out rows relative to the training rows. Values
+# far above one mean the training-fit coefficients are being extrapolated.
+.brt_heldout_leverage <- function(z_train, z_test) {
+  qr_z <- qr(z_train)
+  keep <- qr_z$pivot[seq_len(qr_z$rank)]
+  r <- qr.R(qr_z)[seq_len(qr_z$rank), seq_len(qr_z$rank), drop = FALSE]
+  max(colSums(backsolve(r, t(z_test[, keep, drop = FALSE]), transpose = TRUE)^2))
+}
+
+# Data for one train/test split, as the training rows followed by the held-out
+# rows; `observed` is the held-out response the predictions are scored against.
+#
+# `nuisance` (scan-level regressors such as motion and drift, plus an
+# intercept) is regressed out of X and Y. The training rows always use
+# coefficients fitted on the training rows. The held-out rows use, by default
+# (`fit = "within"`), coefficients fitted on the held-out rows themselves:
+# nothing is carried between the two sets, and nothing is extrapolated. With
+# `fit = "train"` the training coefficients are applied to the held-out rows,
+# which is appropriate for exchangeable observations but not for drift-like
+# regressors and contiguous held-out blocks, where the extrapolated nuisance
+# fit dominates both sides and inflates accuracy.
+#
+# `covariates` are regressed out afterwards with training-fit coefficients;
+# they are for stimulus-level predictors whose held-out values lie within the
+# training range.
+.brt_split_data <- function(X, Y, train, test, nuisance = NULL, covariates = NULL) {
+  if (is.null(nuisance) && is.null(covariates)) {
     return(list(X = X, Y = Y, train = train, test = test,
                 observed = Y[test, , drop = FALSE]))
   }
-  z_train <- cbind(rep(1, length(train)), nuisance[train, , drop = FALSE])
-  z_test <- cbind(rep(1, length(test)), nuisance[test, , drop = FALSE])
-  qr_z <- qr(z_train)
-  if (length(train) - qr_z$rank < 2L) {
-    stop("nuisance regressors leave fewer than two residual degrees of ",
-         "freedom in a training split.", call. = FALSE)
-  }
-  residualize <- function(M) {
-    beta <- qr.coef(qr_z, M[train, , drop = FALSE])
-    beta[is.na(beta)] <- 0  # aliased nuisance columns contribute nothing
-    out <- rbind(M[train, , drop = FALSE] - z_train %*% beta,
-                 M[test, , drop = FALSE] - z_test %*% beta)
+  n_train <- length(train)
+  tr <- seq_len(n_train)
+  held <- n_train + seq_along(test)
+  rows <- c(train, test)
+  stack <- function(M) {
+    out <- M[rows, , drop = FALSE]
     dimnames(out) <- list(NULL, colnames(M))
     out
   }
-  n_train <- length(train)
-  Yr <- residualize(Y)
-  held_out <- n_train + seq_along(test)
-  list(X = residualize(X), Y = Yr, train = seq_len(n_train), test = held_out,
-       observed = Yr[held_out, , drop = FALSE])
+  parts <- list(X = stack(X), Y = stack(Y))
+  if (!is.null(covariates)) parts$C <- stack(covariates)
+
+  if (!is.null(nuisance)) {
+    fit <- attr(nuisance, "fit") %||% "within"
+    z <- cbind(rep(1, length(rows)), nuisance[rows, , drop = FALSE])
+    if (fit == "train" && length(test)) {
+      leverage <- .brt_heldout_leverage(z[tr, , drop = FALSE], z[held, , drop = FALSE])
+      if (leverage > 1) {
+        warning(
+          "nuisance_fit = 'train': held-out nuisance rows lie outside the ",
+          "range of the training rows (largest leverage ",
+          format(signif(leverage, 3)), "); extrapolated nuisance fits ",
+          "inflate accuracy. Use nuisance_fit = 'within'.", call. = FALSE
+        )
+      }
+    }
+    parts <- lapply(parts, function(M) {
+      out <- M
+      out[tr, ] <- .brt_remove(z[tr, , drop = FALSE], M[tr, , drop = FALSE])
+      if (length(test)) {
+        out[held, ] <- if (fit == "within") {
+          .brt_remove(z[held, , drop = FALSE], M[held, , drop = FALSE],
+                      what = "a held-out split (use fewer, longer folds or fewer nuisance regressors)")
+        } else {
+          .brt_remove(z[tr, , drop = FALSE], M[tr, , drop = FALSE],
+                      z[held, , drop = FALSE], M[held, , drop = FALSE])
+        }
+      }
+      out
+    })
+  }
+  if (!is.null(covariates)) {
+    z <- cbind(rep(1, length(rows)), parts$C)
+    for (name in c("X", "Y")) {
+      M <- parts[[name]]
+      parts[[name]] <- .brt_remove(z[tr, , drop = FALSE], M[tr, , drop = FALSE],
+                                   z, M)
+    }
+  }
+  list(X = parts$X, Y = parts$Y, train = tr, test = held,
+       observed = parts$Y[held, , drop = FALSE])
 }
 
 .brt_inner_folds <- function(inner_folds,
@@ -643,7 +711,8 @@
                                     solver_cache = NULL,
                                     cache_prefix = "nested",
                                     kernel_cache_prefix = cache_prefix,
-                                    nuisance = NULL) {
+                                    nuisance = NULL,
+                                    covariates = NULL) {
   metric <- match.arg(metric)
   solver <- match.arg(solver)
   gx <- .brc_grouped_matrix(X, groups = feature_groups, context = "X")
@@ -651,7 +720,9 @@
   n <- nrow(Y)
   v <- ncol(Y)
   nuisance <- .brt_validate_nuisance(nuisance, n)
-  if (!is.null(nuisance) && !is.matrix(X)) {
+  covariates <- .brt_validate_nuisance(covariates, n, "covariates")
+  adjusted <- !is.null(nuisance) || !is.null(covariates)
+  if (adjusted && !is.matrix(X)) {
     stop("nuisance regressors require X to be a single numeric matrix.",
          call. = FALSE)
   }
@@ -708,8 +779,8 @@
   oof <- matrix(NA_real_, n, v, dimnames = list(rownames(Y), colnames(Y)))
   if (is.null(rownames(oof))) rownames(oof) <- as.character(seq_len(n))
   # Held-out responses the predictions are scored against: Y itself, or Y with
-  # the training-fit nuisance projection removed.
-  oof_observed <- if (is.null(nuisance)) Y else oof
+  # its nuisance projection removed.
+  oof_observed <- if (adjusted) oof else Y
   # Evaluate candidates grouped by theta (first-appearance order, stable within
   # a group) so each (fold, theta) decomposition is reused across alphas after
   # K fits instead of after T * K fits, which keeps reuse inside a byte-capped
@@ -747,10 +818,10 @@
 
     row_lookup <- setNames(seq_along(outer$train), outer$train)
     inner_data <- lapply(inners, function(fold) {
-      .brt_split_data(X, Y, fold$train, fold$test, nuisance)
+      .brt_split_data(X, Y, fold$train, fold$test, nuisance, covariates)
     })
     inner_observed <- Y[outer$train, , drop = FALSE]
-    if (!is.null(nuisance)) {
+    if (adjusted) {
       for (ii in seq_along(inners)) {
         inner_observed[unname(row_lookup[as.character(inners[[ii]]$test)]), ] <-
           inner_data[[ii]]$observed
@@ -805,7 +876,8 @@
     outer_pred <- matrix(NA_real_, length(outer$test), v,
                          dimnames = list(as.character(outer$test), colnames(Y)))
     outer_fits <- list()
-    outer_data <- .brt_split_data(X, Y, outer$train, outer$test, nuisance)
+    outer_data <- .brt_split_data(X, Y, outer$train, outer$test, nuisance,
+                                  covariates)
     for (cc in sort(unique(selected))) {
       response_indices <- which(selected == cc)
       batches <- split(response_indices,
@@ -841,7 +913,7 @@
       stop("Outer predictions were not completely and finitely assembled.", call. = FALSE)
     }
     oof[outer$test, ] <- outer_pred
-    if (!is.null(nuisance)) oof_observed[outer$test, ] <- outer_data$observed
+    if (adjusted) oof_observed[outer$test, ] <- outer_data$observed
 
     selected_table <- data.frame(
       outer_fold = outer$id,
@@ -895,7 +967,7 @@
   out <- list(
     predictions = oof,
     performance = .banded_ridge_score(oof_observed, oof),
-    observed = if (is.null(nuisance)) NULL else oof_observed,
+    observed = if (adjusted) oof_observed else NULL,
     n_nuisance = if (is.null(nuisance)) 0L else ncol(nuisance),
     fold_performance = fold_performance,
     selections = do.call(rbind, selection_rows),

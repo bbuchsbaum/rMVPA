@@ -639,11 +639,20 @@
 #' @param nuisance Optional numeric matrix of nuisance regressors (rows =
 #'   observations), for example motion parameters and drift terms. Within every
 #'   inner and outer split an intercept and these columns are regressed out of
-#'   both the features and the responses using coefficients estimated on the
-#'   training rows only, and the same coefficients are applied to the held-out
-#'   rows. Nuisance columns are never penalized and never contribute to the
-#'   predictions, so all reported accuracies, including leave-band-out delta
-#'   R2, describe variance in the nuisance-residualized held-out responses.
+#'   both the features and the responses, separately for the training rows and
+#'   the held-out rows (see `nuisance_fit`). Nuisance columns are never
+#'   penalized and never contribute to the predictions, so all reported
+#'   accuracies, including leave-band-out delta R2, describe variance in the
+#'   nuisance-residualized held-out responses.
+#' @param nuisance_fit How held-out rows are residualized. `"within"` (default)
+#'   fits the nuisance coefficients on the held-out rows themselves, so nothing
+#'   is carried between training and held-out data and nothing is extrapolated;
+#'   each held-out split then needs more rows than nuisance regressors.
+#'   `"train"` applies the training-fit coefficients to the held-out rows. That
+#'   suits exchangeable observations, but with drift-like regressors and
+#'   contiguous held-out blocks the extrapolated fit dominates features and
+#'   responses alike and inflates accuracy; a warning is given when the
+#'   held-out rows lie outside the range of the training rows.
 #' @param purge Non-negative temporal gap (in rows) around validation/test
 #'   rows. Training rows within the gap are dropped when folds are constructed
 #'   from an integer count or a `cross_validation` object; explicit fold lists
@@ -733,7 +742,9 @@ banded_ridge_model <- function(dataset,
                                weight_overflow = c("error", "none"),
                                seed = 1L,
                                memory_limit_mb = 1024,
-                               nuisance = NULL) {
+                               nuisance = NULL,
+                               nuisance_fit = c("within", "train")) {
+  nuisance_fit <- match.arg(nuisance_fit)
   if (!inherits(dataset, "mvpa_image_dataset")) {
     stop("banded_ridge_model currently supports image mvpa_dataset objects only.",
          call. = FALSE)
@@ -769,7 +780,8 @@ banded_ridge_model <- function(dataset,
     stop("banded_ridge_model: design X_train rows must match dataset training observations.",
          call. = FALSE)
   }
-  nuisance <- .brt_validate_nuisance(nuisance, n, "banded_ridge_model: nuisance")
+  nuisance <- .brt_validate_nuisance(nuisance, n, "banded_ridge_model: nuisance",
+                                     fit = nuisance_fit)
   blocks <- design$block_var_train
   if (isTRUE(design$time_series) && is.null(blocks) && purge < 1L) {
     stop(

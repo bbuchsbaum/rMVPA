@@ -26,8 +26,9 @@
 #'     i.e. observed and predicted features projected onto the contrast.}
 #'   \item{`<set>_partial_r2`, `<set>_partial_cor`}{With `partial = TRUE`:
 #'     accuracy for a set or family after every other feature column has been
-#'     regressed out of both the pattern and the targets, inside each training
-#'     split. This is the pattern-level analogue of unique variance.}
+#'     regressed out of both the pattern and the targets, with coefficients
+#'     fitted on each training split. This is the pattern-level analogue of
+#'     unique variance.}
 #'   \item{`<metric>_p`}{With `n_perm > 0`: one-sided p-value against a null in
 #'     which the predictions are shifted in time against the observations.}
 #' }
@@ -43,8 +44,9 @@
 #'   rows of a held-out row.
 #' @param alphas Candidate ridge penalties. Each feature column selects its
 #'   own penalty inside each outer-training set.
-#' @param nuisance Optional nuisance matrix (rows = observations), regressed
-#'   out of patterns and targets inside every training split.
+#' @param nuisance,nuisance_fit Optional nuisance matrix (rows = observations)
+#'   regressed out of patterns and targets inside every split, and how held-out
+#'   rows are residualized; see [banded_ridge_model()].
 #' @param partial If `TRUE`, also report partial accuracies (see Metrics).
 #' @param n_perm Number of time-shift permutations; `0` (default) disables the
 #'   null.
@@ -78,6 +80,7 @@ feature_decode_model <- function(dataset,
                                  alphas = 10^seq(-1, 5),
                                  purge = 0L,
                                  nuisance = NULL,
+                                 nuisance_fit = c("within", "train"),
                                  partial = FALSE,
                                  n_perm = 0L,
                                  perm_strategy = c("circular_shift", "block_shuffle"),
@@ -87,6 +90,7 @@ feature_decode_model <- function(dataset,
                                  seed = 1L,
                                  ...) {
   perm_strategy <- match.arg(perm_strategy)
+  nuisance_fit <- match.arg(nuisance_fit)
   if (!inherits(design, "feature_sets_design")) {
     stop("feature_decode_model: design must be created by feature_sets_design().",
          call. = FALSE)
@@ -109,7 +113,8 @@ feature_decode_model <- function(dataset,
     stop("feature_decode_model: design rows must match dataset observations.",
          call. = FALSE)
   }
-  nuisance <- .brt_validate_nuisance(nuisance, n, "feature_decode_model: nuisance")
+  nuisance <- .brt_validate_nuisance(nuisance, n, "feature_decode_model: nuisance",
+                                     fit = nuisance_fit)
   blocks <- design$block_var_train
   if (isTRUE(design$time_series) && is.null(blocks) && purge < 1L) {
     stop("feature_decode_model: time_series = TRUE requires block_var_train or ",
@@ -158,7 +163,7 @@ feature_decode_model <- function(dataset,
 
 # Held-out predictions of `targets` from `pattern`, with the scores'
 # observed counterpart (targets, or their nuisance-residualized version).
-.fdm_predict <- function(model, pattern, targets, nuisance) {
+.fdm_predict <- function(model, pattern, targets, covariates = NULL) {
   wide <- ncol(pattern) > nrow(pattern)
   nested <- .banded_ridge_nested_cv(
     pattern, targets, model$outer_folds, model$candidates,
@@ -168,7 +173,7 @@ feature_decode_model <- function(dataset,
     metric = "mse", seed = model$seed,
     solver = if (wide) "dual_kernel" else "svd_primal",
     solver_cache = .banded_ridge_solver_cache(),
-    nuisance = nuisance
+    nuisance = model$nuisance, covariates = covariates
   )
   list(predicted = nested$predictions,
        observed = if (is.null(nested$observed)) targets else nested$observed)
@@ -223,7 +228,7 @@ fit_roi.feature_decode_model <- function(model, roi_data, context, ...) {
 
   result <- tryCatch({
     .brt_with_seed(model$seed, {
-      fit <- .fdm_predict(model, pattern, targets, model$nuisance)
+      fit <- .fdm_predict(model, pattern, targets)
       scores <- .feature_target_scores(fit$observed, fit$predicted, set,
                                        fs$families, fs$contrasts)
       null <- if (model$n_perm > 0L) {
@@ -237,7 +242,7 @@ fit_roi.feature_decode_model <- function(model, roi_data, context, ...) {
         columns <- model$partial_groups[[label]]
         part <- .fdm_predict(
           model, pattern, targets[, columns, drop = FALSE],
-          cbind(model$nuisance, targets[, -columns, drop = FALSE])
+          covariates = targets[, -columns, drop = FALSE]
         )
         partial_names <- paste0(label, c("_partial_r2", "_partial_cor"))
         own <- rep("x", length(columns))
