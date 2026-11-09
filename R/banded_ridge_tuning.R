@@ -542,8 +542,8 @@
     return(list(X = X, Y = Y, train = train, test = test,
                 observed = Y[test, , drop = FALSE]))
   }
-  z_train <- cbind(1, nuisance[train, , drop = FALSE])
-  z_test <- cbind(1, nuisance[test, , drop = FALSE])
+  z_train <- cbind(rep(1, length(train)), nuisance[train, , drop = FALSE])
+  z_test <- cbind(rep(1, length(test)), nuisance[test, , drop = FALSE])
   qr_z <- qr(z_train)
   if (length(train) - qr_z$rank < 2L) {
     stop("nuisance regressors leave fewer than two residual degrees of ",

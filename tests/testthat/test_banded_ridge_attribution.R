@@ -549,3 +549,47 @@ test_that("banded_ridge_model applies nuisance regressors to full and reduced mo
   expect_gt(effects$delta_cv_r2_b[[2L]], 0.9)
   expect_error(build(N[-1L, , drop = FALSE]), "one row per observation")
 })
+
+test_that("banded_ridge_weights refits on all rows with each response's modal candidate", {
+  set.seed(6203L)
+  n <- 60L
+  block <- rep(1:5, each = 12L)
+  N <- cbind(drift = seq(-1, 1, length.out = n))
+  X <- cbind(a1 = rnorm(n), a2 = 3 * rnorm(n), b1 = rnorm(n) + N[, 1L])
+  beta <- cbind(c(2, 0, 0), c(0, -1, 1))
+  Y <- X %*% beta + 4 * N[, 1L] + matrix(rnorm(2 * n, sd = 0.05), n)
+  fs <- feature_sets(X, by_set(c("a", "a", "b"), order = c("a", "b")))
+  design <- feature_sets_design(fs, block_var_train = block, time_series = TRUE)
+  candidates <- rMVPA:::.banded_ridge_candidates(
+    c("a", "b"), c(1e-6, 1e3), method = "fixed", theta = c(a = 0.5, b = 0.5)
+  )
+  model <- banded_ridge_model(
+    .bra_test_dataset(Y), design, outer_crossval = 5L, tune_crossval = 2L,
+    candidates = candidates, nuisance = N, seed = 2L
+  )
+  result <- suppressWarnings(run_banded_ridge(model))
+
+  raw <- banded_ridge_weights(model, result, standardized = FALSE)
+  expect_s3_class(raw, "banded_ridge_weights")
+  expect_identical(dim(raw$weights), c(3L, 2L))
+  expect_identical(raw$set, c("a", "a", "b"))
+  expect_identical(raw$voxel_index, model$active_response_ids)
+  # nearly unpenalized fit recovers the generating weights despite the drift
+  expect_true(all(raw$hyperparameters$alpha == 1e-6))
+  expect_equal(unname(raw$weights), beta, tolerance = 0.05)
+  expect_true(all(raw$hyperparameters$outer_folds_selected >= 3L))
+
+  std <- banded_ridge_weights(model, result)
+  resid_sd <- apply(stats::resid(stats::lm(X ~ N)), 2L, function(z) {
+    sqrt(mean((z - mean(z))^2))
+  })
+  ratio <- std$weights / raw$weights
+  keep <- abs(raw$weights) > 0.5
+  expect_equal(ratio[keep], (resid_sd * (keep * 1))[keep], tolerance = 0.02)
+
+  # batching does not change the answer
+  expect_equal(banded_ridge_weights(model, result, target_batch_size = 1L)$weights,
+               std$weights, tolerance = 1e-10)
+  expect_error(banded_ridge_weights(model, list()), "run_banded_ridge")
+  expect_error(banded_ridge_weights(list(), result), "banded_ridge_model")
+})
