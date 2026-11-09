@@ -433,9 +433,12 @@
 .brm_retention_estimate <- function(n, p, v, n_outer,
                                     weight_retention, return_predictions,
                                     retain_diagnostics, n_candidates, inner_v,
-                                    n_delta = 0L, n_groups = 1L) {
+                                    n_delta = 0L, n_groups = 1L,
+                                    retain_observed = FALSE) {
   if (is.na(inner_v)) inner_v <- 0L
-  prediction <- if (return_predictions) 8 * n * v * (1L + n_delta) else 0
+  prediction <- if (return_predictions) {
+    8 * n * v * (1L + n_delta + isTRUE(retain_observed))
+  } else 0
   weights <- switch(weight_retention,
     none = 0,
     primal = 8 * n_outer * p * v,
@@ -523,12 +526,16 @@
                                       Y,
                                       groups,
                                       cache,
-                                      cache_prefix) {
+                                      cache_prefix,
+                                      nuisance = NULL) {
   out <- list()
   theta_columns <- paste0("theta_", nested$group_names)
   for (oo in seq_along(nested$outer_results)) {
     outer <- nested$outer_results[[oo]]
     selected <- outer$selected
+    # The same outer-training data the nested fit used: with nuisance
+    # regressors, that is the residualized X and Y, not the raw matrices.
+    split <- .brt_split_data(X, Y, outer$train, outer$test, nuisance)
     for (candidate_index in unique(selected$candidate_index)) {
       rows <- which(selected$candidate_index == candidate_index)
       alpha <- selected$alpha[rows[[1L]]]
@@ -536,7 +543,8 @@
       names(theta) <- nested$group_names
       theta_key <- .brt_theta_keys(matrix(theta, nrow = 1L))
       path <- .banded_ridge_fit_dual_path(
-        .brc_subset_rows(X, outer$train), Y[outer$train, rows, drop = FALSE],
+        .brc_subset_rows(split$X, split$train),
+        split$Y[split$train, rows, drop = FALSE],
         alphas = alpha, theta = theta, groups = groups,
         recover_primal = FALSE, cache = cache,
         cache_key = paste(cache_prefix, "outer", oo, "refit", "theta",
@@ -610,15 +618,32 @@
 #' @param theta_method One of `"grid"`, `"fixed"`, or `"random"`. The default
 #'   constructs a small, deterministic simplex grid.
 #' @param theta Fixed named simplex vector/matrix for `theta_method = "fixed"`.
-#' @param theta_grid_points Grid resolution for simplex grid candidates.
+#' @param theta_grid_points Grid resolution for simplex grid candidates. A grid
+#'   with fewer than `n_bands + 1` points has no candidate in which every band
+#'   is active, so the equal-weight point is added automatically. With more
+#'   than about three bands prefer `theta_method = "random"`, which samples the
+#'   interior of the simplex.
 #' @param n_theta Number of deterministic random simplex points.
 #' @param metric Inner selection metric; MSE is the default estimand.
 #' @param alpha_scope,theta_scope `"response"`, `"shared"`/`"roi"`, or
 #'   `"fixed"` selection constraints.
 #' @param fixed_alpha,fixed_theta Values required by corresponding fixed scopes.
 #' @param delta_sets Optional feature-band names, or `"all"`, for independently
-#'   retuned predictive leave-one-band-out outer-OOF delta R2. `NULL` (the
-#'   default) performs no reduced-model work.
+#'   retuned predictive leave-one-band-out outer-OOF delta R2. A named list of
+#'   band-name vectors drops each entry's bands together, for example
+#'   `list(phonology = c("manner", "place", "voicing"), manner = "manner")`,
+#'   giving the unique contribution of a family of bands next to that of its
+#'   members; results are labelled by the list names. `"families"` requests
+#'   every band plus every family declared in `feature_sets(families = ...)`.
+#'   `NULL` (the default) performs no reduced-model work.
+#' @param nuisance Optional numeric matrix of nuisance regressors (rows =
+#'   observations), for example motion parameters and drift terms. Within every
+#'   inner and outer split an intercept and these columns are regressed out of
+#'   both the features and the responses using coefficients estimated on the
+#'   training rows only, and the same coefficients are applied to the held-out
+#'   rows. Nuisance columns are never penalized and never contribute to the
+#'   predictions, so all reported accuracies, including leave-band-out delta
+#'   R2, describe variance in the nuisance-residualized held-out responses.
 #' @param purge Non-negative temporal gap (in rows) around validation/test
 #'   rows. Training rows within the gap are dropped when folds are constructed
 #'   from an integer count or a `cross_validation` object; explicit fold lists
@@ -627,7 +652,9 @@
 #' @param solver `"auto"`, `"direct"`, `"svd_primal"`, or `"dual_kernel"`.
 #' @param target_batch_size Maximum responses evaluated together.
 #' @param return_predictions Retain the complete outer out-of-fold prediction
-#'   matrix.
+#'   matrix. With nuisance regressors, the nuisance-residualized held-out
+#'   responses the predictions are scored against are also returned, as
+#'   `observed`.
 #' @param weight_retention Retain no weights, outer-fold primal coefficients, or
 #'   outer-fold dual weights.
 #' @param retain_diagnostics Retain full candidate/fold diagnostics per chunk.
@@ -705,7 +732,8 @@ banded_ridge_model <- function(dataset,
                                max_retained_mb = 1024,
                                weight_overflow = c("error", "none"),
                                seed = 1L,
-                               memory_limit_mb = 1024) {
+                               memory_limit_mb = 1024,
+                               nuisance = NULL) {
   if (!inherits(dataset, "mvpa_image_dataset")) {
     stop("banded_ridge_model currently supports image mvpa_dataset objects only.",
          call. = FALSE)
@@ -741,6 +769,7 @@ banded_ridge_model <- function(dataset,
     stop("banded_ridge_model: design X_train rows must match dataset training observations.",
          call. = FALSE)
   }
+  nuisance <- .brt_validate_nuisance(nuisance, n, "banded_ridge_model: nuisance")
   blocks <- design$block_var_train
   if (isTRUE(design$time_series) && is.null(blocks) && purge < 1L) {
     stop(
@@ -774,12 +803,26 @@ banded_ridge_model <- function(dataset,
     tune_crossval, outer_folds, n, blocks, as.integer(purge), as.integer(seed),
     n_available = length(available)
   )
-  delta_sets <- .bra_validate_delta_sets(delta_sets, group_names)
+  if (identical(delta_sets, "families")) {
+    families <- design$X_train$families
+    if (!length(families)) {
+      stop("delta_sets = 'families' requires feature_sets(families = ...).",
+           call. = FALSE)
+    }
+    # every band, plus every family that is a proper group of bands
+    proper <- vapply(families, function(members) {
+      length(members) > 1L && length(members) < length(group_names)
+    }, logical(1))
+    delta_sets <- c(stats::setNames(as.list(group_names), group_names),
+                    families[proper])
+  }
+  delta_members <- .bra_delta_members(delta_sets, group_names)
+  delta_sets <- names(delta_members)
   reduced_candidates <- setNames(lapply(delta_sets, function(band) {
-    .bra_reduced_candidates(candidates, band)
+    .bra_reduced_candidates(candidates, delta_members[[band]])
   }), delta_sets)
   reduced_fixed_theta <- setNames(lapply(delta_sets, function(band) {
-    .bra_reduced_fixed_theta(fixed_theta, group_names, band)
+    .bra_reduced_fixed_theta(fixed_theta, group_names, delta_members[[band]])
   }), delta_sets)
   active_ids <- .brm_active_ids(dataset)
   plan <- .banded_ridge_solver_plan(
@@ -794,7 +837,8 @@ banded_ridge_model <- function(dataset,
     n, ncol(design$X_train$X), length(active_ids), length(outer_folds),
     weight_retention, return_predictions, retain_diagnostics,
     length(candidates$alpha), tuning$inner_v,
-    n_delta = length(delta_sets), n_groups = length(group_names)
+    n_delta = length(delta_sets), n_groups = length(group_names),
+    retain_observed = !is.null(nuisance)
   )
   if (!is.numeric(max_retained_mb) || length(max_retained_mb) != 1L ||
       !is.finite(max_retained_mb) || max_retained_mb <= 0) {
@@ -812,7 +856,8 @@ banded_ridge_model <- function(dataset,
         n, ncol(design$X_train$X), length(active_ids), length(outer_folds),
         weight_retention, return_predictions, retain_diagnostics,
         length(candidates$alpha), tuning$inner_v,
-        n_delta = length(delta_sets), n_groups = length(group_names)
+        n_delta = length(delta_sets), n_groups = length(group_names),
+    retain_observed = !is.null(nuisance)
       )
     }
     if (retention[["total"]] > max_retained_mb * 1024^2) {
@@ -836,7 +881,9 @@ banded_ridge_model <- function(dataset,
     selectable_alphas = sort(unique(candidates$alpha[available])),
     alpha_scope = alpha_scope, theta_scope = theta_scope,
     fixed_alpha = fixed_alpha, fixed_theta = fixed_theta,
-    delta_sets = delta_sets, reduced_candidates = reduced_candidates,
+    nuisance = nuisance,
+    delta_sets = delta_sets, delta_members = delta_members,
+    reduced_candidates = reduced_candidates,
     reduced_fixed_theta = reduced_fixed_theta,
     purge = as.integer(purge), solver = resolved_solver, solver_plan = plan,
     target_batch_size = target_batch_size, weight_retention = weight_retention,
@@ -913,6 +960,9 @@ run_banded_ridge <- function(model,
     matrix(NA_real_, n, v,
            dimnames = list(as.character(seq_len(n)), paste0("voxel_", active_ids)))
   } else NULL
+  observed <- if (model$return_predictions && !is.null(model$nuisance)) {
+    predictions
+  } else NULL
   delta_bands <- model$delta_sets
   reduced_metric_chunks <- setNames(lapply(delta_bands, function(x) {
     vector("list", length(batches))
@@ -960,7 +1010,7 @@ run_banded_ridge <- function(model,
       fixed_alpha = model$fixed_alpha, fixed_theta = model$fixed_theta,
       response_batch_size = length(ids), seed = model$seed,
       solver = model$solver, solver_cache = cache,
-      cache_prefix = "public"
+      cache_prefix = "public", nuisance = model$nuisance
     )
     counters_after <- .bra_cache_counters(cache)
     work_rows[[length(work_rows) + 1L]] <- .bra_work_row(
@@ -981,11 +1031,16 @@ run_banded_ridge <- function(model,
     selection_rows[[bb]] <- selections
     if (model$return_predictions) {
       predictions[, match(ids, active_ids)] <- nested$predictions
+      if (!is.null(observed)) {
+        observed[, match(ids, active_ids)] <- nested$observed
+      }
     }
     if (model$retain_diagnostics) diagnostics[[bb]] <- nested$outer_results
 
     for (band in delta_bands) {
-      keep <- groups != band
+      dropped <- model$delta_members[[band]]
+      if (is.null(dropped)) dropped <- band
+      keep <- !groups %in% dropped
       reduced_x <- X[, keep, drop = FALSE]
       reduced_groups <- groups[keep]
       reduced_manifest <- model$reduced_candidates[[band]]
@@ -1001,7 +1056,7 @@ run_banded_ridge <- function(model,
         response_batch_size = length(ids), seed = model$seed,
         solver = model$solver, solver_cache = cache,
         cache_prefix = paste("public", "without", band, sep = "::"),
-        kernel_cache_prefix = "public"
+        kernel_cache_prefix = "public", nuisance = model$nuisance
       )
       counters_after <- .bra_cache_counters(cache)
       work_rows[[length(work_rows) + 1L]] <- .bra_work_row(
@@ -1032,7 +1087,8 @@ run_banded_ridge <- function(model,
       weights <- c(weights, .brm_extract_primal_weights(nested))
     } else if (model$weight_retention == "dual") {
       weights <- c(weights, .brm_extract_dual_weights(
-        nested, X, Y, groups, weight_cache, "public"
+        nested, X, Y, groups, weight_cache, "public",
+        nuisance = model$nuisance
       ))
     }
     chunk_manifest[[bb]] <- list(
@@ -1127,6 +1183,7 @@ run_banded_ridge <- function(model,
       candidate_manifests = model$reduced_candidates,
       provenance = list(
         requested_bands = delta_bands,
+        band_members = model$delta_members,
         conceptual_model_count = 1L + length(delta_bands),
         matched_outer_fold_ids = vapply(
           model$outer_folds, `[[`, character(1), "id"
@@ -1169,6 +1226,7 @@ run_banded_ridge <- function(model,
     selection_diagnostics = selection_diagnostics,
     maps = maps,
     predictions = predictions,
+    observed = observed,
     weights = weights,
     diagnostics = diagnostics,
     active_response_ids = active_ids,

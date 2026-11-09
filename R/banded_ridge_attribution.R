@@ -26,6 +26,45 @@
   delta_sets
 }
 
+# Resolve delta_sets to a named list: label -> bands dropped together. A
+# character vector drops one band per entry; a named list drops each entry's
+# bands jointly, which gives the unique contribution of a group of bands (for
+# example every sub-band of one feature family) alongside its members.
+.bra_delta_members <- function(delta_sets, group_names) {
+  if (!is.list(delta_sets)) {
+    labels <- .bra_validate_delta_sets(delta_sets, group_names)
+    return(stats::setNames(as.list(labels), labels))
+  }
+  labels <- names(delta_sets)
+  if (!length(delta_sets) || is.null(labels) || anyNA(labels) ||
+      any(!nzchar(labels)) || anyDuplicated(labels)) {
+    stop("A delta_sets list must have unique non-empty names.", call. = FALSE)
+  }
+  members <- lapply(labels, function(label) {
+    bands <- delta_sets[[label]]
+    if (!is.character(bands) || !length(bands) || anyNA(bands) ||
+        anyDuplicated(bands)) {
+      stop("delta_sets[['", label, "']] must be unique feature-band names.",
+           call. = FALSE)
+    }
+    unknown <- setdiff(bands, group_names)
+    if (length(unknown)) {
+      stop("delta_sets[['", label, "']] contains unknown feature bands: ",
+           paste(unknown, collapse = ", "), ".", call. = FALSE)
+    }
+    if (length(bands) >= length(group_names)) {
+      stop("delta_sets[['", label, "']] cannot drop every feature band.",
+           call. = FALSE)
+    }
+    if (label %in% group_names && !identical(bands, label)) {
+      stop("delta_sets[['", label, "']] is named after a feature band but ",
+           "drops different bands; choose another name.", call. = FALSE)
+    }
+    group_names[group_names %in% bands]
+  })
+  stats::setNames(members, labels)
+}
+
 .bra_project_theta <- function(theta, keep_groups, context) {
   theta <- theta[, keep_groups, drop = FALSE]
   mass <- rowSums(theta)
@@ -41,8 +80,9 @@
 
 .bra_reduced_candidates <- function(candidates, excluded_band) {
   group_names <- candidates$group_names
-  if (!excluded_band %in% group_names) {
-    stop("excluded_band must name one candidate feature band.", call. = FALSE)
+  if (!is.character(excluded_band) || !length(excluded_band) ||
+      !all(excluded_band %in% group_names)) {
+    stop("excluded_band must name candidate feature bands.", call. = FALSE)
   }
   keep_groups <- setdiff(group_names, excluded_band)
   if (!length(keep_groups)) {
@@ -51,7 +91,7 @@
   }
   projected <- .bra_project_theta(
     candidates$theta, keep_groups,
-    paste0("Dropping band '", excluded_band, "'")
+    paste0("Dropping band '", paste(excluded_band, collapse = "+"), "'")
   )
   alpha <- candidates$alpha[projected$valid]
   ids <- .brt_candidate_ids(alpha, projected$theta, keep_groups)
@@ -75,7 +115,8 @@
   theta <- .brt_theta_matrix(fixed_theta, group_names, "fixed_theta")
   projected <- .bra_project_theta(
     theta, setdiff(group_names, excluded_band),
-    paste0("fixed_theta after dropping band '", excluded_band, "'")
+    paste0("fixed_theta after dropping band '",
+           paste(excluded_band, collapse = "+"), "'")
   )
   drop(projected$theta[1L, ])
 }

@@ -136,6 +136,13 @@ by_set <- function(set, order = NULL) {
 #'   the order implied by `spec` or the names of the list).
 #' @param row_weights Optional numeric vector of length nrow(X), used as observation weights
 #'   by downstream models (default: all 1).
+#' @param families Optional named list grouping sets into families, for
+#'   example `list(phonology = c("manner", "place", "voicing"))`. Models report
+#'   family-level summaries next to set-level ones.
+#' @param contrasts Optional contrasts over feature columns: a numeric matrix
+#'   with one row per column of the feature matrix and one named column per
+#'   contrast, or a named list of numeric vectors named by feature columns
+#'   (unnamed features get weight zero).
 #'
 #' @return An object of class `feature_sets`.
 #' @export
@@ -148,7 +155,8 @@ by_set <- function(set, order = NULL) {
 #' # 2) List input (already split per set)
 #' Xlist <- list(low = X[, 1:3], sem = X[, 4:8])
 #' fs2 <- feature_sets(Xlist)
-feature_sets <- function(x, spec = NULL, set_order = NULL, row_weights = NULL) {
+feature_sets <- function(x, spec = NULL, set_order = NULL, row_weights = NULL,
+                         families = NULL, contrasts = NULL) {
   if (is.matrix(x)) {
     if (is.null(spec)) {
       stop("feature_sets(): 'spec' is required when 'x' is a matrix (use blocks(...) or by_set(...)).", call. = FALSE)
@@ -218,7 +226,7 @@ feature_sets <- function(x, spec = NULL, set_order = NULL, row_weights = NULL) {
       row_weights = as.numeric(row_weights)
     )
     class(ret) <- c("feature_sets", "list")
-    return(ret)
+    return(.fs_attach_structure(ret, families, contrasts))
   }
 
   if (is.list(x)) {
@@ -265,10 +273,81 @@ feature_sets <- function(x, spec = NULL, set_order = NULL, row_weights = NULL) {
       row_weights = as.numeric(row_weights)
     )
     class(ret) <- c("feature_sets", "list")
-    return(ret)
+    return(.fs_attach_structure(ret, families, contrasts))
   }
 
   stop("feature_sets(): 'x' must be a matrix or a named list of matrices.", call. = FALSE)
+}
+
+# Attach the optional structure that summaries are reported over: families
+# (named groups of sets, e.g. the sub-bands of one feature family) and
+# contrasts (named weight vectors over feature columns). Both are declared
+# once here and read by every consumer.
+.fs_attach_structure <- function(fs, families = NULL, contrasts = NULL) {
+  sets <- fs$set_order
+  if (!is.null(families)) {
+    labels <- names(families)
+    if (!is.list(families) || !length(families) || is.null(labels) ||
+        anyNA(labels) || any(!nzchar(labels)) || anyDuplicated(labels)) {
+      stop("feature_sets(): 'families' must be a list with unique non-empty names.",
+           call. = FALSE)
+    }
+    families <- lapply(stats::setNames(labels, labels), function(label) {
+      members <- families[[label]]
+      if (!is.character(members) || !length(members) || anyNA(members) ||
+          anyDuplicated(members) || !all(members %in% sets)) {
+        stop("feature_sets(): family '", label,
+             "' must name existing feature sets, each once.", call. = FALSE)
+      }
+      if (label %in% sets && !identical(members, label)) {
+        stop("feature_sets(): family '", label,
+             "' is named after a feature set but has other members.",
+             call. = FALSE)
+      }
+      sets[sets %in% members]
+    })
+  }
+  if (!is.null(contrasts)) {
+    features <- colnames(fs$X)
+    if (is.list(contrasts) && !is.data.frame(contrasts)) {
+      labels <- names(contrasts)
+      if (is.null(features)) {
+        stop("feature_sets(): a list of 'contrasts' needs named feature columns.",
+             call. = FALSE)
+      }
+      if (!length(contrasts) || is.null(labels) || any(!nzchar(labels))) {
+        stop("feature_sets(): a 'contrasts' list must be named.", call. = FALSE)
+      }
+      contrasts <- vapply(contrasts, function(w) {
+        if (!is.numeric(w) || is.null(names(w)) || !all(names(w) %in% features) ||
+            anyDuplicated(names(w))) {
+          stop("feature_sets(): each contrast must be a numeric vector named ",
+               "by feature columns.", call. = FALSE)
+        }
+        out <- stats::setNames(numeric(length(features)), features)
+        out[names(w)] <- w
+        out
+      }, numeric(length(features)))
+    }
+    contrasts <- as.matrix(contrasts)
+    if (!is.numeric(contrasts) || nrow(contrasts) != ncol(fs$X) ||
+        !ncol(contrasts) || any(!is.finite(contrasts)) ||
+        is.null(colnames(contrasts)) || any(!nzchar(colnames(contrasts))) ||
+        anyDuplicated(colnames(contrasts)) ||
+        any(colSums(abs(contrasts)) == 0)) {
+      stop("feature_sets(): 'contrasts' must be a finite, non-zero numeric ",
+           "matrix with one row per feature column and unique column names.",
+           call. = FALSE)
+    }
+    if (any(colnames(contrasts) %in% c("all", sets, names(families)))) {
+      stop("feature_sets(): contrast names must differ from set and family ",
+           "names and from 'all'.", call. = FALSE)
+    }
+    rownames(contrasts) <- colnames(fs$X)
+  }
+  fs$families <- families
+  fs$contrasts <- contrasts
+  fs
 }
 
 #' Print method for feature_sets
@@ -287,6 +366,12 @@ print.feature_sets <- function(x, ...) {
   cat(sprintf("Observations: %d\n", nrow(x$X)))
   cat(sprintf("Features:     %d\n", ncol(x$X)))
   cat(sprintf("Sets:         %d (%s)\n", length(x$indices), paste(names(x$indices), collapse = ", ")))
+  if (length(x$families)) {
+    cat(sprintf("Families:     %s\n", paste(names(x$families), collapse = ", ")))
+  }
+  if (!is.null(x$contrasts)) {
+    cat(sprintf("Contrasts:    %s\n", paste(colnames(x$contrasts), collapse = ", ")))
+  }
   invisible(x)
 }
 
