@@ -653,13 +653,15 @@ test_that("theta-free Gram reuse and cache eviction leave nested dual results un
       candidates$theta[x$selected$candidate_index, , drop = FALSE]
     )))
   }, integer(1))
-  total_fit_calls <- n_inner * n_candidates + sum(refit_calls)
+  # Every alpha of a theta is fitted in one solver pass, so a split costs one
+  # pass per theta, not one per candidate.
+  expect_identical(sum(refit_calls) >= sum(refit_thetas), TRUE)
+  expect_gt(n_candidates, n_theta)
+  solver_passes <- n_inner * n_theta + sum(refit_thetas)
   expect_identical(unlimited$kernel_build_count, 2L * n_folds)
-  expect_identical(unlimited$kernel_hit_count, 2L * (total_fit_calls - n_folds))
-  expect_identical(unlimited$decomposition_count,
-                   n_inner * n_theta + sum(refit_thetas))
-  expect_identical(unlimited$hit_count,
-                   total_fit_calls - unlimited$decomposition_count)
+  expect_identical(unlimited$kernel_hit_count, 2L * (solver_passes - n_folds))
+  expect_identical(unlimited$decomposition_count, solver_passes)
+  expect_identical(unlimited$hit_count, 0L)
 
   # a leave-one-band-out model on the same folds shares the retained band's Grams
   keep <- data$feature_groups != "b"
@@ -695,7 +697,7 @@ test_that("theta-free Gram reuse and cache eviction leave nested dual results un
   same_results(run(nothing), reference)
   expect_identical(length(nothing$entries), 0L)
   expect_gt(nothing$oversize_count, 0L)
-  expect_identical(nothing$decomposition_count, total_fit_calls)
+  expect_identical(nothing$decomposition_count, solver_passes)
 })
 
 test_that("simplex grids always offer a candidate with every band active", {
@@ -939,4 +941,46 @@ test_that("drift nuisance with contiguous folds does not manufacture accuracy", 
     fixed_theta = c(a = 0.5, b = 0.5),
     nuisance = rMVPA:::.brt_validate_nuisance(N, n, fit = "within")
   ), "held-out split")
+})
+
+test_that("fitting every alpha of a theta in one pass matches candidate-by-candidate fits", {
+  data <- .brt_test_data(seed = 9311L, n = 40L, p = 9L, v = 5L)
+  candidates <- rMVPA:::.banded_ridge_candidates(
+    c("a", "b"), alphas = c(0, 0.2, 2, 20), method = "grid", grid_points = 3L
+  )
+  train <- data$outer[[1L]]$train; test <- data$outer[[1L]]$test
+  group <- which(rMVPA:::.brt_theta_keys(candidates$theta) ==
+                   rMVPA:::.brt_theta_keys(candidates$theta)[[2L]])
+  expect_gt(length(group), 1L)
+  for (solver in c("direct", "svd_primal", "dual_kernel")) {
+    together <- rMVPA:::.brt_fit_candidates(
+      data$X, data$Y, train, test, data$feature_groups, candidates, group,
+      solver = solver
+    )
+    for (jj in seq_along(group)) {
+      alone <- rMVPA:::.brt_fit_candidate(
+        data$X, data$Y, train, test, data$feature_groups,
+        rMVPA:::.brt_candidate_args(candidates, group[[jj]]), solver = solver
+      )
+      expect_true(together[[jj]]$ok)
+      expect_equal(together[[jj]]$result$predictions, alone$result$predictions,
+                   tolerance = 1e-12, info = solver)
+      expect_equal(together[[jj]]$result$fit$coefficients,
+                   alone$result$fit$coefficients, tolerance = 1e-12, info = solver)
+    }
+  }
+  # a failing pass marks every candidate of the group as failed
+  broken <- rMVPA:::.brt_fit_candidates(
+    data$X, data$Y, train[1L], test, data$feature_groups, candidates, group,
+    solver = "svd_primal"
+  )
+  expect_false(any(vapply(broken, `[[`, logical(1), "ok")))
+  expect_length(broken, length(group))
+
+  # restricting a fit to some responses keeps its other fields aligned
+  fit <- together[[1L]]$result$fit
+  part <- rMVPA:::.brt_subset_fit(fit, c(2L, 4L))
+  expect_identical(part$response_names, fit$response_names[c(2L, 4L)])
+  expect_identical(part$dual_weights, fit$dual_weights[, c(2L, 4L), drop = FALSE])
+  expect_identical(rMVPA:::.brt_subset_fit(fit, 1:5), fit)
 })

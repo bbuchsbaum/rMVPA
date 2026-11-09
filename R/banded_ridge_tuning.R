@@ -463,6 +463,11 @@
 }
 
 .brt_metric <- function(observed, predicted, metric) {
+  if (metric == "mse") {
+    # the default tuning objective needs no correlation or R2
+    residual <- observed - predicted
+    return(unname(colMeans(residual * residual)))
+  }
   score <- .banded_ridge_score(observed, predicted)
   unname(score[[metric]])
 }
@@ -643,6 +648,66 @@
        observed = parts$Y[held, , drop = FALSE])
 }
 
+# Fit several candidates on one train/test split. Candidates that share theta
+# differ only in alpha, and the path solvers fit every alpha from one
+# preparation and one decomposition, so they are fitted in a single pass.
+# Returns one .brt_fit_candidate()-style result per index.
+.brt_fit_candidates <- function(X, Y, train, test, feature_groups, candidates,
+                                indices, solver = "direct", solver_cache = NULL,
+                                cache_key = NULL, kernel_cache_key = NULL) {
+  if (solver == "direct" || length(indices) == 1L) {
+    return(lapply(indices, function(cc) {
+      .brt_fit_candidate(
+        X, Y, train, test, feature_groups, .brt_candidate_args(candidates, cc),
+        solver = solver, solver_cache = solver_cache, cache_key = cache_key,
+        kernel_cache_key = kernel_cache_key
+      )
+    }))
+  }
+  tryCatch({
+    theta <- .brt_candidate_args(candidates, indices[[1L]])$theta
+    x_train <- .brc_subset_rows(X, train)
+    y_train <- Y[train, , drop = FALSE]
+    path <- if (solver == "svd_primal") {
+      .banded_ridge_fit_svd_path(
+        x_train, y_train, alphas = candidates$alpha[indices], theta = theta,
+        groups = feature_groups, cache = solver_cache, cache_key = cache_key
+      )
+    } else {
+      .banded_ridge_fit_dual_path(
+        x_train, y_train, alphas = candidates$alpha[indices], theta = theta,
+        groups = feature_groups, cache = solver_cache, cache_key = cache_key,
+        kernel_cache_key = kernel_cache_key
+      )
+    }
+    x_test <- .brc_subset_rows(X, test)
+    lapply(seq_along(indices), function(jj) {
+      fit <- path$fits[[jj]]
+      predictions <- .banded_ridge_predict_optimized(fit, x_test,
+                                                     groups = feature_groups)
+      rownames(predictions) <- as.character(test)
+      list(ok = TRUE, error = NULL,
+           result = list(fit = fit, predictions = predictions,
+                         train = train, test = test))
+    })
+  }, error = function(e) {
+    rep(list(list(ok = FALSE, result = NULL, error = conditionMessage(e))),
+        length(indices))
+  })
+}
+
+# Restrict an optimized fit to some of its responses.
+.brt_subset_fit <- function(fit, columns) {
+  if (length(columns) == length(fit$response_names)) return(fit)
+  for (field in c("coefficients", "standardized_coefficients", "dual_weights")) {
+    if (!is.null(fit[[field]])) fit[[field]] <- fit[[field]][, columns, drop = FALSE]
+  }
+  for (field in c("intercept", "y_center", "response_names")) {
+    if (!is.null(fit[[field]])) fit[[field]] <- fit[[field]][columns]
+  }
+  fit
+}
+
 .brt_inner_folds <- function(inner_folds,
                              outer_index,
                              outer_train,
@@ -799,6 +864,9 @@
   theta_keys <- .brt_theta_keys(candidates$theta)
   candidate_order <- order(match(theta_keys, unique(theta_keys)),
                            seq_along(theta_keys))
+  fit_group <- if (solver == "direct") {
+    seq_along(theta_keys)
+  } else match(theta_keys, unique(theta_keys))
   outer_results <- vector("list", length(outer_folds))
   selection_rows <- list()
   error_rows <- list()
@@ -839,39 +907,49 @@
       }
     }
 
-    for (cc in if (tune) candidate_order else integer(0)) {
-      args <- .brt_candidate_args(candidates, cc)
-      inner_oof <- matrix(NA_real_, length(outer$train), v,
-                          dimnames = list(as.character(outer$train), colnames(Y)))
-      candidate_valid <- TRUE
+    # Candidates are evaluated in groups that one solver pass can fit: every
+    # alpha of a theta for the path solvers, one candidate for the direct
+    # reference solver.
+    for (group in if (tune) split(candidate_order, fit_group[candidate_order]) else list()) {
+      theta_key <- .brt_theta_keys(candidates$theta[group[[1L]], , drop = FALSE])
+      inner_oof <- lapply(group, function(cc) {
+        matrix(NA_real_, length(outer$train), v,
+               dimnames = list(as.character(outer$train), colnames(Y)))
+      })
+      candidate_valid <- rep(TRUE, length(group))
       for (ii in seq_along(inners)) {
         inner <- inners[[ii]]
         split <- inner_data[[ii]]
-        evaluated <- .brt_fit_candidate(
-          split$X, split$Y, split$train, split$test, feature_groups, args,
-          solver = solver, solver_cache = solver_cache,
+        evaluated <- .brt_fit_candidates(
+          split$X, split$Y, split$train, split$test, feature_groups,
+          candidates, group, solver = solver, solver_cache = solver_cache,
           cache_key = paste(cache_prefix, "outer", oo, "inner", ii,
-                            "theta", .brt_theta_keys(matrix(
-                              args$theta, nrow = 1L
-                            )), sep = "::"),
+                            "theta", theta_key, sep = "::"),
           kernel_cache_key = paste(kernel_cache_prefix, "outer", oo,
                                    "inner", ii, sep = "::")
         )
-        if (!evaluated$ok) {
-          candidate_valid <- FALSE
-          error_rows[[length(error_rows) + 1L]] <- data.frame(
-            outer_fold = outer$id, inner_fold = inner$id,
-            candidate_id = candidates$candidate_id[[cc]],
-            error = evaluated$error, stringsAsFactors = FALSE
-          )
-          next
+        rows <- unname(row_lookup[as.character(inner$test)])
+        for (jj in seq_along(group)) {
+          cc <- group[[jj]]
+          if (!evaluated[[jj]]$ok) {
+            candidate_valid[[jj]] <- FALSE
+            error_rows[[length(error_rows) + 1L]] <- data.frame(
+              outer_fold = outer$id, inner_fold = inner$id,
+              candidate_id = candidates$candidate_id[[cc]],
+              error = evaluated[[jj]]$error, stringsAsFactors = FALSE
+            )
+            next
+          }
+          pred <- evaluated[[jj]]$result$predictions
+          fold_scores[ii, cc, ] <- .brt_metric(split$observed, pred, metric)
+          inner_oof[[jj]][rows, ] <- pred
         }
-        pred <- evaluated$result$predictions
-        fold_scores[ii, cc, ] <- .brt_metric(split$observed, pred, metric)
-        inner_oof[unname(row_lookup[as.character(inner$test)]), ] <- pred
       }
-      if (candidate_valid && all(is.finite(inner_oof))) {
-        candidate_scores[cc, ] <- .brt_metric(inner_observed, inner_oof, metric)
+      for (jj in seq_along(group)) {
+        if (candidate_valid[[jj]] && all(is.finite(inner_oof[[jj]]))) {
+          candidate_scores[group[[jj]], ] <-
+            .brt_metric(inner_observed, inner_oof[[jj]], metric)
+        }
       }
     }
 
@@ -889,35 +967,41 @@
     outer_fits <- list()
     outer_data <- .brt_split_data(X, Y, outer$train, outer$test, nuisance,
                                   covariates)
-    for (cc in sort(unique(selected))) {
-      response_indices <- which(selected == cc)
+    chosen <- sort(unique(selected))
+    for (group in split(chosen, fit_group[chosen])) {
+      theta_key <- .brt_theta_keys(candidates$theta[group[[1L]], , drop = FALSE])
+      response_indices <- which(selected %in% group)
       batches <- split(response_indices,
                        ceiling(seq_along(response_indices) / batch_size))
-      args <- .brt_candidate_args(candidates, cc)
       for (bb in seq_along(batches)) {
         response_index <- batches[[bb]]
-        fitted <- .brt_fit_candidate(
+        present <- group[group %in% selected[response_index]]
+        fitted <- .brt_fit_candidates(
           outer_data$X, outer_data$Y[, response_index, drop = FALSE],
-          outer_data$train, outer_data$test,
-          feature_groups, args, solver = solver, solver_cache = solver_cache,
+          outer_data$train, outer_data$test, feature_groups, candidates,
+          present, solver = solver, solver_cache = solver_cache,
           cache_key = paste(cache_prefix, "outer", oo, "refit", "theta",
-                            .brt_theta_keys(matrix(args$theta, nrow = 1L)),
-                            sep = "::"),
+                            theta_key, sep = "::"),
           kernel_cache_key = paste(kernel_cache_prefix, "outer", oo, "refit",
                                    sep = "::")
         )
-        if (!fitted$ok) {
-          stop("Selected candidate failed during outer refit: ", fitted$error,
-               call. = FALSE)
+        for (jj in seq_along(present)) {
+          cc <- present[[jj]]
+          if (!fitted[[jj]]$ok) {
+            stop("Selected candidate failed during outer refit: ",
+                 fitted[[jj]]$error, call. = FALSE)
+          }
+          columns <- which(selected[response_index] == cc)
+          outer_pred[, response_index[columns]] <-
+            fitted[[jj]]$result$predictions[, columns, drop = FALSE]
+          outer_fits[[length(outer_fits) + 1L]] <- list(
+            candidate_index = cc,
+            candidate_id = candidates$candidate_id[[cc]],
+            response_indices = response_index[columns],
+            responses = colnames(Y)[response_index[columns]],
+            fit = .brt_subset_fit(fitted[[jj]]$result$fit, columns)
+          )
         }
-        outer_pred[, response_index] <- fitted$result$predictions
-        outer_fits[[length(outer_fits) + 1L]] <- list(
-          candidate_index = cc,
-          candidate_id = candidates$candidate_id[[cc]],
-          response_indices = response_index,
-          responses = colnames(Y)[response_index],
-          fit = fitted$result$fit
-        )
       }
     }
     if (any(!is.finite(outer_pred))) {
