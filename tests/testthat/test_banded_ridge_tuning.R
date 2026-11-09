@@ -712,3 +712,26 @@ test_that("simplex grids always offer a candidate with every band active", {
   expect_equal(nrow(rMVPA:::.brt_simplex_grid(2L, 3L)), 3L)
   expect_equal(nrow(rMVPA:::.brt_simplex_grid(3L, 4L)), 10L)
 })
+
+test_that("purged folds without declared blocks are contiguous segments", {
+  folds <- rMVPA:::.banded_ridge_make_folds(1:40, 4L, purge = 2L, seed = 11L)
+  expect_length(folds, 4L)
+  for (fold in folds) {
+    expect_true(all(diff(fold$test) == 1L))
+    gap <- vapply(fold$train, function(i) min(abs(i - fold$test)), numeric(1))
+    expect_true(all(gap > 2L))
+    # only the purge margins are lost, never most of the training rows
+    expect_gte(length(fold$train), 40L - length(fold$test) - 2L * 2L)
+  }
+  expect_setequal(unlist(lapply(folds, `[[`, "test")), 1:40)
+  expect_identical(
+    folds, rMVPA:::.banded_ridge_make_folds(1:40, 4L, purge = 2L, seed = 99L)
+  )
+  # rows need not be consecutive (inner folds inside an outer-training set)
+  inner <- rMVPA:::.banded_ridge_make_folds(c(1:10, 21:40), 3L, purge = 1L)
+  expect_setequal(unlist(lapply(inner, `[[`, "test")), c(1:10, 21:40))
+  # without a purge the historical random row-wise folds are kept
+  random <- rMVPA:::.banded_ridge_make_folds(1:40, 4L, purge = 0L, seed = 11L)
+  expect_false(all(vapply(random, function(f) all(diff(f$test) == 1L),
+                          logical(1))))
+})

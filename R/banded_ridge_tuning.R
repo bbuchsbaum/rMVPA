@@ -91,9 +91,20 @@
     if (length(rows) < n_folds) {
       stop("There are fewer rows than requested folds.", call. = FALSE)
     }
-    shuffled <- .brt_with_seed(seed, sample(rows, length(rows), replace = FALSE))
-    assignment <- rep(seq_len(n_folds), length.out = length(rows))
-    test_sets <- lapply(seq_len(n_folds), function(k) sort(shuffled[assignment == k]))
+    if (purge > 0L) {
+      # A temporal purge declares the rows to be an ordered series. Scattered
+      # random test rows would then be leaky and, once purged, would delete
+      # most of the training data, so cut the ordered rows into contiguous
+      # segments instead.
+      ordered <- sort(rows)
+      assignment <- cut(seq_along(ordered), n_folds, labels = FALSE)
+      test_sets <- lapply(seq_len(n_folds), function(k) ordered[assignment == k])
+    } else {
+      shuffled <- .brt_with_seed(seed, sample(rows, length(rows), replace = FALSE))
+      assignment <- rep(seq_len(n_folds), length.out = length(rows))
+      test_sets <- lapply(seq_len(n_folds),
+                          function(k) sort(shuffled[assignment == k]))
+    }
   }
 
   folds <- lapply(seq_len(n_folds), function(k) {
