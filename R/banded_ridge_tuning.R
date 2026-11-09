@@ -515,6 +515,55 @@
   }, error = function(e) list(ok = FALSE, result = NULL, error = conditionMessage(e)))
 }
 
+# Validate an optional nuisance matrix (rows = observations).
+.brt_validate_nuisance <- function(nuisance, n, context = "nuisance") {
+  if (is.null(nuisance)) return(NULL)
+  if (is.data.frame(nuisance)) nuisance <- as.matrix(nuisance)
+  if (is.numeric(nuisance) && is.null(dim(nuisance))) {
+    nuisance <- matrix(nuisance, ncol = 1L)
+  }
+  if (!is.matrix(nuisance) || !is.numeric(nuisance) || nrow(nuisance) != n ||
+      !ncol(nuisance) || any(!is.finite(nuisance))) {
+    stop(context, " must be a finite numeric matrix with one row per ",
+         "observation.", call. = FALSE)
+  }
+  storage.mode(nuisance) <- "double"
+  nuisance
+}
+
+# Data for one train/test split. With nuisance regressors, an intercept plus
+# the nuisance columns are regressed out of X and Y using coefficients
+# estimated on the training rows only; the same coefficients are then applied
+# to the test rows, so nothing about the held-out rows reaches the fit. The
+# returned matrices hold the training rows followed by the test rows, and
+# `observed` is the held-out response the predictions are scored against.
+.brt_split_data <- function(X, Y, train, test, nuisance = NULL) {
+  if (is.null(nuisance)) {
+    return(list(X = X, Y = Y, train = train, test = test,
+                observed = Y[test, , drop = FALSE]))
+  }
+  z_train <- cbind(1, nuisance[train, , drop = FALSE])
+  z_test <- cbind(1, nuisance[test, , drop = FALSE])
+  qr_z <- qr(z_train)
+  if (length(train) - qr_z$rank < 2L) {
+    stop("nuisance regressors leave fewer than two residual degrees of ",
+         "freedom in a training split.", call. = FALSE)
+  }
+  residualize <- function(M) {
+    beta <- qr.coef(qr_z, M[train, , drop = FALSE])
+    beta[is.na(beta)] <- 0  # aliased nuisance columns contribute nothing
+    out <- rbind(M[train, , drop = FALSE] - z_train %*% beta,
+                 M[test, , drop = FALSE] - z_test %*% beta)
+    dimnames(out) <- list(NULL, colnames(M))
+    out
+  }
+  n_train <- length(train)
+  Yr <- residualize(Y)
+  held_out <- n_train + seq_along(test)
+  list(X = residualize(X), Y = Yr, train = seq_len(n_train), test = held_out,
+       observed = Yr[held_out, , drop = FALSE])
+}
+
 .brt_inner_folds <- function(inner_folds,
                              outer_index,
                              outer_train,
@@ -593,13 +642,19 @@
                                     solver = c("direct", "svd_primal", "dual_kernel"),
                                     solver_cache = NULL,
                                     cache_prefix = "nested",
-                                    kernel_cache_prefix = cache_prefix) {
+                                    kernel_cache_prefix = cache_prefix,
+                                    nuisance = NULL) {
   metric <- match.arg(metric)
   solver <- match.arg(solver)
   gx <- .brc_grouped_matrix(X, groups = feature_groups, context = "X")
   Y <- .brc_response_matrix(Y, n_expected = nrow(gx$X))
   n <- nrow(Y)
   v <- ncol(Y)
+  nuisance <- .brt_validate_nuisance(nuisance, n)
+  if (!is.null(nuisance) && !is.matrix(X)) {
+    stop("nuisance regressors require X to be a single numeric matrix.",
+         call. = FALSE)
+  }
   blocks <- .brt_validate_blocks(blocks, n)
   candidates <- .brt_validate_candidates(candidates, gx$group_names)
   tune <- !(length(inner_v) == 1L && (is.logical(inner_v) || is.integer(inner_v)) &&
@@ -652,6 +707,9 @@
 
   oof <- matrix(NA_real_, n, v, dimnames = list(rownames(Y), colnames(Y)))
   if (is.null(rownames(oof))) rownames(oof) <- as.character(seq_len(n))
+  # Held-out responses the predictions are scored against: Y itself, or Y with
+  # the training-fit nuisance projection removed.
+  oof_observed <- if (is.null(nuisance)) Y else oof
   # Evaluate candidates grouped by theta (first-appearance order, stable within
   # a group) so each (fold, theta) decomposition is reused across alphas after
   # K fits instead of after T * K fits, which keeps reuse inside a byte-capped
@@ -687,16 +745,28 @@
       .brt_preprocessing_receipt(X, Y, fold, feature_groups)
     })
 
+    row_lookup <- setNames(seq_along(outer$train), outer$train)
+    inner_data <- lapply(inners, function(fold) {
+      .brt_split_data(X, Y, fold$train, fold$test, nuisance)
+    })
+    inner_observed <- Y[outer$train, , drop = FALSE]
+    if (!is.null(nuisance)) {
+      for (ii in seq_along(inners)) {
+        inner_observed[unname(row_lookup[as.character(inners[[ii]]$test)]), ] <-
+          inner_data[[ii]]$observed
+      }
+    }
+
     for (cc in if (tune) candidate_order else integer(0)) {
       args <- .brt_candidate_args(candidates, cc)
       inner_oof <- matrix(NA_real_, length(outer$train), v,
                           dimnames = list(as.character(outer$train), colnames(Y)))
-      row_lookup <- setNames(seq_along(outer$train), outer$train)
       candidate_valid <- TRUE
       for (ii in seq_along(inners)) {
         inner <- inners[[ii]]
+        split <- inner_data[[ii]]
         evaluated <- .brt_fit_candidate(
-          X, Y, inner$train, inner$test, feature_groups, args,
+          split$X, split$Y, split$train, split$test, feature_groups, args,
           solver = solver, solver_cache = solver_cache,
           cache_key = paste(cache_prefix, "outer", oo, "inner", ii,
                             "theta", .brt_theta_keys(matrix(
@@ -715,15 +785,11 @@
           next
         }
         pred <- evaluated$result$predictions
-        fold_scores[ii, cc, ] <- .brt_metric(
-          Y[inner$test, , drop = FALSE], pred, metric
-        )
+        fold_scores[ii, cc, ] <- .brt_metric(split$observed, pred, metric)
         inner_oof[unname(row_lookup[as.character(inner$test)]), ] <- pred
       }
       if (candidate_valid && all(is.finite(inner_oof))) {
-        candidate_scores[cc, ] <- .brt_metric(
-          Y[outer$train, , drop = FALSE], inner_oof, metric
-        )
+        candidate_scores[cc, ] <- .brt_metric(inner_observed, inner_oof, metric)
       }
     }
 
@@ -739,6 +805,7 @@
     outer_pred <- matrix(NA_real_, length(outer$test), v,
                          dimnames = list(as.character(outer$test), colnames(Y)))
     outer_fits <- list()
+    outer_data <- .brt_split_data(X, Y, outer$train, outer$test, nuisance)
     for (cc in sort(unique(selected))) {
       response_indices <- which(selected == cc)
       batches <- split(response_indices,
@@ -747,7 +814,8 @@
       for (bb in seq_along(batches)) {
         response_index <- batches[[bb]]
         fitted <- .brt_fit_candidate(
-          X, Y[, response_index, drop = FALSE], outer$train, outer$test,
+          outer_data$X, outer_data$Y[, response_index, drop = FALSE],
+          outer_data$train, outer_data$test,
           feature_groups, args, solver = solver, solver_cache = solver_cache,
           cache_key = paste(cache_prefix, "outer", oo, "refit", "theta",
                             .brt_theta_keys(matrix(args$theta, nrow = 1L)),
@@ -773,6 +841,7 @@
       stop("Outer predictions were not completely and finitely assembled.", call. = FALSE)
     }
     oof[outer$test, ] <- outer_pred
+    if (!is.null(nuisance)) oof_observed[outer$test, ] <- outer_data$observed
 
     selected_table <- data.frame(
       outer_fold = outer$id,
@@ -818,13 +887,16 @@
   }
   fold_performance <- do.call(rbind, lapply(seq_along(outer_folds), function(oo) {
     rows <- outer_folds[[oo]]$test
-    score <- .banded_ridge_score(Y[rows, , drop = FALSE], oof[rows, , drop = FALSE])
+    score <- .banded_ridge_score(oof_observed[rows, , drop = FALSE],
+                                 oof[rows, , drop = FALSE])
     data.frame(outer_fold = outer_folds[[oo]]$id, score,
                stringsAsFactors = FALSE)
   }))
   out <- list(
     predictions = oof,
-    performance = .banded_ridge_score(Y, oof),
+    performance = .banded_ridge_score(oof_observed, oof),
+    observed = if (is.null(nuisance)) NULL else oof_observed,
+    n_nuisance = if (is.null(nuisance)) 0L else ncol(nuisance),
     fold_performance = fold_performance,
     selections = do.call(rbind, selection_rows),
     outer_results = outer_results,

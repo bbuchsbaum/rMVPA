@@ -627,6 +627,14 @@
 #'   giving the unique contribution of a family of bands next to that of its
 #'   members; results are labelled by the list names. `NULL` (the default)
 #'   performs no reduced-model work.
+#' @param nuisance Optional numeric matrix of nuisance regressors (rows =
+#'   observations), for example motion parameters and drift terms. Within every
+#'   inner and outer split an intercept and these columns are regressed out of
+#'   both the features and the responses using coefficients estimated on the
+#'   training rows only, and the same coefficients are applied to the held-out
+#'   rows. Nuisance columns are never penalized and never contribute to the
+#'   predictions, so all reported accuracies, including leave-band-out delta
+#'   R2, describe variance in the nuisance-residualized held-out responses.
 #' @param purge Non-negative temporal gap (in rows) around validation/test
 #'   rows. Training rows within the gap are dropped when folds are constructed
 #'   from an integer count or a `cross_validation` object; explicit fold lists
@@ -713,7 +721,8 @@ banded_ridge_model <- function(dataset,
                                max_retained_mb = 1024,
                                weight_overflow = c("error", "none"),
                                seed = 1L,
-                               memory_limit_mb = 1024) {
+                               memory_limit_mb = 1024,
+                               nuisance = NULL) {
   if (!inherits(dataset, "mvpa_image_dataset")) {
     stop("banded_ridge_model currently supports image mvpa_dataset objects only.",
          call. = FALSE)
@@ -749,6 +758,7 @@ banded_ridge_model <- function(dataset,
     stop("banded_ridge_model: design X_train rows must match dataset training observations.",
          call. = FALSE)
   }
+  nuisance <- .brt_validate_nuisance(nuisance, n, "banded_ridge_model: nuisance")
   blocks <- design$block_var_train
   if (isTRUE(design$time_series) && is.null(blocks) && purge < 1L) {
     stop(
@@ -845,6 +855,7 @@ banded_ridge_model <- function(dataset,
     selectable_alphas = sort(unique(candidates$alpha[available])),
     alpha_scope = alpha_scope, theta_scope = theta_scope,
     fixed_alpha = fixed_alpha, fixed_theta = fixed_theta,
+    nuisance = nuisance,
     delta_sets = delta_sets, delta_members = delta_members,
     reduced_candidates = reduced_candidates,
     reduced_fixed_theta = reduced_fixed_theta,
@@ -970,7 +981,7 @@ run_banded_ridge <- function(model,
       fixed_alpha = model$fixed_alpha, fixed_theta = model$fixed_theta,
       response_batch_size = length(ids), seed = model$seed,
       solver = model$solver, solver_cache = cache,
-      cache_prefix = "public"
+      cache_prefix = "public", nuisance = model$nuisance
     )
     counters_after <- .bra_cache_counters(cache)
     work_rows[[length(work_rows) + 1L]] <- .bra_work_row(
@@ -1013,7 +1024,7 @@ run_banded_ridge <- function(model,
         response_batch_size = length(ids), seed = model$seed,
         solver = model$solver, solver_cache = cache,
         cache_prefix = paste("public", "without", band, sep = "::"),
-        kernel_cache_prefix = "public"
+        kernel_cache_prefix = "public", nuisance = model$nuisance
       )
       counters_after <- .bra_cache_counters(cache)
       work_rows[[length(work_rows) + 1L]] <- .bra_work_row(

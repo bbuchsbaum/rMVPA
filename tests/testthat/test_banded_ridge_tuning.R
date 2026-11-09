@@ -735,3 +735,118 @@ test_that("purged folds without declared blocks are contiguous segments", {
   expect_false(all(vapply(random, function(f) all(diff(f$test) == 1L),
                           logical(1))))
 })
+
+.brt_nuisance_fixture <- function(n = 60L, seed = 4401L) {
+  set.seed(seed)
+  N <- cbind(drift = seq(-1, 1, length.out = n), motion = rnorm(n))
+  X <- cbind(a = rnorm(n) + 2 * N[, "drift"], b = rnorm(n))
+  Y <- cbind(
+    signal = X[, "a"] - 0.5 * X[, "b"] + 5 * N[, "motion"] + rnorm(n, sd = 0.2),
+    nuisance_only = 4 * N[, "drift"] + rnorm(n, sd = 0.2)
+  )
+  folds <- lapply(1:4, function(k) {
+    test <- which(cut(seq_len(n), 4L, labels = FALSE) == k)
+    list(id = paste0("fold_", k), train = setdiff(seq_len(n), test), test = test)
+  })
+  list(X = X, Y = Y, N = N, folds = folds, groups = c("a", "b"),
+       candidates = rMVPA:::.banded_ridge_candidates(
+         c("a", "b"), 0.5, method = "fixed", theta = c(a = 0.5, b = 0.5)
+       ))
+}
+
+test_that("nuisance regressors are removed with training-fold coefficients only", {
+  f <- .brt_nuisance_fixture()
+  run <- function(Y = f$Y, nuisance = f$N) {
+    rMVPA:::.banded_ridge_nested_cv(
+      f$X, Y, f$folds, f$candidates, feature_groups = f$groups,
+      inner_v = NA_integer_, alpha_scope = "fixed", theta_scope = "fixed",
+      fixed_alpha = 0.5, fixed_theta = c(a = 0.5, b = 0.5), nuisance = nuisance
+    )
+  }
+  got <- run()
+
+  # independent reference: residualize by hand, then an ordinary fit
+  n <- nrow(f$X)
+  expected <- observed <- matrix(NA_real_, n, 2L)
+  for (fold in f$folds) {
+    z_tr <- cbind(1, f$N[fold$train, ]); z_te <- cbind(1, f$N[fold$test, ])
+    proj <- function(M) {
+      beta <- solve(crossprod(z_tr), crossprod(z_tr, M[fold$train, ]))
+      list(train = M[fold$train, ] - z_tr %*% beta,
+           test = M[fold$test, ] - z_te %*% beta)
+    }
+    xr <- proj(f$X); yr <- proj(f$Y)
+    ref <- rMVPA:::.banded_ridge_fit_predict_direct(
+      rbind(xr$train, xr$test), rbind(yr$train, yr$test),
+      train = seq_along(fold$train),
+      test = length(fold$train) + seq_along(fold$test),
+      groups = f$groups, alpha = 0.5, theta = c(a = 0.5, b = 0.5)
+    )
+    expected[fold$test, ] <- ref$predictions
+    observed[fold$test, ] <- yr$test
+  }
+  expect_equal(unname(got$predictions), expected, tolerance = 1e-10)
+  expect_equal(unname(got$observed), observed, tolerance = 1e-10)
+  expect_equal(got$performance$r2,
+               rMVPA:::.banded_ridge_score(observed, expected)$r2,
+               tolerance = 1e-10)
+  expect_identical(got$n_nuisance, 2L)
+
+  # the features explain the signal response once motion is removed, and
+  # explain nothing of a response that is pure drift
+  expect_gt(got$performance$r2[[1L]], 0.9)
+  expect_lt(got$performance$r2[[2L]], 0.05)
+  # without nuisance handling the drift-laden feature "explains" the drift
+  raw <- run(nuisance = NULL)
+  expect_null(raw$observed)
+  expect_gt(raw$performance$r2[[2L]], 0.3)
+  expect_lt(raw$performance$r2[[1L]], got$performance$r2[[1L]])
+
+  # held-out responses cannot influence the predictions for their own fold
+  mutated <- f$Y
+  rows <- f$folds[[2L]]$test
+  mutated[rows, ] <- mutated[rows, ] + 100 * seq_along(rows)
+  changed <- run(Y = mutated)
+  expect_equal(changed$predictions[rows, ], got$predictions[rows, ],
+               tolerance = 1e-10)
+})
+
+test_that("nuisance handling is solver-independent and survives inner tuning", {
+  f <- .brt_nuisance_fixture()
+  candidates <- rMVPA:::.banded_ridge_candidates(
+    c("a", "b"), c(0.1, 1, 10), method = "grid", grid_points = 3L
+  )
+  run <- function(solver) {
+    cache <- if (solver == "direct") NULL else
+      rMVPA:::.banded_ridge_solver_cache()
+    rMVPA:::.banded_ridge_nested_cv(
+      f$X, f$Y, f$folds, candidates, feature_groups = f$groups, inner_v = 3L,
+      purge = 0L, solver = solver, solver_cache = cache, nuisance = f$N
+    )
+  }
+  direct <- run("direct")
+  expect_equal(run("svd_primal")$predictions, direct$predictions,
+               tolerance = 1e-8)
+  expect_equal(run("dual_kernel")$predictions, direct$predictions,
+               tolerance = 1e-8)
+  expect_gt(direct$performance$r2[[1L]], 0.9)
+})
+
+test_that("nuisance input is validated", {
+  f <- .brt_nuisance_fixture()
+  run <- function(nuisance) {
+    rMVPA:::.banded_ridge_nested_cv(
+      f$X, f$Y, f$folds, f$candidates, feature_groups = f$groups,
+      inner_v = NA_integer_, alpha_scope = "fixed", theta_scope = "fixed",
+      fixed_alpha = 0.5, fixed_theta = c(a = 0.5, b = 0.5), nuisance = nuisance
+    )
+  }
+  expect_error(run(f$N[-1L, ]), "one row per observation")
+  bad <- f$N; bad[3L, 1L] <- NA
+  expect_error(run(bad), "finite numeric matrix")
+  expect_error(run(matrix(rnorm(60 * 50), 60L)), "residual degrees of freedom")
+  # a vector is one nuisance column; duplicated columns are harmless
+  expect_equal(run(f$N[, 1L])$n_nuisance, 1L)
+  expect_equal(run(cbind(f$N, f$N))$predictions, run(f$N)$predictions,
+               tolerance = 1e-8)
+})

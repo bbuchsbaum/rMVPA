@@ -521,3 +521,31 @@ test_that("a named delta_sets list drops groups of bands together", {
   bad(list(a = c("a", "b")), "named after a feature band")
   bad(list(x = character()), "unique feature-band names")
 })
+
+test_that("banded_ridge_model applies nuisance regressors to full and reduced models", {
+  set.seed(5102L)
+  n <- 48L
+  block <- rep(1:4, each = 12L)
+  N <- cbind(drift = seq(-1, 1, length.out = n))
+  X <- cbind(rnorm(n) + 2 * N[, 1L], rnorm(n))
+  Y <- cbind(X[, 1L] + 6 * N[, 1L] + rnorm(n, sd = 0.1),
+             X[, 2L] + rnorm(n, sd = 0.1))
+  fs <- feature_sets(X, by_set(c("a", "b"), order = c("a", "b")))
+  design <- feature_sets_design(fs, block_var_train = block, time_series = TRUE)
+  candidates <- rMVPA:::.banded_ridge_candidates(
+    c("a", "b"), 0.01, method = "fixed", theta = c(a = 0.5, b = 0.5)
+  )
+  build <- function(nuisance) {
+    banded_ridge_model(
+      .bra_test_dataset(Y), design, outer_crossval = 4L, candidates = candidates,
+      delta_sets = "all", nuisance = nuisance, seed = 3L
+    )
+  }
+  with_nuisance <- suppressWarnings(run_banded_ridge(build(N)))
+  effects <- with_nuisance$predictive_leave_one_band_out$effects
+  expect_gt(min(with_nuisance$metrics$r2), 0.9)
+  expect_gt(effects$delta_cv_r2_a[[1L]], 0.9)
+  expect_lt(abs(effects$delta_cv_r2_b[[1L]]), 0.05)
+  expect_gt(effects$delta_cv_r2_b[[2L]], 0.9)
+  expect_error(build(N[-1L, , drop = FALSE]), "one row per observation")
+})
