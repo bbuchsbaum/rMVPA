@@ -526,12 +526,16 @@
                                       Y,
                                       groups,
                                       cache,
-                                      cache_prefix) {
+                                      cache_prefix,
+                                      nuisance = NULL) {
   out <- list()
   theta_columns <- paste0("theta_", nested$group_names)
   for (oo in seq_along(nested$outer_results)) {
     outer <- nested$outer_results[[oo]]
     selected <- outer$selected
+    # The same outer-training data the nested fit used: with nuisance
+    # regressors, that is the residualized X and Y, not the raw matrices.
+    split <- .brt_split_data(X, Y, outer$train, outer$test, nuisance)
     for (candidate_index in unique(selected$candidate_index)) {
       rows <- which(selected$candidate_index == candidate_index)
       alpha <- selected$alpha[rows[[1L]]]
@@ -539,7 +543,8 @@
       names(theta) <- nested$group_names
       theta_key <- .brt_theta_keys(matrix(theta, nrow = 1L))
       path <- .banded_ridge_fit_dual_path(
-        .brc_subset_rows(X, outer$train), Y[outer$train, rows, drop = FALSE],
+        .brc_subset_rows(split$X, split$train),
+        split$Y[split$train, rows, drop = FALSE],
         alphas = alpha, theta = theta, groups = groups,
         recover_primal = FALSE, cache = cache,
         cache_key = paste(cache_prefix, "outer", oo, "refit", "theta",
@@ -1082,7 +1087,8 @@ run_banded_ridge <- function(model,
       weights <- c(weights, .brm_extract_primal_weights(nested))
     } else if (model$weight_retention == "dual") {
       weights <- c(weights, .brm_extract_dual_weights(
-        nested, X, Y, groups, weight_cache, "public"
+        nested, X, Y, groups, weight_cache, "public",
+        nuisance = model$nuisance
       ))
     }
     chunk_manifest[[bb]] <- list(
