@@ -2,6 +2,21 @@
 
 ## rMVPA (development version)
 
+- **Faster and parallel
+  [`run_banded_ridge()`](https://bbuchsbaum.github.io/rMVPA/reference/run_banded_ridge.md).**
+
+  - Tuning fits every alpha of a theta in one solver pass instead of
+    refitting each alpha/theta candidate from scratch in every fold, and
+    scores the default objective directly. Results are unchanged; a
+    44-feature, 10-band, 180-candidate problem runs about four times
+    faster with the SVD solver.
+  - `solver = "auto"` now chooses `svd_primal` for small feature
+    matrices when several alphas are tuned (it chose `direct`).
+  - Response batches run on \[future\] workers when the current
+    [`future::plan()`](https://future.futureverse.org/reference/plan.html)
+    has more than one, with results identical to a sequential run.
+    `result$provenance$workers` records how many groups were used.
+
 - **Correctness fix:** nuisance regressors in
   [`banded_ridge_model()`](https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_model.md)
   and

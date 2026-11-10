@@ -93,16 +93,16 @@ cval <- blocked_cross_validation(ds$design$block_var)
 mspec <- mvpa_model(load_model("corclass"), dataset = ds$dataset,
                     design = ds$design, crossval = cval)
 res <- run_searchlight_base(mspec, radius = 2, method = "standard")
-#> INFO [2026-11-10 00:20:28] Running standard searchlight with radius = 2
-#> INFO [2026-11-10 00:20:28] creating standard searchlight
-#> INFO [2026-11-10 00:20:28] running standard searchlight iterator
-#> INFO [2026-11-10 00:20:28] Using automatic searchlight batch size 27 for 27 centers (memory budget 512.0 MiB).
-#> INFO [2026-11-10 00:20:29] 
+#> INFO [2026-11-10 02:22:24] Running standard searchlight with radius = 2
+#> INFO [2026-11-10 02:22:24] creating standard searchlight
+#> INFO [2026-11-10 02:22:24] running standard searchlight iterator
+#> INFO [2026-11-10 02:22:24] Using automatic searchlight batch size 27 for 27 centers (memory budget 512.0 MiB).
+#> INFO [2026-11-10 02:22:24] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 27
 #> - Processed: 27
 #> - Skipped: 0
-#> INFO [2026-11-10 00:20:29] searchlight (standard): 27 ROIs processed (success=27, errors=0)
+#> INFO [2026-11-10 02:22:24] searchlight (standard): 27 ROIs processed (success=27, errors=0)
 names(res$results)
 #> [1] "Accuracy" "AUC"     
 ```

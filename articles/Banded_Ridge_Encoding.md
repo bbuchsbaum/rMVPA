@@ -231,7 +231,7 @@ Request those outputs only when you need them.
 
 | chosen_solver | reason | predictions_MiB | attribution_MiB | total_retained_MiB |
 |:---|:---|---:|---:|---:|
-| direct | measured small-p direct threshold p \<= 64 and storage fits | 0.0148 | 0.0074 | 0.0222 |
+| svd_primal | alpha-path SVD reuse for small p and storage fits | 0.0148 | 0.0074 | 0.0222 |
 
 Decision and retained-storage estimate available before fitting.
 {.table}

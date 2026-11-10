@@ -37,6 +37,13 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="development version" id="rmvpa-development-version">rMVPA (development version)<a class="anchor" aria-label="anchor" href="#rmvpa-development-version"></a></h2>
 <ul><li>
+<p><strong>Faster and parallel <code><a href="../reference/run_banded_ridge.html">run_banded_ridge()</a></code>.</strong></p>
+<ul><li>Tuning fits every alpha of a theta in one solver pass instead of refitting each alpha/theta candidate from scratch in every fold, and scores the default objective directly. Results are unchanged; a 44-feature, 10-band, 180-candidate problem runs about four times faster with the SVD solver.</li>
+<li>
+<code>solver = "auto"</code> now chooses <code>svd_primal</code> for small feature matrices when several alphas are tuned (it chose <code>direct</code>).</li>
+<li>Response batches run on [future] workers when the current <code><a href="https://future.futureverse.org/reference/plan.html" class="external-link">future::plan()</a></code> has more than one, with results identical to a sequential run. <code>result$provenance$workers</code> records how many groups were used.</li>
+</ul></li>
+<li>
 <p><strong>Correctness fix:</strong> nuisance regressors in <code><a href="../reference/banded_ridge_model.html">banded_ridge_model()</a></code> and <code><a href="../reference/feature_decode_model.html">feature_decode_model()</a></code> no longer inflate accuracy for time series. The nuisance coefficients fitted on the training rows are applied to the held-out rows. With drift-like regressors and contiguous held-out blocks that is an extrapolation: the extrapolated fit dominated features and responses alike, and pure-noise responses reached held-out correlations above 0.9.</p>
 <ul><li>The default, <code>nuisance_fit = "train"</code>, is unchanged in what it computes but now stops with an error when held-out nuisance rows lie outside the range of the training rows (largest leverage above one).</li>
 <li>

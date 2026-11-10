@@ -91,6 +91,24 @@ that exactly cover the active mask.</p></dd>
   allocation provenance.</p>
     </div>
     <div class="section level2">
+    <h2 id="parallel-execution">Parallel execution<a class="anchor" aria-label="anchor" href="#parallel-execution"></a></h2>
+
+
+<p>Response batches are independent given the design. When the current
+[future::plan()] has more than one worker, the batches are processed in
+contiguous groups, one group per worker, and the results are identical to a
+sequential run. For example:</p>
+<p>“`r
+future::plan(future::multisession, workers = 8)
+result &lt;- run_banded_ridge(model)
+“`</p>
+<p>Each worker receives only the responses of its own group, so the responses
+are read into memory once in the calling process. Each group keeps its own
+solver cache (the memory limit is divided among the groups), so the cache
+counts in `result$provenance` are sums over groups and differ from a
+sequential run. `result$provenance$workers` records the number of groups.</p>
+    </div>
+    <div class="section level2">
     <h2 id="selection-diagnostics">Selection diagnostics<a class="anchor" aria-label="anchor" href="#selection-diagnostics"></a></h2>
 
 

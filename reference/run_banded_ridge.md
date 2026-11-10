@@ -40,6 +40,23 @@ A \`banded_ridge_result\` with spatial maps, metrics, exact outer-fold
 hyperparameters, selection diagnostics, optional predictions/weights,
 and allocation provenance.
 
+## Parallel execution
+
+Response batches are independent given the design. When the current
+\[future::plan()\] has more than one worker, the batches are processed
+in contiguous groups, one group per worker, and the results are
+identical to a sequential run. For example:
+
+“\`r future::plan(future::multisession, workers = 8) result \<-
+run_banded_ridge(model) “\`
+
+Each worker receives only the responses of its own group, so the
+responses are read into memory once in the calling process. Each group
+keeps its own solver cache (the memory limit is divided among the
+groups), so the cache counts in \`result\$provenance\` are sums over
+groups and differ from a sequential run. \`result\$provenance\$workers\`
+records the number of groups.
+
 ## Selection diagnostics
 
 \`result\$selection_diagnostics\$alpha\` carries one row per fitted
