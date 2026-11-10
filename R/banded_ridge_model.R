@@ -2,7 +2,15 @@
 # the calling process or on a future worker; it receives either the dataset
 # (responses are read batch by batch) or the group's responses as a matrix.
 .brm_run_group <- function(spec, X, groups, batches, batch_index, cache_bytes,
-                           dataset = NULL, Y = NULL) {
+                           dataset = NULL, Y = NULL, rng_kind = NULL) {
+  # Folds are drawn with set.seed(), whose stream depends on the RNG kind. A
+  # worker session may not share the caller's kind, so adopt it for the
+  # duration of the group and put the worker's own kind back afterwards.
+  if (!is.null(rng_kind) && !identical(RNGkind(), rng_kind)) {
+    worker_kind <- RNGkind()
+    do.call(RNGkind, as.list(rng_kind))
+    on.exit(do.call(RNGkind, as.list(worker_kind)), add = TRUE)
+  }
   n <- nrow(X)
   cache <- if (spec$solver == "direct") {
     NULL
@@ -1164,17 +1172,21 @@ run_banded_ridge <- function(model,
     group_y <- lapply(group_index, function(bbs) {
       .brm_response_matrix(model$dataset, unlist(batches[bbs]), n)
     })
+    rng_kind <- RNGkind()
     groups_done <- future.apply::future_mapply(
       function(bbs, Y) {
-        .brm_run_group(spec, X, groups, batches, bbs, cache_bytes, Y = Y)
+        .brm_run_group(spec, X, groups, batches, bbs, cache_bytes, Y = Y,
+                       rng_kind = rng_kind)
       },
       # Folds are drawn under explicit seeds that restore the RNG state.
       # Parallel RNG streams would change the generator kind on the workers
       # and with it the folds, so results would depend on the worker count.
+      # The caller's RNG kind is passed along for the same reason.
       group_index, group_y, SIMPLIFY = FALSE, future.seed = FALSE,
       future.packages = "rMVPA",
       future.globals = list(spec = spec, X = X, groups = groups,
                             batches = batches, cache_bytes = cache_bytes,
+                            rng_kind = rng_kind,
                             .brm_run_group = .brm_run_group)
     )
     rm(group_y)

@@ -910,3 +910,53 @@ test_that("run_banded_ridge gives the same result on future workers", {
                      one$provenance$work_manifest[manifest])
   }
 })
+
+test_that("a worker with another RNG kind draws the caller's folds", {
+  set.seed(4407L)
+  n <- 60L; v <- 4L
+  X <- matrix(rnorm(n * 4L), n, 4L)
+  Y <- X %*% matrix(rnorm(4L * v), 4L, v) + matrix(rnorm(n * v), n, v)
+  dataset <- mvpa_dataset(
+    neuroim2::NeuroVec(array(t(Y), c(v, 1L, 1L, n)),
+                       neuroim2::NeuroSpace(c(v, 1L, 1L, n))),
+    mask = neuroim2::NeuroVol(array(1, c(v, 1L, 1L)),
+                              neuroim2::NeuroSpace(c(v, 1L, 1L)))
+  )
+  design <- feature_sets_design(
+    feature_sets(X, by_set(rep(c("a", "b"), each = 2L))),
+    block_var_train = rep(1:10, each = 6L), time_series = TRUE
+  )
+  session_kind <- RNGkind()
+  on.exit(do.call(RNGkind, as.list(session_kind)), add = TRUE)
+  caller_kind <- c("L'Ecuyer-CMRG", "Inversion", "Rejection")
+  worker_kind <- c("Mersenne-Twister", "Inversion", "Rejection")
+  run_group <- function(model, rng_kind) {
+    spec <- model; spec$dataset <- NULL
+    rMVPA:::.brm_run_group(
+      spec, model$design$X_train$X, as.character(model$design$X_train$set),
+      list(model$active_response_ids), 1L, 1e8, dataset = model$dataset,
+      rng_kind = rng_kind
+    )$pieces[[1L]]
+  }
+  folds_of <- function(piece) lapply(piece$diagnostics, `[[`, "inner_folds")
+
+  # the caller builds and runs the model under its own RNG kind
+  do.call(RNGkind, as.list(caller_kind))
+  model <- banded_ridge_model(
+    dataset, design, outer_crossval = 5L, tune_crossval = 3L,
+    alphas = c(0.1, 1, 10), solver = "svd_primal", retain_diagnostics = TRUE,
+    seed = 11L
+  )
+  reference <- run_group(model, NULL)
+
+  # a worker session with a different kind
+  do.call(RNGkind, as.list(worker_kind))
+  adopted <- run_group(model, caller_kind)
+  expect_identical(RNGkind(), worker_kind)   # the worker's kind is put back
+  expect_identical(folds_of(adopted), folds_of(reference))
+  expect_identical(adopted$metrics, reference$metrics)
+  expect_identical(adopted$selections, reference$selections)
+
+  # without it the same seed gives other folds under the other generator
+  expect_false(identical(folds_of(run_group(model, NULL)), folds_of(reference)))
+})
