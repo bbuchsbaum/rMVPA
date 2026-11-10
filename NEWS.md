@@ -2,16 +2,16 @@
 
 * `banded_ridge_model()` and `feature_decode_model()` gain
   `nuisance_fit = "global"`: nuisance regressors are removed from features and
-  responses once, over all rows, before the data are split. This is the usual
-  preprocessing step of encoding analyses and avoids both problems of the
-  other modes on a single continuous run: `"train"` extrapolates drift into a
-  held-out block (and is refused), and `"within"` has to fit every nuisance
-  regressor inside each held-out block, which removes slow stimulus-driven
-  variance along with the drift. On one 12-minute story run, the median
-  held-out correlation of the best envelope voxels was .33 with whole-run
-  removal and .19 with `"within"`. It is an explicit choice, not the default,
-  because held-out rows contribute to the nuisance coefficients (never to the
-  feature weights or their tuning). The mode is recorded in
+  responses once, over all rows, before the data are split, as much encoding
+  work does in preprocessing. It is an explicit choice and **not leak-free**:
+  held-out responses enter the nuisance coefficients subtracted from the
+  training responses, so accuracy under the null can be biased upward, the more so
+  the more nuisance and feature columns there are relative to rows (about .03
+  to .05 in held-out correlation for unrelated responses in a 374-volume run
+  with 25 nuisance and 44 feature columns). Use it for exploration or
+  calibrate it against a null computed the same way; `"within"` is the
+  leak-free choice for inference. The model refuses when the features have as
+  many columns as residual degrees of freedom. The mode is recorded in
   `result$provenance$nuisance_fit`.
 
 * **Faster and parallel `run_banded_ridge()`.**

@@ -591,15 +591,29 @@
 # they are for stimulus-level predictors whose held-out values lie within the
 # training range.
 # `fit = "global"`: regress the nuisance (with an intercept) out of X, Y and
-# the covariates once, over all rows, before any split is made. Held-out rows
-# then contribute to the nuisance fit, though never to the feature fit. For
-# the other modes the inputs are returned untouched.
+# the covariates once, over all rows, before any split is made. For the other
+# modes the inputs are returned untouched.
+#
+# This leaks: held-out responses enter the nuisance coefficients subtracted
+# from the training responses, so residuals of the two sets are dependent and
+# accuracy under the null is biased upward, the more so the more nuisance and
+# feature columns there are relative to rows. In the limit the residuals live
+# in a space no larger than the feature matrix and any response is fitted
+# exactly, in held-out rows too; that case is refused here.
 .brt_remove_global <- function(X, Y, nuisance = NULL, covariates = NULL) {
   if (is.null(nuisance) || !identical(attr(nuisance, "fit"), "global")) {
     return(list(X = X, Y = Y, nuisance = nuisance, covariates = covariates,
                 global = FALSE))
   }
   z <- cbind(rep(1, nrow(nuisance)), nuisance)
+  residual_df <- nrow(z) - qr(z)$rank
+  n_columns <- if (is.matrix(X)) ncol(X) else NA_integer_
+  if (!is.na(n_columns) && residual_df >= 2L && n_columns >= residual_df) {
+    stop("nuisance_fit = 'global': the features have ", n_columns,
+         " columns but only ", residual_df, " residual degrees of freedom ",
+         "remain after removing the nuisance, so any response would be ",
+         "fitted exactly in held-out rows too.", call. = FALSE)
+  }
   remove <- function(M) {
     out <- .brt_remove(z, M, what = "the data")
     dimnames(out) <- dimnames(M)

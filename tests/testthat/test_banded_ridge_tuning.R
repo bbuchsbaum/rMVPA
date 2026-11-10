@@ -1042,11 +1042,42 @@ test_that("global nuisance removal neither inflates noise nor wastes signal", {
       nuisance = rMVPA:::.brt_validate_nuisance(N, n, fit = mode)
     )$performance$correlation
   }
-  # responses with no feature signal stay at chance
-  expect_lt(max(abs(run(noise, "global"))), 0.35)
-  expect_lt(abs(median(run(noise, "global"))), 0.1)
-  # with signal, one fit over the whole run keeps more of it than a separate
-  # twelve-regressor fit inside every 40-row held-out block
+  # With signal, one fit over the whole run scores higher than a separate
+  # twelve-regressor fit inside every 40-row held-out block ...
   expect_gt(median(run(signal, "global")), median(run(signal, "within")) + 0.05)
-  expect_gt(median(run(signal, "global")), 0.4)
+  # ... and with few nuisance and feature columns relative to rows, responses
+  # with no feature signal stay near zero in both modes. The next test shows
+  # the upward bias of "global" when that ratio is not small.
+  expect_lt(abs(median(run(noise, "within"))), 0.1)
+  expect_lt(abs(median(run(noise, "global"))), 0.1)
+})
+
+test_that("global nuisance removal is refused when the features exhaust the residual space", {
+  # 80 rows, 77 nuisance columns and an intercept leave two residual degrees
+  # of freedom; two feature columns then fit any response exactly, held-out
+  # rows included.
+  set.seed(9310L)
+  n <- 80L
+  N <- matrix(rnorm(n * 77L), n, 77L)
+  X <- matrix(rnorm(n * 2L), n, 2L)
+  Y <- matrix(rnorm(n * 3L), n, 3L)
+  folds <- lapply(1:4, function(k) {
+    test <- which((seq_len(n) - 1L) %% 4L + 1L == k)
+    list(id = paste0("fold_", k), train = setdiff(seq_len(n), test), test = test)
+  })
+  candidates <- rMVPA:::.banded_ridge_candidates("a", 1e-6, method = "fixed",
+                                                 theta = c(a = 1))
+  run <- function(X) {
+    rMVPA:::.banded_ridge_nested_cv(
+      X, Y, folds, candidates, feature_groups = rep("a", ncol(X)),
+      inner_v = NA_integer_, alpha_scope = "fixed", theta_scope = "fixed",
+      fixed_alpha = 1e-6, fixed_theta = c(a = 1),
+      nuisance = rMVPA:::.brt_validate_nuisance(N, n, fit = "global")
+    )
+  }
+  expect_error(run(X), "only 2 residual degrees of freedom")
+  # one column fewer is allowed, and shows why the mode must not be tested
+  # against zero: unrelated responses are predicted well above chance
+  leaky <- run(X[, 1L, drop = FALSE])
+  expect_gt(median(leaky$performance$correlation), 0.3)
 })

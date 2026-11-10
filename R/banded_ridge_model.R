@@ -786,13 +786,20 @@
 #'   training-derived pipeline. Each held-out split needs more rows than
 #'   nuisance regressors.
 #'   `"global"` removes the nuisance from features and responses once, over
-#'   all rows, before the data are split. This is the usual preprocessing step
-#'   of encoding analyses and the most efficient of the three, because no
-#'   held-out block has to support its own nuisance fit. It is not a
-#'   training-only transformation: held-out rows contribute to the nuisance
-#'   coefficients, though never to the feature weights or their tuning. Under
-#'   the null the dependence this creates between training and held-out
-#'   residuals is slightly negative, not optimistic.
+#'   all rows, before the data are split, as much encoding work does in
+#'   preprocessing. **It is not leak-free and its accuracies can be biased
+#'   upward.** Held-out responses enter the nuisance coefficients that are then
+#'   subtracted from the training responses, so training and held-out
+#'   residuals are dependent, and responses with no relation to the features
+#'   can show positive held-out accuracy. The bias grows with the number of
+#'   nuisance and feature columns relative to the number of rows: in a
+#'   374-volume run with 25 nuisance and 44 feature columns, unrelated
+#'   responses gave held-out correlations of about .03 to .05 where `"within"`
+#'   gave about zero, and when few residual degrees of freedom remain the fit
+#'   becomes exact. Use it for exploration, or calibrate it against a null
+#'   computed the same way (for example with time-shifted features); do not
+#'   test its accuracies against zero. The model refuses when the features
+#'   have as many columns as there are residual degrees of freedom.
 #'   The mode used is recorded in `result$provenance$nuisance_fit`.
 #' @param purge Non-negative temporal gap (in rows) around validation/test
 #'   rows. Training rows within the gap are dropped when folds are constructed
