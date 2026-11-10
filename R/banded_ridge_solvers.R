@@ -331,7 +331,8 @@
                              decomposition,
                              alpha,
                              response_batch_size,
-                             recover_dual) {
+                             recover_dual,
+                             projection = NULL) {
   beta <- matrix(0, prepared$p, prepared$v)
   dual <- if (recover_dual) matrix(0, prepared$n, prepared$v) else NULL
   batches <- .brs_batches(prepared$v, response_batch_size)
@@ -339,7 +340,10 @@
   keep <- d > decomposition$tolerance
   for (batch in batches) {
     Yb <- prepared$Yc[, batch, drop = FALSE]
-    UY <- crossprod(decomposition$U, Yb)
+    # U'Y does not depend on alpha; a path over several alphas passes it in
+    UY <- if (is.null(projection)) {
+      crossprod(decomposition$U, Yb)
+    } else projection[, batch, drop = FALSE]
     multiplier <- if (alpha == 0) {
       out <- numeric(length(d)); out[keep] <- 1 / d[keep]; out
     } else {
@@ -403,11 +407,14 @@
     function() .brs_svd_decomposition(prepared, solver_tolerance)
   )
   fits <- vector("list", length(alphas))
+  projection <- if (length(alphas) > 1L) {
+    crossprod(decomposition$value$U, prepared$Yc)
+  } else NULL
   for (alpha_indices in .brs_batches(length(alphas), alpha_batch)) {
     for (ii in alpha_indices) {
       fits[[ii]] <- .brs_svd_fit_one(
         prepared, decomposition$value, alphas[[ii]], response_batch,
-        isTRUE(recover_dual)
+        isTRUE(recover_dual), projection = projection
       )
       fits[[ii]]$solver$cache_hit <- decomposition$cache_hit
       fits[[ii]]$solver$cache_key <- decomposition$cache_key
@@ -663,7 +670,12 @@
     }
     reason <- "explicit override within memory contract"
   } else {
-    if (p <= 64L && fits[["direct"]]) {
+    if (p <= 64L && n_alphas > 1L && fits[["svd_primal"]]) {
+      # every alpha of a theta is fitted from one decomposition, which beats
+      # refitting the direct solver per candidate even for small p
+      chosen <- "svd_primal"
+      reason <- "alpha-path SVD reuse for small p and storage fits"
+    } else if (p <= 64L && fits[["direct"]]) {
       chosen <- "direct"
       reason <- "measured small-p direct threshold p <= 64 and storage fits"
     } else if (p >= 4L * n && fits[["dual_kernel"]]) {
@@ -692,6 +704,6 @@
     estimated_mib = estimates / 1024^2,
     memory_limit_mb = memory_limit_mb,
     fits_memory_contract = fits,
-    heuristic_version = "br-auto-v2-measured-p64-conservative-p4n"
+    heuristic_version = "br-auto-v3-alpha-path-p64-conservative-p4n"
   )
 }

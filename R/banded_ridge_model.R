@@ -1,3 +1,128 @@
+# One contiguous group of response batches, with its own solver cache. Runs in
+# the calling process or on a future worker; it receives either the dataset
+# (responses are read batch by batch) or the group's responses as a matrix.
+.brm_run_group <- function(spec, X, groups, batches, batch_index, cache_bytes,
+                           dataset = NULL, Y = NULL, rng_kind = NULL) {
+  # Folds are drawn with set.seed(), whose stream depends on the RNG kind. A
+  # worker session may not share the caller's kind, so adopt it for the
+  # duration of the group and put the worker's own kind back afterwards.
+  if (!is.null(rng_kind) && !identical(RNGkind(), rng_kind)) {
+    worker_kind <- RNGkind()
+    do.call(RNGkind, as.list(rng_kind))
+    on.exit(do.call(RNGkind, as.list(worker_kind)), add = TRUE)
+  }
+  n <- nrow(X)
+  cache <- if (spec$solver == "direct") {
+    NULL
+  } else .banded_ridge_solver_cache(max_bytes = cache_bytes)
+  separate_weight_cache <- spec$weight_retention == "dual" && is.null(cache)
+  weight_cache <- if (separate_weight_cache) {
+    .banded_ridge_solver_cache(max_bytes = cache_bytes)
+  } else cache
+  pieces <- lapply(batch_index, function(bb) {
+    ids <- batches[[bb]]
+    Yb <- if (is.null(Y)) {
+      .brm_response_matrix(dataset, ids, n)
+    } else Y[, paste0("voxel_", ids), drop = FALSE]
+    .brm_run_batch(spec, X, groups, ids, bb, Yb, cache, weight_cache)
+  })
+  zero <- .bra_cache_counters(NULL)
+  list(
+    pieces = pieces,
+    cache_counters = .bra_cache_counters(cache),
+    cache_peak_bytes = if (is.null(cache)) 0 else as.numeric(cache$peak_bytes),
+    weight_counters = if (separate_weight_cache) {
+      .bra_cache_counters(weight_cache)
+    } else zero
+  )
+}
+
+# Everything run_banded_ridge() needs from one batch of responses.
+.brm_run_batch <- function(model, X, groups, ids, bb, Y, cache, weight_cache) {
+  work_rows <- list()
+  ids_by_name <- setNames(ids, paste0("voxel_", ids))
+  label <- function(table) {
+    table$voxel_index <- unname(ids_by_name[table$response])
+    table
+  }
+  counters_before <- .bra_cache_counters(cache)
+  nested <- .banded_ridge_nested_cv(
+    X, Y, model$outer_folds, model$candidates,
+    feature_groups = groups, inner_folds = model$inner_folds,
+    inner_v = model$inner_v, blocks = model$design$block_var_train,
+    purge = model$purge, metric = model$metric,
+    alpha_scope = model$alpha_scope, theta_scope = model$theta_scope,
+    fixed_alpha = model$fixed_alpha, fixed_theta = model$fixed_theta,
+    response_batch_size = length(ids), seed = model$seed,
+    solver = model$solver, solver_cache = cache,
+    cache_prefix = "public", nuisance = model$nuisance
+  )
+  work_rows[[1L]] <- .bra_work_row(
+    "full", NULL, bb, ncol(X), length(ids), length(model$candidates$alpha),
+    nested, counters_before, .bra_cache_counters(cache)
+  )
+  max_result_bytes <- as.numeric(utils::object.size(nested))
+  peak_dimensions <- nested$peak_intermediate_dimensions
+
+  reduced_pieces <- list()
+  for (band in model$delta_sets) {
+    dropped <- model$delta_members[[band]]
+    if (is.null(dropped)) dropped <- band
+    keep <- !groups %in% dropped
+    reduced_x <- X[, keep, drop = FALSE]
+    reduced_manifest <- model$reduced_candidates[[band]]
+    counters_before <- .bra_cache_counters(cache)
+    reduced <- .banded_ridge_nested_cv(
+      reduced_x, Y, model$outer_folds, reduced_manifest,
+      feature_groups = groups[keep], inner_folds = model$inner_folds,
+      inner_v = model$inner_v, blocks = model$design$block_var_train,
+      purge = model$purge, metric = model$metric,
+      alpha_scope = model$alpha_scope, theta_scope = model$theta_scope,
+      fixed_alpha = model$fixed_alpha,
+      fixed_theta = model$reduced_fixed_theta[[band]],
+      response_batch_size = length(ids), seed = model$seed,
+      solver = model$solver, solver_cache = cache,
+      cache_prefix = paste("public", "without", band, sep = "::"),
+      kernel_cache_prefix = "public", nuisance = model$nuisance
+    )
+    work_rows[[length(work_rows) + 1L]] <- .bra_work_row(
+      paste0("without_", band), band, bb, ncol(reduced_x), length(ids),
+      length(reduced_manifest$alpha), reduced, counters_before,
+      .bra_cache_counters(cache)
+    )
+    max_result_bytes <- max(max_result_bytes,
+                            as.numeric(utils::object.size(reduced)))
+    peak_dimensions <- pmax(peak_dimensions,
+                            reduced$peak_intermediate_dimensions)
+    reduced_pieces[[band]] <- list(
+      metrics = label(reduced$performance),
+      selections = label(reduced$selections),
+      predictions = if (model$return_predictions) reduced$predictions else NULL,
+      diagnostics = if (model$retain_diagnostics) reduced$outer_results else NULL
+    )
+  }
+
+  weights <- switch(model$weight_retention,
+    primal = .brm_extract_primal_weights(nested),
+    dual = .brm_extract_dual_weights(nested, X, Y, groups, weight_cache,
+                                     "public", nuisance = model$nuisance),
+    NULL
+  )
+  list(
+    chunk = bb,
+    metrics = label(nested$performance),
+    selections = label(nested$selections),
+    predictions = if (model$return_predictions) nested$predictions else NULL,
+    observed = if (model$return_predictions) nested$observed else NULL,
+    diagnostics = if (model$retain_diagnostics) nested$outer_results else NULL,
+    reduced = reduced_pieces,
+    weights = weights,
+    work_rows = work_rows,
+    max_result_bytes = max_result_bytes,
+    peak_dimensions = peak_dimensions
+  )
+}
+
 # Public single-domain banded-ridge model ------------------------------------
 
 .brm_active_ids <- function(dataset) {
@@ -433,9 +558,12 @@
 .brm_retention_estimate <- function(n, p, v, n_outer,
                                     weight_retention, return_predictions,
                                     retain_diagnostics, n_candidates, inner_v,
-                                    n_delta = 0L, n_groups = 1L) {
+                                    n_delta = 0L, n_groups = 1L,
+                                    retain_observed = FALSE) {
   if (is.na(inner_v)) inner_v <- 0L
-  prediction <- if (return_predictions) 8 * n * v * (1L + n_delta) else 0
+  prediction <- if (return_predictions) {
+    8 * n * v * (1L + n_delta + isTRUE(retain_observed))
+  } else 0
   weights <- switch(weight_retention,
     none = 0,
     primal = 8 * n_outer * p * v,
@@ -523,12 +651,16 @@
                                       Y,
                                       groups,
                                       cache,
-                                      cache_prefix) {
+                                      cache_prefix,
+                                      nuisance = NULL) {
   out <- list()
   theta_columns <- paste0("theta_", nested$group_names)
   for (oo in seq_along(nested$outer_results)) {
     outer <- nested$outer_results[[oo]]
     selected <- outer$selected
+    # The same outer-training data the nested fit used: with nuisance
+    # regressors, that is the residualized X and Y, not the raw matrices.
+    split <- .brt_split_data(X, Y, outer$train, outer$test, nuisance)
     for (candidate_index in unique(selected$candidate_index)) {
       rows <- which(selected$candidate_index == candidate_index)
       alpha <- selected$alpha[rows[[1L]]]
@@ -536,7 +668,8 @@
       names(theta) <- nested$group_names
       theta_key <- .brt_theta_keys(matrix(theta, nrow = 1L))
       path <- .banded_ridge_fit_dual_path(
-        .brc_subset_rows(X, outer$train), Y[outer$train, rows, drop = FALSE],
+        .brc_subset_rows(split$X, split$train),
+        split$Y[split$train, rows, drop = FALSE],
         alphas = alpha, theta = theta, groups = groups,
         recover_primal = FALSE, cache = cache,
         cache_key = paste(cache_prefix, "outer", oo, "refit", "theta",
@@ -610,15 +743,47 @@
 #' @param theta_method One of `"grid"`, `"fixed"`, or `"random"`. The default
 #'   constructs a small, deterministic simplex grid.
 #' @param theta Fixed named simplex vector/matrix for `theta_method = "fixed"`.
-#' @param theta_grid_points Grid resolution for simplex grid candidates.
+#' @param theta_grid_points Grid resolution for simplex grid candidates. A grid
+#'   with fewer than `n_bands + 1` points has no candidate in which every band
+#'   is active, so the equal-weight point is added automatically. With more
+#'   than about three bands prefer `theta_method = "random"`, which samples the
+#'   interior of the simplex.
 #' @param n_theta Number of deterministic random simplex points.
 #' @param metric Inner selection metric; MSE is the default estimand.
 #' @param alpha_scope,theta_scope `"response"`, `"shared"`/`"roi"`, or
 #'   `"fixed"` selection constraints.
 #' @param fixed_alpha,fixed_theta Values required by corresponding fixed scopes.
 #' @param delta_sets Optional feature-band names, or `"all"`, for independently
-#'   retuned predictive leave-one-band-out outer-OOF delta R2. `NULL` (the
-#'   default) performs no reduced-model work.
+#'   retuned predictive leave-one-band-out outer-OOF delta R2. A named list of
+#'   band-name vectors drops each entry's bands together, for example
+#'   `list(phonology = c("manner", "place", "voicing"), manner = "manner")`,
+#'   giving the unique contribution of a family of bands next to that of its
+#'   members; results are labelled by the list names. `"families"` requests
+#'   every band plus every family declared in `feature_sets(families = ...)`.
+#'   `NULL` (the default) performs no reduced-model work.
+#' @param nuisance Optional numeric matrix of nuisance regressors (rows =
+#'   observations), for example motion parameters and drift terms. Within every
+#'   inner and outer split an intercept and these columns are regressed out of
+#'   both the features and the responses, separately for the training rows and
+#'   the held-out rows (see `nuisance_fit`). Nuisance columns are never
+#'   penalized and never contribute to the predictions, so all reported
+#'   accuracies, including leave-band-out delta R2, describe variance in the
+#'   nuisance-residualized held-out responses.
+#' @param nuisance_fit How held-out rows are residualized.
+#'   `"train"` (default) applies the coefficients fitted on the training rows,
+#'   so the transformation is fixed before the held-out rows are seen. This
+#'   requires the held-out nuisance rows to lie within the range of the
+#'   training rows. With drift-like regressors and contiguous held-out blocks
+#'   they do not, the extrapolated fit would dominate features and responses
+#'   alike and inflate accuracy, and the model stops with an error.
+#'   `"within"` fits the nuisance coefficients on the held-out rows themselves.
+#'   Nothing is carried between training and held-out data and nothing is
+#'   extrapolated, but a held-out row's transformation then depends on the
+#'   other rows of its assessment set, so the reported accuracy is conditional
+#'   on each held-out block and is not the accuracy of a frozen
+#'   training-derived pipeline. Each held-out split needs more rows than
+#'   nuisance regressors. The mode used is recorded in
+#'   `result$provenance$nuisance_fit`.
 #' @param purge Non-negative temporal gap (in rows) around validation/test
 #'   rows. Training rows within the gap are dropped when folds are constructed
 #'   from an integer count or a `cross_validation` object; explicit fold lists
@@ -627,7 +792,9 @@
 #' @param solver `"auto"`, `"direct"`, `"svd_primal"`, or `"dual_kernel"`.
 #' @param target_batch_size Maximum responses evaluated together.
 #' @param return_predictions Retain the complete outer out-of-fold prediction
-#'   matrix.
+#'   matrix. With nuisance regressors, the nuisance-residualized held-out
+#'   responses the predictions are scored against are also returned, as
+#'   `observed`.
 #' @param weight_retention Retain no weights, outer-fold primal coefficients, or
 #'   outer-fold dual weights.
 #' @param retain_diagnostics Retain full candidate/fold diagnostics per chunk.
@@ -705,7 +872,10 @@ banded_ridge_model <- function(dataset,
                                max_retained_mb = 1024,
                                weight_overflow = c("error", "none"),
                                seed = 1L,
-                               memory_limit_mb = 1024) {
+                               memory_limit_mb = 1024,
+                               nuisance = NULL,
+                               nuisance_fit = c("train", "within")) {
+  nuisance_fit <- match.arg(nuisance_fit)
   if (!inherits(dataset, "mvpa_image_dataset")) {
     stop("banded_ridge_model currently supports image mvpa_dataset objects only.",
          call. = FALSE)
@@ -741,6 +911,8 @@ banded_ridge_model <- function(dataset,
     stop("banded_ridge_model: design X_train rows must match dataset training observations.",
          call. = FALSE)
   }
+  nuisance <- .brt_validate_nuisance(nuisance, n, "banded_ridge_model: nuisance",
+                                     fit = nuisance_fit)
   blocks <- design$block_var_train
   if (isTRUE(design$time_series) && is.null(blocks) && purge < 1L) {
     stop(
@@ -774,12 +946,26 @@ banded_ridge_model <- function(dataset,
     tune_crossval, outer_folds, n, blocks, as.integer(purge), as.integer(seed),
     n_available = length(available)
   )
-  delta_sets <- .bra_validate_delta_sets(delta_sets, group_names)
+  if (identical(delta_sets, "families")) {
+    families <- design$X_train$families
+    if (!length(families)) {
+      stop("delta_sets = 'families' requires feature_sets(families = ...).",
+           call. = FALSE)
+    }
+    # every band, plus every family that is a proper group of bands
+    proper <- vapply(families, function(members) {
+      length(members) > 1L && length(members) < length(group_names)
+    }, logical(1))
+    delta_sets <- c(stats::setNames(as.list(group_names), group_names),
+                    families[proper])
+  }
+  delta_members <- .bra_delta_members(delta_sets, group_names)
+  delta_sets <- names(delta_members)
   reduced_candidates <- setNames(lapply(delta_sets, function(band) {
-    .bra_reduced_candidates(candidates, band)
+    .bra_reduced_candidates(candidates, delta_members[[band]])
   }), delta_sets)
   reduced_fixed_theta <- setNames(lapply(delta_sets, function(band) {
-    .bra_reduced_fixed_theta(fixed_theta, group_names, band)
+    .bra_reduced_fixed_theta(fixed_theta, group_names, delta_members[[band]])
   }), delta_sets)
   active_ids <- .brm_active_ids(dataset)
   plan <- .banded_ridge_solver_plan(
@@ -794,7 +980,8 @@ banded_ridge_model <- function(dataset,
     n, ncol(design$X_train$X), length(active_ids), length(outer_folds),
     weight_retention, return_predictions, retain_diagnostics,
     length(candidates$alpha), tuning$inner_v,
-    n_delta = length(delta_sets), n_groups = length(group_names)
+    n_delta = length(delta_sets), n_groups = length(group_names),
+    retain_observed = !is.null(nuisance)
   )
   if (!is.numeric(max_retained_mb) || length(max_retained_mb) != 1L ||
       !is.finite(max_retained_mb) || max_retained_mb <= 0) {
@@ -812,7 +999,8 @@ banded_ridge_model <- function(dataset,
         n, ncol(design$X_train$X), length(active_ids), length(outer_folds),
         weight_retention, return_predictions, retain_diagnostics,
         length(candidates$alpha), tuning$inner_v,
-        n_delta = length(delta_sets), n_groups = length(group_names)
+        n_delta = length(delta_sets), n_groups = length(group_names),
+    retain_observed = !is.null(nuisance)
       )
     }
     if (retention[["total"]] > max_retained_mb * 1024^2) {
@@ -836,7 +1024,9 @@ banded_ridge_model <- function(dataset,
     selectable_alphas = sort(unique(candidates$alpha[available])),
     alpha_scope = alpha_scope, theta_scope = theta_scope,
     fixed_alpha = fixed_alpha, fixed_theta = fixed_theta,
-    delta_sets = delta_sets, reduced_candidates = reduced_candidates,
+    nuisance = nuisance,
+    delta_sets = delta_sets, delta_members = delta_members,
+    reduced_candidates = reduced_candidates,
     reduced_fixed_theta = reduced_fixed_theta,
     purge = as.integer(purge), solver = resolved_solver, solver_plan = plan,
     target_batch_size = target_batch_size, weight_retention = weight_retention,
@@ -867,6 +1057,23 @@ banded_ridge_model <- function(dataset,
 #' @return A `banded_ridge_result` with spatial maps, metrics, exact outer-fold
 #'   hyperparameters, selection diagnostics, optional predictions/weights, and
 #'   allocation provenance.
+#'
+#' @section Parallel execution:
+#' Response batches are independent given the design. When the current
+#' [future::plan()] has more than one worker, the batches are processed in
+#' contiguous groups, one group per worker, and the results are identical to a
+#' sequential run. For example:
+#'
+#' ```r
+#' future::plan(future::multisession, workers = 8)
+#' result <- run_banded_ridge(model)
+#' ```
+#'
+#' Each worker receives only the responses of its own group, so the responses
+#' are read into memory once in the calling process. Each group keeps its own
+#' solver cache (the memory limit is divided among the groups), so the cache
+#' counts in `result$provenance` are sums over groups and differ from a
+#' sequential run. `result$provenance$workers` records the number of groups.
 #'
 #' @section Selection diagnostics:
 #' `result$selection_diagnostics$alpha` carries one row per fitted model (the
@@ -913,6 +1120,9 @@ run_banded_ridge <- function(model,
     matrix(NA_real_, n, v,
            dimnames = list(as.character(seq_len(n)), paste0("voxel_", active_ids)))
   } else NULL
+  observed <- if (model$return_predictions && !is.null(model$nuisance)) {
+    predictions
+  } else NULL
   delta_bands <- model$delta_sets
   reduced_metric_chunks <- setNames(lapply(delta_bands, function(x) {
     vector("list", length(batches))
@@ -935,106 +1145,83 @@ run_banded_ridge <- function(model,
   selection_rows <- list()
   diagnostics <- if (model$retain_diagnostics) list() else NULL
   weights <- if (model$weight_retention == "none") NULL else list()
-  cache_bytes <- model$memory_limit_mb * 1024^2
-  cache <- if (model$solver == "direct") {
-    NULL
-  } else .banded_ridge_solver_cache(max_bytes = cache_bytes)
-  weight_cache <- if (model$weight_retention == "dual" && is.null(cache)) {
-    .banded_ridge_solver_cache(max_bytes = cache_bytes)
-  } else cache
   max_chunk_result_bytes <- 0
   peak_dimensions <- NULL
   chunk_manifest <- vector("list", length(batches))
   work_rows <- list()
 
-  for (bb in seq_along(batches)) {
-    ids <- batches[[bb]]
-    Y <- .brm_response_matrix(model$dataset, ids, n)
-    counters_before <- .bra_cache_counters(cache)
-    nested <- .banded_ridge_nested_cv(
-      X, Y, model$outer_folds, model$candidates,
-      feature_groups = groups, inner_folds = model$inner_folds,
-      inner_v = model$inner_v, blocks = model$design$block_var_train,
-      purge = model$purge, metric = model$metric,
-      alpha_scope = model$alpha_scope, theta_scope = model$theta_scope,
-      fixed_alpha = model$fixed_alpha, fixed_theta = model$fixed_theta,
-      response_batch_size = length(ids), seed = model$seed,
-      solver = model$solver, solver_cache = cache,
-      cache_prefix = "public"
+  # Batches are independent given the design. With more than one future
+  # worker they are processed in contiguous groups, one group per worker; each
+  # group keeps its own solver cache, so decompositions of the design are
+  # still reused across the batches of a group.
+  n_groups <- max(1L, min(as.integer(future::nbrOfWorkers()), length(batches)))
+  group_index <- unname(split(
+    seq_along(batches),
+    ceiling(seq_along(batches) * n_groups / length(batches))
+  ))
+  spec <- model
+  spec$dataset <- NULL
+  cache_bytes <- model$memory_limit_mb * 1024^2 / n_groups
+  if (n_groups == 1L) {
+    groups_done <- list(.brm_run_group(
+      spec, X, groups, batches, group_index[[1L]], cache_bytes,
+      dataset = model$dataset
+    ))
+  } else {
+    # Each worker receives only the responses of its own group.
+    group_y <- lapply(group_index, function(bbs) {
+      .brm_response_matrix(model$dataset, unlist(batches[bbs]), n)
+    })
+    rng_kind <- RNGkind()
+    groups_done <- future.apply::future_mapply(
+      function(bbs, Y) {
+        .brm_run_group(spec, X, groups, batches, bbs, cache_bytes, Y = Y,
+                       rng_kind = rng_kind)
+      },
+      # Folds are drawn under explicit seeds that restore the RNG state.
+      # Parallel RNG streams would change the generator kind on the workers
+      # and with it the folds, so results would depend on the worker count.
+      # The caller's RNG kind is passed along for the same reason.
+      group_index, group_y, SIMPLIFY = FALSE, future.seed = FALSE,
+      future.packages = "rMVPA",
+      future.globals = list(spec = spec, X = X, groups = groups,
+                            batches = batches, cache_bytes = cache_bytes,
+                            rng_kind = rng_kind,
+                            .brm_run_group = .brm_run_group)
     )
-    counters_after <- .bra_cache_counters(cache)
-    work_rows[[length(work_rows) + 1L]] <- .bra_work_row(
-      "full", NULL, bb, ncol(X), length(ids),
-      length(model$candidates$alpha), nested, counters_before, counters_after
-    )
-    max_chunk_result_bytes <- max(max_chunk_result_bytes,
-                                  as.numeric(utils::object.size(nested)))
-    peak_dimensions <- if (is.null(peak_dimensions)) {
-      nested$peak_intermediate_dimensions
-    } else pmax(peak_dimensions, nested$peak_intermediate_dimensions)
-    ids_by_name <- setNames(ids, paste0("voxel_", ids))
-    metrics <- nested$performance
-    metrics$voxel_index <- unname(ids_by_name[metrics$response])
-    metric_rows[[bb]] <- metrics
-    selections <- nested$selections
-    selections$voxel_index <- unname(ids_by_name[selections$response])
-    selection_rows[[bb]] <- selections
-    if (model$return_predictions) {
-      predictions[, match(ids, active_ids)] <- nested$predictions
-    }
-    if (model$retain_diagnostics) diagnostics[[bb]] <- nested$outer_results
+    rm(group_y)
+  }
+  cache_counters <- Reduce(`+`, lapply(groups_done, `[[`, "cache_counters"))
+  weight_counters <- Reduce(`+`, lapply(groups_done, `[[`, "weight_counters"))
+  cache_peak_bytes <- sum(vapply(groups_done, `[[`, numeric(1), "cache_peak_bytes"))
 
+  for (piece in unlist(lapply(groups_done, `[[`, "pieces"), recursive = FALSE)) {
+    bb <- piece$chunk
+    ids <- batches[[bb]]
+    columns <- match(ids, active_ids)
+    metric_rows[[bb]] <- piece$metrics
+    selection_rows[[bb]] <- piece$selections
+    if (model$return_predictions) {
+      predictions[, columns] <- piece$predictions
+      if (!is.null(observed)) observed[, columns] <- piece$observed
+    }
+    if (model$retain_diagnostics) diagnostics[[bb]] <- piece$diagnostics
     for (band in delta_bands) {
-      keep <- groups != band
-      reduced_x <- X[, keep, drop = FALSE]
-      reduced_groups <- groups[keep]
-      reduced_manifest <- model$reduced_candidates[[band]]
-      counters_before <- .bra_cache_counters(cache)
-      reduced <- .banded_ridge_nested_cv(
-        reduced_x, Y, model$outer_folds, reduced_manifest,
-        feature_groups = reduced_groups, inner_folds = model$inner_folds,
-        inner_v = model$inner_v, blocks = model$design$block_var_train,
-        purge = model$purge, metric = model$metric,
-        alpha_scope = model$alpha_scope, theta_scope = model$theta_scope,
-        fixed_alpha = model$fixed_alpha,
-        fixed_theta = model$reduced_fixed_theta[[band]],
-        response_batch_size = length(ids), seed = model$seed,
-        solver = model$solver, solver_cache = cache,
-        cache_prefix = paste("public", "without", band, sep = "::"),
-        kernel_cache_prefix = "public"
-      )
-      counters_after <- .bra_cache_counters(cache)
-      work_rows[[length(work_rows) + 1L]] <- .bra_work_row(
-        paste0("without_", band), band, bb, ncol(reduced_x), length(ids),
-        length(reduced_manifest$alpha), reduced, counters_before, counters_after
-      )
-      max_chunk_result_bytes <- max(max_chunk_result_bytes,
-                                    as.numeric(utils::object.size(reduced)))
-      peak_dimensions <- pmax(peak_dimensions,
-                              reduced$peak_intermediate_dimensions)
-      reduced_metrics <- reduced$performance
-      reduced_metrics$voxel_index <- unname(ids_by_name[reduced_metrics$response])
-      reduced_metric_chunks[[band]][[bb]] <- reduced_metrics
-      reduced_selections <- reduced$selections
-      reduced_selections$voxel_index <-
-        unname(ids_by_name[reduced_selections$response])
-      reduced_selection_chunks[[band]][[bb]] <- reduced_selections
+      reduced_metric_chunks[[band]][[bb]] <- piece$reduced[[band]]$metrics
+      reduced_selection_chunks[[band]][[bb]] <- piece$reduced[[band]]$selections
       if (model$return_predictions) {
-        reduced_predictions[[band]][, match(ids, active_ids)] <-
-          reduced$predictions
+        reduced_predictions[[band]][, columns] <- piece$reduced[[band]]$predictions
       }
       if (model$retain_diagnostics) {
-        reduced_diagnostics[[band]][[bb]] <- reduced$outer_results
+        reduced_diagnostics[[band]][[bb]] <- piece$reduced[[band]]$diagnostics
       }
     }
-
-    if (model$weight_retention == "primal") {
-      weights <- c(weights, .brm_extract_primal_weights(nested))
-    } else if (model$weight_retention == "dual") {
-      weights <- c(weights, .brm_extract_dual_weights(
-        nested, X, Y, groups, weight_cache, "public"
-      ))
-    }
+    if (!is.null(weights)) weights <- c(weights, piece$weights)
+    work_rows <- c(work_rows, piece$work_rows)
+    max_chunk_result_bytes <- max(max_chunk_result_bytes, piece$max_result_bytes)
+    peak_dimensions <- if (is.null(peak_dimensions)) {
+      piece$peak_dimensions
+    } else pmax(peak_dimensions, piece$peak_dimensions)
     chunk_manifest[[bb]] <- list(
       chunk = bb, voxel_ids = ids, n_responses = length(ids),
       solver = model$solver
@@ -1127,6 +1314,7 @@ run_banded_ridge <- function(model,
       candidate_manifests = model$reduced_candidates,
       provenance = list(
         requested_bands = delta_bands,
+        band_members = model$delta_members,
         conceptual_model_count = 1L + length(delta_bands),
         matched_outer_fold_ids = vapply(
           model$outer_folds, `[[`, character(1), "id"
@@ -1169,6 +1357,7 @@ run_banded_ridge <- function(model,
     selection_diagnostics = selection_diagnostics,
     maps = maps,
     predictions = predictions,
+    observed = observed,
     weights = weights,
     diagnostics = diagnostics,
     active_response_ids = active_ids,
@@ -1179,6 +1368,7 @@ run_banded_ridge <- function(model,
       solver_plan = runtime_plan,
       outer_fold_ids = vapply(model$outer_folds, `[[`, character(1), "id"),
       seed = model$seed,
+      nuisance_fit = if (is.null(model$nuisance)) NA_character_ else attr(model$nuisance, "fit"),
       metric = model$metric,
       chunk_manifest = chunk_manifest,
       target_batch_size = batch_size,
@@ -1189,22 +1379,17 @@ run_banded_ridge <- function(model,
       work_manifest = do.call(rbind, work_rows),
       retention_estimated_bytes = model$retention_estimated_bytes,
       retention_notice = model$retention_notice,
-      solver_decomposition_count = if (is.null(cache)) 0L else cache$decomposition_count,
-      solver_cache_hits = if (is.null(cache)) 0L else cache$hit_count,
-      solver_band_kernel_builds = if (is.null(cache)) 0L else cache$kernel_build_count,
-      solver_band_kernel_hits = if (is.null(cache)) 0L else cache$kernel_hit_count,
-      solver_cache_evictions = if (is.null(cache)) 0L else cache$eviction_count,
-      solver_cache_oversize = if (is.null(cache)) 0L else cache$oversize_count,
-      solver_cache_peak_mb = if (is.null(cache)) 0 else cache$peak_bytes / 1024^2,
+      solver_decomposition_count = cache_counters[["decompositions"]],
+      solver_cache_hits = cache_counters[["hits"]],
+      solver_band_kernel_builds = cache_counters[["kernel_builds"]],
+      solver_band_kernel_hits = cache_counters[["kernel_hits"]],
+      solver_cache_evictions = cache_counters[["evictions"]],
+      solver_cache_oversize = cache_counters[["oversize"]],
+      solver_cache_peak_mb = cache_peak_bytes / 1024^2,
       solver_cache_limit_mb = model$memory_limit_mb,
-      weight_decomposition_count = if (is.null(weight_cache) ||
-                                          identical(weight_cache, cache)) {
-        0L
-      } else weight_cache$decomposition_count,
-      weight_cache_hits = if (is.null(weight_cache) ||
-                                 identical(weight_cache, cache)) {
-        0L
-      } else weight_cache$hit_count
+      workers = n_groups,
+      weight_decomposition_count = weight_counters[["decompositions"]],
+      weight_cache_hits = weight_counters[["hits"]]
     )
   )
   class(out) <- c("banded_ridge_result", "list")

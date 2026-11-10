@@ -95,9 +95,11 @@ test_that("candidate manifests cover fixed, grid, and deterministic random simpl
     c("a", "b", "c"), c(0, 2), method = "grid", grid_points = 3L
   )
   expect_s3_class(grid, "banded_ridge_candidates")
-  expect_equal(length(grid$alpha), 12L)
-  expect_equal(rowSums(grid$theta), rep(1, 12), tolerance = 0)
+  # six boundary points plus the equal-weight point, at two alphas
+  expect_equal(length(grid$alpha), 14L)
+  expect_equal(rowSums(grid$theta), rep(1, 14), tolerance = 1e-12)
   expect_true(any(grid$theta == 0))
+  expect_true(any(rowSums(grid$theta > 0) == 3L))
   expect_identical(grid$candidate_id, sort(grid$candidate_id)[order(
     match(sort(grid$candidate_id), grid$candidate_id)
   )])
@@ -651,13 +653,15 @@ test_that("theta-free Gram reuse and cache eviction leave nested dual results un
       candidates$theta[x$selected$candidate_index, , drop = FALSE]
     )))
   }, integer(1))
-  total_fit_calls <- n_inner * n_candidates + sum(refit_calls)
+  # Every alpha of a theta is fitted in one solver pass, so a split costs one
+  # pass per theta, not one per candidate.
+  expect_identical(sum(refit_calls) >= sum(refit_thetas), TRUE)
+  expect_gt(n_candidates, n_theta)
+  solver_passes <- n_inner * n_theta + sum(refit_thetas)
   expect_identical(unlimited$kernel_build_count, 2L * n_folds)
-  expect_identical(unlimited$kernel_hit_count, 2L * (total_fit_calls - n_folds))
-  expect_identical(unlimited$decomposition_count,
-                   n_inner * n_theta + sum(refit_thetas))
-  expect_identical(unlimited$hit_count,
-                   total_fit_calls - unlimited$decomposition_count)
+  expect_identical(unlimited$kernel_hit_count, 2L * (solver_passes - n_folds))
+  expect_identical(unlimited$decomposition_count, solver_passes)
+  expect_identical(unlimited$hit_count, 0L)
 
   # a leave-one-band-out model on the same folds shares the retained band's Grams
   keep <- data$feature_groups != "b"
@@ -693,5 +697,290 @@ test_that("theta-free Gram reuse and cache eviction leave nested dual results un
   same_results(run(nothing), reference)
   expect_identical(length(nothing$entries), 0L)
   expect_gt(nothing$oversize_count, 0L)
-  expect_identical(nothing$decomposition_count, total_fit_calls)
+  expect_identical(nothing$decomposition_count, solver_passes)
+})
+
+test_that("simplex grids always offer a candidate with every band active", {
+  for (g in 2:7) {
+    for (points in 2:4) {
+      grid <- rMVPA:::.brt_simplex_grid(g, points)
+      expect_equal(rowSums(grid), rep(1, nrow(grid)), tolerance = 1e-12)
+      expect_true(any(rowSums(grid > 0) == g),
+                  info = sprintf("bands = %d, grid_points = %d", g, points))
+      expect_false(anyDuplicated(round(grid, 12)) > 0)
+    }
+  }
+  # grids that already contain an interior point are unchanged
+  expect_equal(nrow(rMVPA:::.brt_simplex_grid(2L, 3L)), 3L)
+  expect_equal(nrow(rMVPA:::.brt_simplex_grid(3L, 4L)), 10L)
+})
+
+test_that("purged folds without declared blocks are contiguous segments", {
+  folds <- rMVPA:::.banded_ridge_make_folds(1:40, 4L, purge = 2L, seed = 11L)
+  expect_length(folds, 4L)
+  for (fold in folds) {
+    expect_true(all(diff(fold$test) == 1L))
+    gap <- vapply(fold$train, function(i) min(abs(i - fold$test)), numeric(1))
+    expect_true(all(gap > 2L))
+    # only the purge margins are lost, never most of the training rows
+    expect_gte(length(fold$train), 40L - length(fold$test) - 2L * 2L)
+  }
+  expect_setequal(unlist(lapply(folds, `[[`, "test")), 1:40)
+  expect_identical(
+    folds, rMVPA:::.banded_ridge_make_folds(1:40, 4L, purge = 2L, seed = 99L)
+  )
+  # rows need not be consecutive (inner folds inside an outer-training set)
+  inner <- rMVPA:::.banded_ridge_make_folds(c(1:10, 21:40), 3L, purge = 1L)
+  expect_setequal(unlist(lapply(inner, `[[`, "test")), c(1:10, 21:40))
+  # without a purge the historical random row-wise folds are kept
+  random <- rMVPA:::.banded_ridge_make_folds(1:40, 4L, purge = 0L, seed = 11L)
+  expect_false(all(vapply(random, function(f) all(diff(f$test) == 1L),
+                          logical(1))))
+})
+
+.brt_nuisance_fixture <- function(n = 60L, seed = 4401L) {
+  set.seed(seed)
+  N <- cbind(drift = seq(-1, 1, length.out = n), motion = rnorm(n))
+  X <- cbind(a = rnorm(n) + 2 * N[, "drift"], b = rnorm(n))
+  Y <- cbind(
+    signal = X[, "a"] - 0.5 * X[, "b"] + 5 * N[, "motion"] + rnorm(n, sd = 0.2),
+    nuisance_only = 4 * N[, "drift"] + rnorm(n, sd = 0.2)
+  )
+  folds <- lapply(1:4, function(k) {
+    test <- which(cut(seq_len(n), 4L, labels = FALSE) == k)
+    list(id = paste0("fold_", k), train = setdiff(seq_len(n), test), test = test)
+  })
+  list(X = X, Y = Y, N = N, folds = folds, groups = c("a", "b"),
+       candidates = rMVPA:::.banded_ridge_candidates(
+         c("a", "b"), 0.5, method = "fixed", theta = c(a = 0.5, b = 0.5)
+       ))
+}
+
+test_that("nuisance regressors are removed without carrying held-out data into the fit", {
+  f <- .brt_nuisance_fixture()
+  as_mode <- function(mode) rMVPA:::.brt_validate_nuisance(f$N, nrow(f$N), fit = mode)
+  # contiguous held-out blocks for "within"; interleaved rows for "train",
+  # whose held-out rows must lie within the range of the training rows
+  interleaved <- lapply(1:4, function(k) {
+    test <- which((seq_len(nrow(f$X)) - 1L) %% 4L + 1L == k)
+    list(id = paste0("fold_", k), train = setdiff(seq_len(nrow(f$X)), test),
+         test = test)
+  })
+  fold_sets <- list(within = f$folds, train = interleaved)
+  run <- function(Y = f$Y, nuisance = as_mode("within"), folds = f$folds) {
+    rMVPA:::.banded_ridge_nested_cv(
+      f$X, Y, folds, f$candidates, feature_groups = f$groups,
+      inner_v = NA_integer_, alpha_scope = "fixed", theta_scope = "fixed",
+      fixed_alpha = 0.5, fixed_theta = c(a = 0.5, b = 0.5), nuisance = nuisance
+    )
+  }
+  got <- run()
+  expect_identical(attr(rMVPA:::.brt_validate_nuisance(f$N, nrow(f$N)), "fit"),
+                   "train")
+  expect_identical(got$nuisance_fit, "within")
+  expect_identical(run(nuisance = f$N)$nuisance_fit, "train")
+
+  # independent reference: residualize by hand, then an ordinary fit. Training
+  # rows use training-fit coefficients in both modes; held-out rows use their
+  # own fit ("within", the default) or the training fit ("train").
+  n <- nrow(f$X)
+  reference <- function(mode) {
+    expected <- observed <- matrix(NA_real_, n, 2L)
+    for (fold in fold_sets[[mode]]) {
+      z_tr <- cbind(1, f$N[fold$train, ]); z_te <- cbind(1, f$N[fold$test, ])
+      proj <- function(M) {
+        beta <- solve(crossprod(z_tr), crossprod(z_tr, M[fold$train, ]))
+        beta_te <- if (mode == "train") beta else {
+          solve(crossprod(z_te), crossprod(z_te, M[fold$test, ]))
+        }
+        list(train = M[fold$train, ] - z_tr %*% beta,
+             test = M[fold$test, ] - z_te %*% beta_te)
+      }
+      xr <- proj(f$X); yr <- proj(f$Y)
+      ref <- rMVPA:::.banded_ridge_fit_predict_direct(
+        rbind(xr$train, xr$test), rbind(yr$train, yr$test),
+        train = seq_along(fold$train),
+        test = length(fold$train) + seq_along(fold$test),
+        groups = f$groups, alpha = 0.5, theta = c(a = 0.5, b = 0.5)
+      )
+      expected[fold$test, ] <- ref$predictions
+      observed[fold$test, ] <- yr$test
+    }
+    list(expected = expected, observed = observed)
+  }
+  for (mode in c("within", "train")) {
+    fitted <- run(nuisance = as_mode(mode), folds = fold_sets[[mode]])
+    ref <- reference(mode)
+    expect_equal(unname(fitted$predictions), ref$expected, tolerance = 1e-10,
+                 info = mode)
+    expect_equal(unname(fitted$observed), ref$observed, tolerance = 1e-10,
+                 info = mode)
+    expect_equal(fitted$performance$r2,
+                 rMVPA:::.banded_ridge_score(ref$observed, ref$expected)$r2,
+                 tolerance = 1e-10, info = mode)
+  }
+  expect_identical(got$n_nuisance, 2L)
+
+  # the features explain the signal response once motion is removed, and
+  # explain nothing of a response that is pure drift
+  expect_gt(got$performance$r2[[1L]], 0.9)
+  expect_lt(got$performance$r2[[2L]], 0.05)
+  # without nuisance handling the drift-laden feature "explains" the drift
+  raw <- run(nuisance = NULL)
+  expect_null(raw$observed)
+  expect_gt(raw$performance$r2[[2L]], 0.3)
+  expect_lt(raw$performance$r2[[1L]], got$performance$r2[[1L]])
+
+  # held-out responses cannot influence the predictions for their own fold
+  mutated <- f$Y
+  rows <- f$folds[[2L]]$test
+  mutated[rows, ] <- mutated[rows, ] + 100 * seq_along(rows)
+  changed <- run(Y = mutated)
+  expect_equal(changed$predictions[rows, ], got$predictions[rows, ],
+               tolerance = 1e-10)
+})
+
+test_that("nuisance handling is solver-independent and survives inner tuning", {
+  f <- .brt_nuisance_fixture()
+  candidates <- rMVPA:::.banded_ridge_candidates(
+    c("a", "b"), c(0.1, 1, 10), method = "grid", grid_points = 3L
+  )
+  run <- function(solver) {
+    cache <- if (solver == "direct") NULL else
+      rMVPA:::.banded_ridge_solver_cache()
+    rMVPA:::.banded_ridge_nested_cv(
+      f$X, f$Y, f$folds, candidates, feature_groups = f$groups, inner_v = 3L,
+      purge = 0L, solver = solver, solver_cache = cache,
+      nuisance = rMVPA:::.brt_validate_nuisance(f$N, nrow(f$N), fit = "within")
+    )
+  }
+  direct <- run("direct")
+  expect_equal(run("svd_primal")$predictions, direct$predictions,
+               tolerance = 1e-8)
+  expect_equal(run("dual_kernel")$predictions, direct$predictions,
+               tolerance = 1e-8)
+  expect_gt(direct$performance$r2[[1L]], 0.9)
+})
+
+test_that("nuisance input is validated", {
+  f <- .brt_nuisance_fixture()
+  run <- function(nuisance) {
+    rMVPA:::.banded_ridge_nested_cv(
+      f$X, f$Y, f$folds, f$candidates, feature_groups = f$groups,
+      inner_v = NA_integer_, alpha_scope = "fixed", theta_scope = "fixed",
+      fixed_alpha = 0.5, fixed_theta = c(a = 0.5, b = 0.5),
+      nuisance = rMVPA:::.brt_validate_nuisance(nuisance, nrow(f$X), fit = "within")
+    )
+  }
+  expect_error(run(f$N[-1L, ]), "one row per observation")
+  bad <- f$N; bad[3L, 1L] <- NA
+  expect_error(run(bad), "finite numeric matrix")
+  expect_error(run(matrix(rnorm(60 * 50), 60L)), "residual degrees of freedom")
+  # a vector is one nuisance column; duplicated columns are harmless
+  expect_equal(run(f$N[, 1L])$n_nuisance, 1L)
+  expect_equal(run(cbind(f$N, f$N))$predictions, run(f$N)$predictions,
+               tolerance = 1e-8)
+})
+
+test_that("drift nuisance with contiguous folds does not manufacture accuracy", {
+  # Voxels that are pure noise plus drift and motion: no feature signal. With
+  # training-fit coefficients extrapolated into a contiguous held-out block,
+  # the nuisance fit dominates features and responses alike.
+  set.seed(9107L)
+  n <- 240L; v <- 30L
+  tt <- (seq_len(n) - 0.5) / n
+  N <- cbind(sapply(1:8, function(j) cos(pi * j * tt)), matrix(rnorm(n * 4), n, 4))
+  ar <- function() as.numeric(stats::filter(rnorm(n), 0.4, "recursive"))
+  X <- sapply(1:6, function(i) ar() + 2 * cos(pi * i * tt))
+  Y <- sapply(seq_len(v), function(i) ar()) +
+    N %*% matrix(rnorm(ncol(N) * v, sd = 3), ncol(N), v)
+  groups <- rep(c("a", "b"), each = 3L)
+  blocks <- as.integer(cut(seq_len(n), 6L, labels = FALSE))
+  folds <- rMVPA:::.banded_ridge_make_folds(seq_len(n), 6L, blocks = blocks,
+                                            purge = 3L)
+  candidates <- rMVPA:::.banded_ridge_candidates(
+    c("a", "b"), 10, method = "fixed", theta = c(a = 0.5, b = 0.5)
+  )
+  run <- function(mode) {
+    rMVPA:::.banded_ridge_nested_cv(
+      X, Y, folds, candidates, feature_groups = groups, inner_v = NA_integer_,
+      alpha_scope = "fixed", theta_scope = "fixed", fixed_alpha = 10,
+      fixed_theta = c(a = 0.5, b = 0.5), blocks = blocks, purge = 3L,
+      nuisance = rMVPA:::.brt_validate_nuisance(N, n, fit = mode)
+    )
+  }
+  within <- run("within")
+  expect_lt(max(abs(within$performance$correlation)), 0.35)
+  expect_lt(abs(median(within$performance$correlation)), 0.1)
+  # the scored held-out responses are on the scale of the noise
+  expect_lt(stats::sd(within$observed), 3)
+
+  # the training-only mode refuses instead of reporting inflated accuracy
+  expect_error(run("train"), "outside the range of the training rows")
+
+  # exchangeable rows are within range and are fitted
+  shuffled <- lapply(1:6, function(k) {
+    test <- which(((seq_len(n) * 7L) %% 6L) + 1L == k)
+    list(id = paste0("fold_", k), train = setdiff(seq_len(n), test), test = test)
+  })
+  exchangeable <- rMVPA:::.banded_ridge_nested_cv(
+    X, Y, shuffled, candidates, feature_groups = groups, inner_v = NA_integer_,
+    alpha_scope = "fixed", theta_scope = "fixed", fixed_alpha = 10,
+    fixed_theta = c(a = 0.5, b = 0.5), nuisance = N[, 9:12]
+  )
+  expect_identical(exchangeable$nuisance_fit, "train")
+
+  # held-out splits too short for their own nuisance fit are refused
+  short <- lapply(1:24, function(k) {
+    test <- which(as.integer(cut(seq_len(n), 24L, labels = FALSE)) == k)
+    list(id = paste0("fold_", k), train = setdiff(seq_len(n), test), test = test)
+  })
+  expect_error(rMVPA:::.banded_ridge_nested_cv(
+    X, Y, short, candidates, feature_groups = groups, inner_v = NA_integer_,
+    alpha_scope = "fixed", theta_scope = "fixed", fixed_alpha = 10,
+    fixed_theta = c(a = 0.5, b = 0.5),
+    nuisance = rMVPA:::.brt_validate_nuisance(N, n, fit = "within")
+  ), "held-out split")
+})
+
+test_that("fitting every alpha of a theta in one pass matches candidate-by-candidate fits", {
+  data <- .brt_test_data(seed = 9311L, n = 40L, p = 9L, v = 5L)
+  candidates <- rMVPA:::.banded_ridge_candidates(
+    c("a", "b"), alphas = c(0, 0.2, 2, 20), method = "grid", grid_points = 3L
+  )
+  train <- data$outer[[1L]]$train; test <- data$outer[[1L]]$test
+  group <- which(rMVPA:::.brt_theta_keys(candidates$theta) ==
+                   rMVPA:::.brt_theta_keys(candidates$theta)[[2L]])
+  expect_gt(length(group), 1L)
+  for (solver in c("direct", "svd_primal", "dual_kernel")) {
+    together <- rMVPA:::.brt_fit_candidates(
+      data$X, data$Y, train, test, data$feature_groups, candidates, group,
+      solver = solver
+    )
+    for (jj in seq_along(group)) {
+      alone <- rMVPA:::.brt_fit_candidate(
+        data$X, data$Y, train, test, data$feature_groups,
+        rMVPA:::.brt_candidate_args(candidates, group[[jj]]), solver = solver
+      )
+      expect_true(together[[jj]]$ok)
+      expect_equal(together[[jj]]$result$predictions, alone$result$predictions,
+                   tolerance = 1e-12, info = solver)
+      expect_equal(together[[jj]]$result$fit$coefficients,
+                   alone$result$fit$coefficients, tolerance = 1e-12, info = solver)
+    }
+  }
+  # a failing pass marks every candidate of the group as failed
+  broken <- rMVPA:::.brt_fit_candidates(
+    data$X, data$Y, train[1L], test, data$feature_groups, candidates, group,
+    solver = "svd_primal"
+  )
+  expect_false(any(vapply(broken, `[[`, logical(1), "ok")))
+  expect_length(broken, length(group))
+
+  # restricting a fit to some responses keeps its other fields aligned
+  fit <- together[[1L]]$result$fit
+  part <- rMVPA:::.brt_subset_fit(fit, c(2L, 4L))
+  expect_identical(part$response_names, fit$response_names[c(2L, 4L)])
+  expect_identical(part$dual_weights, fit$dual_weights[, c(2L, 4L), drop = FALSE])
+  expect_identical(rMVPA:::.brt_subset_fit(fit, 1:5), fit)
 })
