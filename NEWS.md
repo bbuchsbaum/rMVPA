@@ -1,5 +1,19 @@
 # rMVPA (development version)
 
+* New `run_permutation_regional()`: permutation inference for regional
+  analyses with the searchlight's machinery (`permutation_control()`,
+  `permute_labels()`, the same per-permutation seeds and model adaptation).
+  Every region is refitted under every permutation, so each gets an exact
+  null, p = (1 + #null >= observed) / (1 + B). Across regions it reports
+  Benjamini-Hochberg FDR (`p_adj`) and single-step minP family-wise p-values
+  (`p_fwer`), valid under dependence because all regions share each
+  relabelling. Correlation and naive Bayes classifiers with fixed folds use
+  the exact aggregate engine over region membership (data and folds prepared
+  once; about 12x faster than calling `run_regional()` per permutation on 32
+  regions); other models reuse each region's extracted data across
+  permutations. Both paths reproduce `run_regional()` on the permuted design
+  exactly.
+
 
 * **Correctness fix:** `run_permutation_searchlight()` on a
   `naive_xdec_model()` no longer returns a null that reproduces the observed
