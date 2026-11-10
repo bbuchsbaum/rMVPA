@@ -20,6 +20,7 @@ feature_decode_model(
   alphas = 10^seq(-1, 5),
   purge = 0L,
   nuisance = NULL,
+  nuisance_fit = c("train", "within"),
   partial = FALSE,
   n_perm = 0L,
   perm_strategy = c("circular_shift", "block_shuffle"),
@@ -56,10 +57,11 @@ feature_decode_model(
   Candidate ridge penalties. Each feature column selects its own penalty
   inside each outer-training set.
 
-- nuisance:
+- nuisance, nuisance_fit:
 
-  Optional nuisance matrix (rows = observations), regressed out of
-  patterns and targets inside every training split.
+  Optional nuisance matrix (rows = observations) regressed out of
+  patterns and targets inside every split, and how held-out rows are
+  residualized; see \[banded_ridge_model()\].
 
 - partial:
 
@@ -120,8 +122,8 @@ One value per region or searchlight centre:
 
   With \`partial = TRUE\`: accuracy for a set or family after every
   other feature column has been regressed out of both the pattern and
-  the targets, inside each training split. This is the pattern-level
-  analogue of unique variance.
+  the targets, with coefficients fitted on each training split. This is
+  the pattern-level analogue of unique variance.
 
 - \`\<metric\>\_p\`:
 
@@ -146,17 +148,17 @@ des <- feature_sets_design(fs, block_var_train = rep(1:4, each = 20),
                            time_series = TRUE)
 model <- feature_decode_model(ds$dataset, des, outer_crossval = 4)
 res <- run_searchlight(model, radius = 4, method = "standard")
-#> INFO [2026-11-09 22:45:06] Running standard searchlight with radius = 4
-#> INFO [2026-11-09 22:45:06] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)
-#> INFO [2026-11-09 22:45:06] shard backend [volumetric]: shared 80 x 125 matrix (125 masked voxels)
-#> INFO [2026-11-09 22:45:06] creating standard searchlight
-#> INFO [2026-11-09 22:45:06] running standard searchlight iterator
-#> INFO [2026-11-09 22:45:06] Using automatic searchlight batch size 125 for 125 centers (memory budget 512.0 MiB).
-#> INFO [2026-11-09 22:45:31] 
+#> INFO [2026-11-10 00:19:43] Running standard searchlight with radius = 4
+#> INFO [2026-11-10 00:19:43] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)
+#> INFO [2026-11-10 00:19:43] shard backend [volumetric]: shared 80 x 125 matrix (125 masked voxels)
+#> INFO [2026-11-10 00:19:43] creating standard searchlight
+#> INFO [2026-11-10 00:19:43] running standard searchlight iterator
+#> INFO [2026-11-10 00:19:43] Using automatic searchlight batch size 125 for 125 centers (memory budget 512.0 MiB).
+#> INFO [2026-11-10 00:20:02] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 125
 #> - Processed: 125
 #> - Skipped: 0
-#> INFO [2026-11-09 22:45:31] searchlight (standard): 125 ROIs processed (success=125, errors=0)
+#> INFO [2026-11-10 00:20:02] searchlight (standard): 125 ROIs processed (success=125, errors=0)
 # }
 ```

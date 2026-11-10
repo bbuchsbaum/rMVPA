@@ -2,6 +2,33 @@
 
 ## rMVPA (development version)
 
+- **Correctness fix:** nuisance regressors in
+  [`banded_ridge_model()`](https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_model.md)
+  and
+  [`feature_decode_model()`](https://bbuchsbaum.github.io/rMVPA/reference/feature_decode_model.md)
+  no longer inflate accuracy for time series. The nuisance coefficients
+  fitted on the training rows are applied to the held-out rows. With
+  drift-like regressors and contiguous held-out blocks that is an
+  extrapolation: the extrapolated fit dominated features and responses
+  alike, and pure-noise responses reached held-out correlations above
+  0.9.
+
+  - The default, `nuisance_fit = "train"`, is unchanged in what it
+    computes but now stops with an error when held-out nuisance rows lie
+    outside the range of the training rows (largest leverage above one).
+  - `nuisance_fit = "within"` residualizes each held-out split with
+    coefficients fitted on that split. Nothing is carried between
+    training and held-out data and nothing is extrapolated. A held-out
+    row’s transformation then depends on the other rows of its
+    assessment set, so the accuracy is conditional on each held-out
+    block and is not that of a frozen training-derived pipeline; choose
+    it deliberately. Each held-out split needs more rows than nuisance
+    regressors.
+  - The mode is recorded in `result$provenance$nuisance_fit`.
+  - In `feature_decode_model(partial = TRUE)` the other feature columns
+    are removed with training-fit coefficients; only scan-level nuisance
+    follows `nuisance_fit`.
+
 - **Continuous encoding models.**
   [`banded_ridge_model()`](https://bbuchsbaum.github.io/rMVPA/reference/banded_ridge_model.md)
   gains what a time-resolved naturalistic analysis needs:

@@ -35,7 +35,8 @@ banded_ridge_model(
   weight_overflow = c("error", "none"),
   seed = 1L,
   memory_limit_mb = 1024,
-  nuisance = NULL
+  nuisance = NULL,
+  nuisance_fit = c("train", "within")
 )
 ```
 
@@ -211,12 +212,29 @@ banded_ridge_model(
   Optional numeric matrix of nuisance regressors (rows = observations),
   for example motion parameters and drift terms. Within every inner and
   outer split an intercept and these columns are regressed out of both
-  the features and the responses using coefficients estimated on the
-  training rows only, and the same coefficients are applied to the
-  held-out rows. Nuisance columns are never penalized and never
-  contribute to the predictions, so all reported accuracies, including
-  leave-band-out delta R2, describe variance in the
-  nuisance-residualized held-out responses.
+  the features and the responses, separately for the training rows and
+  the held-out rows (see \`nuisance_fit\`). Nuisance columns are never
+  penalized and never contribute to the predictions, so all reported
+  accuracies, including leave-band-out delta R2, describe variance in
+  the nuisance-residualized held-out responses.
+
+- nuisance_fit:
+
+  How held-out rows are residualized. \`"train"\` (default) applies the
+  coefficients fitted on the training rows, so the transformation is
+  fixed before the held-out rows are seen. This requires the held-out
+  nuisance rows to lie within the range of the training rows. With
+  drift-like regressors and contiguous held-out blocks they do not, the
+  extrapolated fit would dominate features and responses alike and
+  inflate accuracy, and the model stops with an error. \`"within"\` fits
+  the nuisance coefficients on the held-out rows themselves. Nothing is
+  carried between training and held-out data and nothing is
+  extrapolated, but a held-out row's transformation then depends on the
+  other rows of its assessment set, so the reported accuracy is
+  conditional on each held-out block and is not the accuracy of a frozen
+  training-derived pipeline. Each held-out split needs more rows than
+  nuisance regressors. The mode used is recorded in
+  \`result\$provenance\$nuisance_fit\`.
 
 ## Value
 

@@ -67,6 +67,7 @@ from the same held-out predictions, so they need no additional fits.</p>
 <span>  alphas <span class="op">=</span> <span class="fl">10</span><span class="op">^</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="op">-</span><span class="fl">1</span>, <span class="fl">5</span><span class="op">)</span>,</span>
 <span>  purge <span class="op">=</span> <span class="fl">0L</span>,</span>
 <span>  nuisance <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  nuisance_fit <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"train"</span>, <span class="st">"within"</span><span class="op">)</span>,</span>
 <span>  partial <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  n_perm <span class="op">=</span> <span class="fl">0L</span>,</span>
 <span>  perm_strategy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"circular_shift"</span>, <span class="st">"block_shuffle"</span><span class="op">)</span>,</span>
@@ -105,9 +106,10 @@ rows of a held-out row.</p></dd>
 own penalty inside each outer-training set.</p></dd>
 
 
-<dt id="arg-nuisance">nuisance<a class="anchor" aria-label="anchor" href="#arg-nuisance"></a></dt>
-<dd><p>Optional nuisance matrix (rows = observations), regressed
-out of patterns and targets inside every training split.</p></dd>
+<dt id="arg-nuisance-nuisance-fit">nuisance, nuisance_fit<a class="anchor" aria-label="anchor" href="#arg-nuisance-nuisance-fit"></a></dt>
+<dd><p>Optional nuisance matrix (rows = observations)
+regressed out of patterns and targets inside every split, and how held-out
+rows are residualized; see [banded_ridge_model()].</p></dd>
 
 
 <dt id="arg-partial">partial<a class="anchor" aria-label="anchor" href="#arg-partial"></a></dt>
@@ -167,8 +169,9 @@ matrices exchanged. It implements [fit_roi()], so [run_searchlight()] and
   <dt>`&lt;set&gt;_partial_r2`, `&lt;set&gt;_partial_cor`</dt>
 <dd><p>With `partial = TRUE`:
     accuracy for a set or family after every other feature column has been
-    regressed out of both the pattern and the targets, inside each training
-    split. This is the pattern-level analogue of unique variance.</p></dd>
+    regressed out of both the pattern and the targets, with coefficients
+    fitted on each training split. This is the pattern-level analogue of
+    unique variance.</p></dd>
 
   <dt>`&lt;metric&gt;_p`</dt>
 <dd><p>With `n_perm &gt; 0`: one-sided p-value against a null in
@@ -194,18 +197,18 @@ matrices exchanged. It implements [fit_roi()], so [run_searchlight()] and
 <span class="r-in"><span>                           time_series <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu">feature_decode_model</span><span class="op">(</span><span class="va">ds</span><span class="op">$</span><span class="va">dataset</span>, <span class="va">des</span>, outer_crossval <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="run_searchlight.html">run_searchlight</a></span><span class="op">(</span><span class="va">model</span>, radius <span class="op">=</span> <span class="fl">4</span>, method <span class="op">=</span> <span class="st">"standard"</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-09 22:45:06] Running standard searchlight with radius = 4</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-09 22:45:06] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-09 22:45:06] shard backend [volumetric]: shared 80 x 125 matrix (125 masked voxels)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-09 22:45:06] creating standard searchlight</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-09 22:45:06] running standard searchlight iterator</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-09 22:45:06] Using automatic searchlight batch size 125 for 125 centers (memory budget 512.0 MiB).</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-09 22:45:31] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-10 00:19:43] Running standard searchlight with radius = 4</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-10 00:19:43] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-10 00:19:43] shard backend [volumetric]: shared 80 x 125 matrix (125 masked voxels)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-10 00:19:43] creating standard searchlight</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-10 00:19:43] running standard searchlight iterator</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-10 00:19:43] Using automatic searchlight batch size 125 for 125 centers (memory budget 512.0 MiB).</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-10 00:20:02] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-09 22:45:31] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-10 00:20:02] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
     </div>

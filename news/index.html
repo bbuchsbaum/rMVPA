@@ -37,6 +37,14 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="development version" id="rmvpa-development-version">rMVPA (development version)<a class="anchor" aria-label="anchor" href="#rmvpa-development-version"></a></h2>
 <ul><li>
+<p><strong>Correctness fix:</strong> nuisance regressors in <code><a href="../reference/banded_ridge_model.html">banded_ridge_model()</a></code> and <code><a href="../reference/feature_decode_model.html">feature_decode_model()</a></code> no longer inflate accuracy for time series. The nuisance coefficients fitted on the training rows are applied to the held-out rows. With drift-like regressors and contiguous held-out blocks that is an extrapolation: the extrapolated fit dominated features and responses alike, and pure-noise responses reached held-out correlations above 0.9.</p>
+<ul><li>The default, <code>nuisance_fit = "train"</code>, is unchanged in what it computes but now stops with an error when held-out nuisance rows lie outside the range of the training rows (largest leverage above one).</li>
+<li>
+<code>nuisance_fit = "within"</code> residualizes each held-out split with coefficients fitted on that split. Nothing is carried between training and held-out data and nothing is extrapolated. A held-out row’s transformation then depends on the other rows of its assessment set, so the accuracy is conditional on each held-out block and is not that of a frozen training-derived pipeline; choose it deliberately. Each held-out split needs more rows than nuisance regressors.</li>
+<li>The mode is recorded in <code>result$provenance$nuisance_fit</code>.</li>
+<li>In <code>feature_decode_model(partial = TRUE)</code> the other feature columns are removed with training-fit coefficients; only scan-level nuisance follows <code>nuisance_fit</code>.</li>
+</ul></li>
+<li>
 <p><strong>Continuous encoding models.</strong> <code><a href="../reference/banded_ridge_model.html">banded_ridge_model()</a></code> gains what a time-resolved naturalistic analysis needs:</p>
 <ul><li>
 <strong>Correctness fix:</strong> the default simplex grid (<code>theta_grid_points = 3</code>) activated at most two bands in any candidate, so with three or more bands the full model never contained every band and leave-band-out delta R2 compared the wrong models. Grids without an interior point now include the equal-weight point.</li>

@@ -199,9 +199,9 @@ make_maps <- function(n) {
 group_A_vols <- make_maps(6)
 group_B_vols <- make_maps(6)
 result <- spatial_nmf_maps(group_A_vols, group_B_vols, mask = mask, k = 2)
-#> INFO [2026-11-09 22:46:09] spatial_nmf_maps: fitting NMF (n=12, p=50, k=2, lambda=0)
-#> INFO [2026-11-09 22:46:09] spatial_nmf_maps: NMF fit complete (converged=TRUE, iterations=14)
-#> INFO [2026-11-09 22:46:09] spatial_nmf_maps: parallel=FALSE (explicit=FALSE)
+#> INFO [2026-11-10 00:20:32] spatial_nmf_maps: fitting NMF (n=12, p=50, k=2, lambda=0)
+#> INFO [2026-11-10 00:20:32] spatial_nmf_maps: NMF fit complete (converged=TRUE, iterations=14)
+#> INFO [2026-11-10 00:20:32] spatial_nmf_maps: parallel=FALSE (explicit=FALSE)
 length(result$components)
 #> [1] 2
 ```

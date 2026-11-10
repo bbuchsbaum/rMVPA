@@ -103,15 +103,15 @@ my_roi_stats <- function(roi_data, roi_info) {
 
 custom_results <- run_custom_regional(dataset_obj, region_mask_vol, my_roi_stats)
 #> Warning: future::availableCores() is deprecated. Please use the identical parallelly::availableCores() instead [pkgdown::build_site_github_pages() -> pkgdown::build_site() -> pkgdown::build_site_local() -> pkgdown::build_reference() -> pkgdown::unwrap_purrr_error() -> base::withCallingHandlers() -> purrr::map() -> purrr::map_() -> purrr::with_indexed_errors() -> base::withCallingHandlers() -> purrr::call_with_cleanup() -> pkgdown::.f() -> base::withCallingHandlers() -> pkgdown::data_reference_topic() -> pkgdown::run_examples() -> pkgdown::highlight_examples() -> downlit::evaluate_and_highlight() -> evaluate::evaluate() -> base::withRestarts() -> withRestartList() -> withOneRestart() -> doWithOneRestart() -> withRestartList() -> withOneRestart() -> doWithOneRestart() -> evaluate::with_handlers() -> base::eval() -> eval() -> base::withCallingHandlers() -> base::withVisible() -> base::eval() -> eval() -> rMVPA::run_custom_regional() -> rMVPA::.rmvpa_apply_future_plan() -> base::tryCatch() -> tryCatchList() -> tryCatchOne() -> doTryCatch() -> future::availableCores()]
-#> INFO [2026-11-09 22:46:00] Starting custom regional analysis...
-#> INFO [2026-11-09 22:46:00] Using automatic searchlight batch size 3 for 3 centers (memory budget 512.0 MiB).
-#> INFO [2026-11-09 22:46:00] 
+#> INFO [2026-11-10 00:20:24] Starting custom regional analysis...
+#> INFO [2026-11-10 00:20:24] Using automatic searchlight batch size 3 for 3 centers (memory budget 512.0 MiB).
+#> INFO [2026-11-10 00:20:24] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 3
 #> - Processed: 3
 #> - Skipped: 0
-#> INFO [2026-11-09 22:46:00] Custom regional analysis iteration complete.
-#> INFO [2026-11-09 22:46:00] Finished formatting custom regional results.
+#> INFO [2026-11-10 00:20:24] Custom regional analysis iteration complete.
+#> INFO [2026-11-10 00:20:24] Finished formatting custom regional results.
 print(custom_results)
 #> # A tibble: 3 × 6
 #>      id mean_signal sd_signal n_features error error_message
