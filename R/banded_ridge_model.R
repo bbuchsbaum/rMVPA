@@ -655,6 +655,8 @@
                                       nuisance = NULL) {
   out <- list()
   theta_columns <- paste0("theta_", nested$group_names)
+  cleaned <- .brt_remove_global(X, Y, nuisance)
+  X <- cleaned$X; Y <- cleaned$Y; nuisance <- cleaned$nuisance
   for (oo in seq_along(nested$outer_results)) {
     outer <- nested$outer_results[[oo]]
     selected <- outer$selected
@@ -782,8 +784,23 @@
 #'   other rows of its assessment set, so the reported accuracy is conditional
 #'   on each held-out block and is not the accuracy of a frozen
 #'   training-derived pipeline. Each held-out split needs more rows than
-#'   nuisance regressors. The mode used is recorded in
-#'   `result$provenance$nuisance_fit`.
+#'   nuisance regressors.
+#'   `"global"` removes the nuisance from features and responses once, over
+#'   all rows, before the data are split, as much encoding work does in
+#'   preprocessing. **It is not leak-free and its accuracies can be biased
+#'   upward.** Held-out responses enter the nuisance coefficients that are then
+#'   subtracted from the training responses, so training and held-out
+#'   residuals are dependent, and responses with no relation to the features
+#'   can show positive held-out accuracy. The bias grows with the number of
+#'   nuisance and feature columns relative to the number of rows: in a
+#'   374-volume run with 25 nuisance and 44 feature columns, unrelated
+#'   responses gave held-out correlations of about .03 to .05 where `"within"`
+#'   gave about zero, and when few residual degrees of freedom remain the fit
+#'   becomes exact. Use it for exploration, or calibrate it against a null
+#'   computed the same way (for example with time-shifted features); do not
+#'   test its accuracies against zero. The model refuses when the features
+#'   have as many columns as there are residual degrees of freedom.
+#'   The mode used is recorded in `result$provenance$nuisance_fit`.
 #' @param purge Non-negative temporal gap (in rows) around validation/test
 #'   rows. Training rows within the gap are dropped when folds are constructed
 #'   from an integer count or a `cross_validation` object; explicit fold lists
@@ -874,7 +891,7 @@ banded_ridge_model <- function(dataset,
                                seed = 1L,
                                memory_limit_mb = 1024,
                                nuisance = NULL,
-                               nuisance_fit = c("train", "within")) {
+                               nuisance_fit = c("train", "within", "global")) {
   nuisance_fit <- match.arg(nuisance_fit)
   if (!inherits(dataset, "mvpa_image_dataset")) {
     stop("banded_ridge_model currently supports image mvpa_dataset objects only.",

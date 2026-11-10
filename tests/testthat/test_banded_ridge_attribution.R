@@ -739,3 +739,52 @@ test_that("banded_ridge_weights gives the same weights with every solver", {
     expect_equal(weights$dual[[kind]], weights$direct[[kind]], tolerance = 1e-8)
   }
 })
+
+test_that("banded_ridge_model and feature_decode_model accept nuisance_fit = 'global'", {
+  set.seed(9309L)
+  n <- 48L
+  block <- rep(1:4, each = 12L)
+  N <- cbind(drift = seq(-1, 1, length.out = n), motion = rnorm(n))
+  X <- cbind(a1 = rnorm(n) + 2 * N[, 1L], b1 = rnorm(n), b2 = rnorm(n))
+  Y <- cbind(X[, 1L] + 6 * N[, 1L] + rnorm(n, sd = 0.1),
+             X[, 2L] - X[, 3L] + 2 * N[, 2L] + rnorm(n, sd = 0.1))
+  sets <- c("a", "b", "b")
+  design <- feature_sets_design(feature_sets(X, by_set(sets, order = c("a", "b"))),
+                                block_var_train = block, time_series = TRUE)
+  candidates <- rMVPA:::.banded_ridge_candidates(
+    c("a", "b"), 0.5, method = "fixed", theta = c(a = 0.5, b = 0.5)
+  )
+  z <- cbind(1, N)
+  clean <- function(M) { out <- qr.resid(qr(z), M); dimnames(out) <- dimnames(M); out }
+  for (solver in c("svd_primal", "dual_kernel")) {
+    model <- banded_ridge_model(
+      .bra_test_dataset(Y), design, outer_crossval = 4L, candidates = candidates,
+      delta_sets = "all", nuisance = N, nuisance_fit = "global",
+      return_predictions = TRUE, weight_retention = "dual", solver = solver, seed = 3L
+    )
+    result <- suppressWarnings(run_banded_ridge(model))
+    expect_identical(result$provenance$nuisance_fit, "global")
+    expect_gt(min(result$metrics$r2), 0.9)
+    expect_equal(unname(result$observed), unname(clean(Y)), tolerance = 1e-10)
+    # the same model on data cleaned by hand, with no nuisance argument
+    by_hand <- banded_ridge_model(
+      .bra_test_dataset(clean(Y)),
+      feature_sets_design(feature_sets(clean(X), by_set(sets, order = c("a", "b"))),
+                          block_var_train = block, time_series = TRUE),
+      outer_crossval = 4L, candidates = candidates, delta_sets = "all",
+      return_predictions = TRUE, weight_retention = "dual", solver = solver, seed = 3L
+    )
+    reference <- suppressWarnings(run_banded_ridge(by_hand))
+    expect_equal(result$metrics$r2, reference$metrics$r2, tolerance = 1e-8)
+    expect_equal(result$predictive_leave_one_band_out$effects[, -(1:2)],
+                 reference$predictive_leave_one_band_out$effects[, -(1:2)],
+                 tolerance = 1e-8)
+    expect_equal(unname(result$predictions), unname(reference$predictions),
+                 tolerance = 1e-8)
+    fold <- model$outer_folds[[1L]]$id
+    expect_equal(result$weights[[1L]][[fold]]$dual_weights,
+                 reference$weights[[1L]][[fold]]$dual_weights, tolerance = 1e-8)
+    expect_equal(banded_ridge_weights(model, result)$weights,
+                 banded_ridge_weights(by_hand, reference)$weights, tolerance = 1e-8)
+  }
+})

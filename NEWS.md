@@ -1,5 +1,19 @@
 # rMVPA (development version)
 
+* `banded_ridge_model()` and `feature_decode_model()` gain
+  `nuisance_fit = "global"`: nuisance regressors are removed from features and
+  responses once, over all rows, before the data are split, as much encoding
+  work does in preprocessing. It is an explicit choice and **not leak-free**:
+  held-out responses enter the nuisance coefficients subtracted from the
+  training responses, so accuracy under the null can be biased upward, the more so
+  the more nuisance and feature columns there are relative to rows (about .03
+  to .05 in held-out correlation for unrelated responses in a 374-volume run
+  with 25 nuisance and 44 feature columns). Use it for exploration or
+  calibrate it against a null computed the same way; `"within"` is the
+  leak-free choice for inference. The model refuses when the features have as
+  many columns as residual degrees of freedom. The mode is recorded in
+  `result$provenance$nuisance_fit`.
+
 
 * **Correctness fix:** `run_permutation_searchlight()` on a
   `naive_xdec_model()` no longer returns a null that reproduces the observed
@@ -12,6 +26,7 @@
   column that label permutation does not change, so no valid null exists and
   the call now stops with an explanation before the observed pass. Rerun any
   permutation results from `naive_xdec_model()`.
+
 
 * **Faster and parallel `run_banded_ridge()`.**
   - Tuning fits every alpha of a theta in one solver pass instead of refitting
