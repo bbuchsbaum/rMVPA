@@ -639,11 +639,26 @@
 #' @param nuisance Optional numeric matrix of nuisance regressors (rows =
 #'   observations), for example motion parameters and drift terms. Within every
 #'   inner and outer split an intercept and these columns are regressed out of
-#'   both the features and the responses using coefficients estimated on the
-#'   training rows only, and the same coefficients are applied to the held-out
-#'   rows. Nuisance columns are never penalized and never contribute to the
-#'   predictions, so all reported accuracies, including leave-band-out delta
-#'   R2, describe variance in the nuisance-residualized held-out responses.
+#'   both the features and the responses, separately for the training rows and
+#'   the held-out rows (see `nuisance_fit`). Nuisance columns are never
+#'   penalized and never contribute to the predictions, so all reported
+#'   accuracies, including leave-band-out delta R2, describe variance in the
+#'   nuisance-residualized held-out responses.
+#' @param nuisance_fit How held-out rows are residualized.
+#'   `"train"` (default) applies the coefficients fitted on the training rows,
+#'   so the transformation is fixed before the held-out rows are seen. This
+#'   requires the held-out nuisance rows to lie within the range of the
+#'   training rows. With drift-like regressors and contiguous held-out blocks
+#'   they do not, the extrapolated fit would dominate features and responses
+#'   alike and inflate accuracy, and the model stops with an error.
+#'   `"within"` fits the nuisance coefficients on the held-out rows themselves.
+#'   Nothing is carried between training and held-out data and nothing is
+#'   extrapolated, but a held-out row's transformation then depends on the
+#'   other rows of its assessment set, so the reported accuracy is conditional
+#'   on each held-out block and is not the accuracy of a frozen
+#'   training-derived pipeline. Each held-out split needs more rows than
+#'   nuisance regressors. The mode used is recorded in
+#'   `result$provenance$nuisance_fit`.
 #' @param purge Non-negative temporal gap (in rows) around validation/test
 #'   rows. Training rows within the gap are dropped when folds are constructed
 #'   from an integer count or a `cross_validation` object; explicit fold lists
@@ -733,7 +748,9 @@ banded_ridge_model <- function(dataset,
                                weight_overflow = c("error", "none"),
                                seed = 1L,
                                memory_limit_mb = 1024,
-                               nuisance = NULL) {
+                               nuisance = NULL,
+                               nuisance_fit = c("train", "within")) {
+  nuisance_fit <- match.arg(nuisance_fit)
   if (!inherits(dataset, "mvpa_image_dataset")) {
     stop("banded_ridge_model currently supports image mvpa_dataset objects only.",
          call. = FALSE)
@@ -769,7 +786,8 @@ banded_ridge_model <- function(dataset,
     stop("banded_ridge_model: design X_train rows must match dataset training observations.",
          call. = FALSE)
   }
-  nuisance <- .brt_validate_nuisance(nuisance, n, "banded_ridge_model: nuisance")
+  nuisance <- .brt_validate_nuisance(nuisance, n, "banded_ridge_model: nuisance",
+                                     fit = nuisance_fit)
   blocks <- design$block_var_train
   if (isTRUE(design$time_series) && is.null(blocks) && purge < 1L) {
     stop(
@@ -1237,6 +1255,7 @@ run_banded_ridge <- function(model,
       solver_plan = runtime_plan,
       outer_fold_ids = vapply(model$outer_folds, `[[`, character(1), "id"),
       seed = model$seed,
+      nuisance_fit = if (is.null(model$nuisance)) NA_character_ else attr(model$nuisance, "fit"),
       metric = model$metric,
       chunk_manifest = chunk_manifest,
       target_batch_size = batch_size,

@@ -12,6 +12,7 @@ feature_decode_model(
   alphas = 10^seq(-1, 5),
   purge = 0L,
   nuisance = NULL,
+  nuisance_fit = c("train", "within"),
   partial = FALSE,
   n_perm = 0L,
   perm_strategy = c("circular_shift", "block_shuffle"),
@@ -38,8 +39,9 @@ rows of a held-out row.}
 \item{alphas}{Candidate ridge penalties. Each feature column selects its
 own penalty inside each outer-training set.}
 
-\item{nuisance}{Optional nuisance matrix (rows = observations), regressed
-out of patterns and targets inside every training split.}
+\item{nuisance, nuisance_fit}{Optional nuisance matrix (rows = observations)
+regressed out of patterns and targets inside every split, and how held-out
+rows are residualized; see [banded_ridge_model()].}
 
 \item{partial}{If `TRUE`, also report partial accuracies (see Metrics).}
 
@@ -86,8 +88,9 @@ One value per region or searchlight centre:
     i.e. observed and predicted features projected onto the contrast.}
   \item{`<set>_partial_r2`, `<set>_partial_cor`}{With `partial = TRUE`:
     accuracy for a set or family after every other feature column has been
-    regressed out of both the pattern and the targets, inside each training
-    split. This is the pattern-level analogue of unique variance.}
+    regressed out of both the pattern and the targets, with coefficients
+    fitted on each training split. This is the pattern-level analogue of
+    unique variance.}
   \item{`<metric>_p`}{With `n_perm > 0`: one-sided p-value against a null in
     which the predictions are shifted in time against the observations.}
 }

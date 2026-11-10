@@ -45,7 +45,8 @@ test_that("feature_decode_model recovers which features a region carries", {
   f <- .fdm_fixture()
   model <- feature_decode_model(f$dataset, f$design, outer_crossval = 6L,
                                 tune_crossval = 3L, purge = 2L,
-                                nuisance = f$drift, partial = TRUE)
+                                nuisance = f$drift, nuisance_fit = "within",
+                                partial = TRUE)
   schema <- output_schema(model)
   labels <- c("all", "manner", "place", "acoustic", "lexical", "phonology",
               "manner_vs_place")
@@ -86,14 +87,16 @@ test_that("feature_decode_model recovers which features a region carries", {
 test_that("feature_decode_model matches a direct nested ridge on swapped roles", {
   f <- .fdm_fixture()
   model <- feature_decode_model(f$dataset, f$design, outer_crossval = 6L,
-                                tune_crossval = 3L, purge = 1L, nuisance = f$drift)
+                                tune_crossval = 3L, purge = 1L, nuisance = f$drift,
+                                nuisance_fit = "within")
   got <- .fdm_fit(model, f$Y, f$left)$metrics
   pattern <- f$Y[, f$left]
   colnames(pattern) <- paste0("v", seq_len(ncol(pattern)))
   reference <- rMVPA:::.banded_ridge_nested_cv(
     pattern, f$X, model$outer_folds, model$candidates,
     feature_groups = rep("pattern", ncol(pattern)), inner_v = 3L,
-    blocks = f$block, purge = 1L, nuisance = f$drift, seed = 1L
+    blocks = f$block, purge = 1L, seed = 1L,
+    nuisance = rMVPA:::.brt_validate_nuisance(f$drift, nrow(f$drift), fit = "within")
   )
   expect_equal(got[["all_r2"]], mean(reference$performance$r2), tolerance = 1e-6)
   expect_equal(got[["manner_cor"]], reference$performance$correlation[[1L]],
@@ -104,7 +107,8 @@ test_that("feature_decode_model time-shift p-values separate signal from none", 
   f <- .fdm_fixture()
   model <- feature_decode_model(f$dataset, f$design, outer_crossval = 6L,
                                 tune_crossval = 3L, purge = 2L,
-                                nuisance = f$drift, partial = TRUE,
+                                nuisance = f$drift, nuisance_fit = "within",
+                                partial = TRUE,
                                 n_perm = 99L, min_shift = 10L)
   expect_length(output_schema(model), 48L)
   m <- .fdm_fit(model, f$Y, f$left)$metrics
@@ -119,7 +123,7 @@ test_that("feature_decode_model runs through run_regional and run_searchlight", 
   f <- .fdm_fixture()
   model <- feature_decode_model(f$dataset, f$design, outer_crossval = 6L,
                                 tune_crossval = 2L, alphas = c(1, 100),
-                                nuisance = f$drift)
+                                nuisance = f$drift, nuisance_fit = "within")
   regional <- run_regional(model, f$region)
   expect_s3_class(regional, "regional_mvpa_result")
   table <- as.data.frame(regional$performance_table)
@@ -142,6 +146,11 @@ test_that("feature_decode_model validates inputs and reports unusable regions", 
   expect_error(build(n_perm = 1.5), "n_perm")
   expect_error(build(partial = NA), "partial")
   expect_error(build(nuisance = f$drift[-1L, , drop = FALSE]), "one row per observation")
+  # the training-only default refuses to extrapolate a drift into a held-out block
+  drifting <- build(tune_crossval = 2L, alphas = c(1, 100), nuisance = f$drift)
+  refused <- .fdm_fit(drifting, f$Y, f$left)
+  expect_true(refused$error)
+  expect_match(refused$error_message, "outside the range of the training rows")
   no_blocks <- feature_sets_design(f$design$X_train, time_series = TRUE)
   expect_error(feature_decode_model(f$dataset, no_blocks, outer_crossval = 6L),
                "random row-wise CV is unsafe")
