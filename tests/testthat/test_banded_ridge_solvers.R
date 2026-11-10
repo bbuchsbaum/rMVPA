@@ -405,6 +405,11 @@ test_that("solver planning is conservative, overrideable, and memory bounded", {
   )
   expect_identical(small$solver, "direct")
   expect_match(small$reason, "p <= 64")
+  small_path <- rMVPA:::.banded_ridge_solver_plan(
+    n = 100, p = 50, v = 20, n_bands = 3, n_alphas = 8
+  )
+  expect_identical(small_path$solver, "svd_primal")
+  expect_match(small_path$reason, "alpha-path SVD reuse for small p")
   expect_identical(path$solver, "svd_primal")
   expect_identical(wide$solver, "dual_kernel")
   expect_match(wide$reason, "p >= 4n")

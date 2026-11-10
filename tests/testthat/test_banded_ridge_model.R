@@ -847,3 +847,116 @@ test_that("a fit that loses to the training mean says so", {
     .brm_saturation_fixture(seed = 8703L, signal = 0.5)
   )))
 })
+
+test_that("run_banded_ridge gives the same result on future workers", {
+  skip_if_not_installed("future")
+  skip_if_not(future::supportsMulticore(), "forked workers are not available")
+  set.seed(4406L)
+  n <- 60L; v <- 12L
+  X <- matrix(rnorm(n * 6L), n, 6L, dimnames = list(NULL, paste0("f", 1:6)))
+  N <- cbind(motion = rnorm(n))
+  Y <- X %*% matrix(rnorm(6L * v), 6L, v) + matrix(rnorm(n * v), n, v)
+  dataset <- mvpa_dataset(
+    neuroim2::NeuroVec(array(t(Y), c(v, 1L, 1L, n)),
+                       neuroim2::NeuroSpace(c(v, 1L, 1L, n))),
+    mask = neuroim2::NeuroVol(array(1, c(v, 1L, 1L)),
+                              neuroim2::NeuroSpace(c(v, 1L, 1L)))
+  )
+  design <- feature_sets_design(
+    feature_sets(X, by_set(rep(c("a", "b"), each = 3L))),
+    block_var_train = rep(1:4, each = 15L), time_series = TRUE
+  )
+  build <- function(solver, retention) {
+    banded_ridge_model(
+      dataset, design, outer_crossval = 4L, tune_crossval = 3L,
+      alphas = c(0.1, 1, 10), delta_sets = "all", nuisance = N,
+      solver = solver, target_batch_size = 3L, return_predictions = TRUE,
+      weight_retention = retention, retain_diagnostics = TRUE, seed = 5L
+    )
+  }
+  old_plan <- future::plan()
+  on.exit(future::plan(old_plan), add = TRUE)
+  for (config in list(c("svd_primal", "primal"), c("dual_kernel", "dual"),
+                      c("direct", "none"))) {
+    model <- build(config[[1L]], config[[2L]])
+    future::plan(future::sequential)
+    one <- suppressWarnings(run_banded_ridge(model))
+    future::plan(future::multicore, workers = 3L)
+    many <- suppressWarnings(run_banded_ridge(model))
+    expect_identical(one$provenance$workers, 1L)
+    expect_identical(many$provenance$workers, 3L)
+    for (field in c("metrics", "hyperparameters", "predictions", "observed",
+                    "weights", "active_response_ids")) {
+      expect_equal(many[[field]], one[[field]], tolerance = 1e-12,
+                   info = paste(config[[1L]], field))
+    }
+    # retained diagnostics agree apart from per-worker cache bookkeeping
+    numeric_part <- function(diagnostics) {
+      lapply(diagnostics, function(chunk) lapply(chunk, function(outer) {
+        outer[c("fold_id", "train", "test", "inner_folds", "inner_fold_scores",
+                "candidate_scores", "selected", "predictions")]
+      }))
+    }
+    expect_equal(numeric_part(many$diagnostics), numeric_part(one$diagnostics),
+                 tolerance = 1e-12, info = config[[1L]])
+    lobo <- c("effects", "reduced_performance", "reduced_hyperparameters",
+              "reduced_predictions")
+    expect_equal(many$predictive_leave_one_band_out[lobo],
+                 one$predictive_leave_one_band_out[lobo], tolerance = 1e-12)
+    expect_identical(many$provenance$chunk_manifest, one$provenance$chunk_manifest)
+    manifest <- c("model_id", "excluded_band", "chunk", "n_responses",
+                  "total_fit_calls")
+    expect_identical(many$provenance$work_manifest[manifest],
+                     one$provenance$work_manifest[manifest])
+  }
+})
+
+test_that("a worker with another RNG kind draws the caller's folds", {
+  set.seed(4407L)
+  n <- 60L; v <- 4L
+  X <- matrix(rnorm(n * 4L), n, 4L)
+  Y <- X %*% matrix(rnorm(4L * v), 4L, v) + matrix(rnorm(n * v), n, v)
+  dataset <- mvpa_dataset(
+    neuroim2::NeuroVec(array(t(Y), c(v, 1L, 1L, n)),
+                       neuroim2::NeuroSpace(c(v, 1L, 1L, n))),
+    mask = neuroim2::NeuroVol(array(1, c(v, 1L, 1L)),
+                              neuroim2::NeuroSpace(c(v, 1L, 1L)))
+  )
+  design <- feature_sets_design(
+    feature_sets(X, by_set(rep(c("a", "b"), each = 2L))),
+    block_var_train = rep(1:10, each = 6L), time_series = TRUE
+  )
+  session_kind <- RNGkind()
+  on.exit(do.call(RNGkind, as.list(session_kind)), add = TRUE)
+  caller_kind <- c("L'Ecuyer-CMRG", "Inversion", "Rejection")
+  worker_kind <- c("Mersenne-Twister", "Inversion", "Rejection")
+  run_group <- function(model, rng_kind) {
+    spec <- model; spec$dataset <- NULL
+    rMVPA:::.brm_run_group(
+      spec, model$design$X_train$X, as.character(model$design$X_train$set),
+      list(model$active_response_ids), 1L, 1e8, dataset = model$dataset,
+      rng_kind = rng_kind
+    )$pieces[[1L]]
+  }
+  folds_of <- function(piece) lapply(piece$diagnostics, `[[`, "inner_folds")
+
+  # the caller builds and runs the model under its own RNG kind
+  do.call(RNGkind, as.list(caller_kind))
+  model <- banded_ridge_model(
+    dataset, design, outer_crossval = 5L, tune_crossval = 3L,
+    alphas = c(0.1, 1, 10), solver = "svd_primal", retain_diagnostics = TRUE,
+    seed = 11L
+  )
+  reference <- run_group(model, NULL)
+
+  # a worker session with a different kind
+  do.call(RNGkind, as.list(worker_kind))
+  adopted <- run_group(model, caller_kind)
+  expect_identical(RNGkind(), worker_kind)   # the worker's kind is put back
+  expect_identical(folds_of(adopted), folds_of(reference))
+  expect_identical(adopted$metrics, reference$metrics)
+  expect_identical(adopted$selections, reference$selections)
+
+  # without it the same seed gives other folds under the other generator
+  expect_false(identical(folds_of(run_group(model, NULL)), folds_of(reference)))
+})

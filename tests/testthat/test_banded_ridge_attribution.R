@@ -463,3 +463,279 @@ test_that("dual leave-one-band-out models share band Grams with the full model",
   expect_identical(sum(manifest$cache_evictions_added), 0L)
   expect_gt(dual$result$provenance$solver_band_kernel_hits, 0L)
 })
+
+test_that("a named delta_sets list drops groups of bands together", {
+  blocks <- 3L
+  grid <- expand.grid(z = c(-1, 1), u = c(-1, 1), w = c(-1, 1))
+  X <- as.matrix(grid[rep(seq_len(nrow(grid)), blocks), ])
+  block <- rep(seq_len(blocks), each = nrow(grid))
+  Y <- cbind(2 * X[, "z"] + X[, "u"], X[, "w"])
+  bands <- c("a", "b", "c")
+
+  grouped <- .bra_test_problem(
+    X, Y, bands, blocks_train = block,
+    delta_sets = list(ab = c("a", "b"), a = "a", b = "b")
+  )
+  single <- .bra_test_problem(
+    X, Y, bands, blocks_train = block, delta_sets = c("a", "b")
+  )
+  lobo <- grouped$result$predictive_leave_one_band_out
+  effects <- lobo$effects
+
+  expect_identical(grouped$model$delta_sets, c("ab", "a", "b"))
+  expect_identical(lobo$provenance$band_members,
+                   list(ab = c("a", "b"), a = "a", b = "b"))
+  expect_setequal(names(lobo$maps),
+                  paste0("delta_cv_r2_", c("ab", "a", "b")))
+
+  # single-band entries of a list are the ordinary leave-one-band-out effects
+  single_effects <- single$result$predictive_leave_one_band_out$effects
+  expect_equal(effects$delta_cv_r2_a, single_effects$delta_cv_r2_a,
+               tolerance = 1e-12)
+  expect_equal(effects$delta_cv_r2_b, single_effects$delta_cv_r2_b,
+               tolerance = 1e-12)
+
+  # response 1 is carried entirely by a and b, response 2 entirely by c
+  full_r2 <- grouped$result$metrics$r2
+  expect_equal(full_r2, c(1, 1), tolerance = 1e-8)
+  expect_equal(effects$delta_cv_r2_ab[[1L]],
+               full_r2[[1L]] - lobo$reduced_performance$ab$r2[[1L]],
+               tolerance = 1e-12)
+  expect_gte(effects$delta_cv_r2_ab[[1L]], 1 - 1e-8)
+  expect_gt(effects$delta_cv_r2_ab[[1L]],
+            max(effects$delta_cv_r2_a[[1L]], effects$delta_cv_r2_b[[1L]]))
+  expect_equal(effects$delta_cv_r2_ab[[2L]], 0, tolerance = 1e-8)
+
+  # orthogonal bands: the joint effect is the sum of the separate effects
+  expect_equal(effects$delta_cv_r2_ab[[1L]],
+               effects$delta_cv_r2_a[[1L]] + effects$delta_cv_r2_b[[1L]],
+               tolerance = 1e-8)
+
+  bad <- function(sets, pattern) {
+    expect_error(.bra_test_problem(X, Y, bands, blocks_train = block,
+                                   delta_sets = sets), pattern)
+  }
+  bad(list(c("a", "b")), "unique non-empty names")
+  bad(list(x = c("a", "nope")), "unknown feature bands")
+  bad(list(x = c("a", "b", "c")), "cannot drop every feature band")
+  bad(list(a = c("a", "b")), "named after a feature band")
+  bad(list(x = character()), "unique feature-band names")
+})
+
+test_that("banded_ridge_model applies nuisance regressors to full and reduced models", {
+  set.seed(5102L)
+  n <- 48L
+  block <- rep(1:4, each = 12L)
+  N <- cbind(drift = seq(-1, 1, length.out = n))
+  X <- cbind(rnorm(n) + 2 * N[, 1L], rnorm(n))
+  Y <- cbind(X[, 1L] + 6 * N[, 1L] + rnorm(n, sd = 0.1),
+             X[, 2L] + rnorm(n, sd = 0.1))
+  fs <- feature_sets(X, by_set(c("a", "b"), order = c("a", "b")))
+  design <- feature_sets_design(fs, block_var_train = block, time_series = TRUE)
+  candidates <- rMVPA:::.banded_ridge_candidates(
+    c("a", "b"), 0.01, method = "fixed", theta = c(a = 0.5, b = 0.5)
+  )
+  build <- function(nuisance) {
+    banded_ridge_model(
+      .bra_test_dataset(Y), design, outer_crossval = 4L, candidates = candidates,
+      delta_sets = "all", nuisance = nuisance, nuisance_fit = "within",
+      seed = 3L
+    )
+  }
+  with_nuisance <- suppressWarnings(run_banded_ridge(build(N)))
+  effects <- with_nuisance$predictive_leave_one_band_out$effects
+  expect_gt(min(with_nuisance$metrics$r2), 0.9)
+  expect_gt(effects$delta_cv_r2_a[[1L]], 0.9)
+  expect_lt(abs(effects$delta_cv_r2_b[[1L]]), 0.05)
+  expect_gt(effects$delta_cv_r2_b[[2L]], 0.9)
+  expect_error(build(N[-1L, , drop = FALSE]), "one row per observation")
+  expect_identical(with_nuisance$provenance$nuisance_fit, "within")
+  # training-only is the default; a single mild drift stays within range
+  default <- banded_ridge_model(.bra_test_dataset(Y), design, outer_crossval = 4L,
+                                candidates = candidates, nuisance = N, seed = 3L)
+  expect_identical(attr(default$nuisance, "fit"), "train")
+  expect_identical(suppressWarnings(run_banded_ridge(default))$provenance$nuisance_fit,
+                   "train")
+})
+
+test_that("banded_ridge_weights refits on all rows with each response's modal candidate", {
+  set.seed(6203L)
+  n <- 60L
+  block <- rep(1:5, each = 12L)
+  N <- cbind(drift = seq(-1, 1, length.out = n))
+  X <- cbind(a1 = rnorm(n), a2 = 3 * rnorm(n), b1 = rnorm(n) + N[, 1L])
+  beta <- cbind(c(2, 0, 0), c(0, -1, 1))
+  Y <- X %*% beta + 4 * N[, 1L] + matrix(rnorm(2 * n, sd = 0.05), n)
+  fs <- feature_sets(X, by_set(c("a", "a", "b"), order = c("a", "b")))
+  design <- feature_sets_design(fs, block_var_train = block, time_series = TRUE)
+  candidates <- rMVPA:::.banded_ridge_candidates(
+    c("a", "b"), c(1e-6, 1e3), method = "fixed", theta = c(a = 0.5, b = 0.5)
+  )
+  model <- banded_ridge_model(
+    .bra_test_dataset(Y), design, outer_crossval = 5L, tune_crossval = 2L,
+    candidates = candidates, nuisance = N, nuisance_fit = "within",
+    seed = 2L
+  )
+  result <- suppressWarnings(run_banded_ridge(model))
+
+  raw <- banded_ridge_weights(model, result, standardized = FALSE)
+  expect_s3_class(raw, "banded_ridge_weights")
+  expect_identical(dim(raw$weights), c(3L, 2L))
+  expect_identical(raw$set, c("a", "a", "b"))
+  expect_identical(raw$voxel_index, model$active_response_ids)
+  # nearly unpenalized fit recovers the generating weights despite the drift
+  expect_true(all(raw$hyperparameters$alpha == 1e-6))
+  expect_equal(unname(raw$weights), beta, tolerance = 0.05)
+  expect_true(all(raw$hyperparameters$outer_folds_selected >= 3L))
+
+  std <- banded_ridge_weights(model, result)
+  resid_sd <- apply(stats::resid(stats::lm(X ~ N)), 2L, function(z) {
+    sqrt(mean((z - mean(z))^2))
+  })
+  ratio <- std$weights / raw$weights
+  keep <- abs(raw$weights) > 0.5
+  expect_equal(ratio[keep], (resid_sd * (keep * 1))[keep], tolerance = 0.02)
+
+  # batching does not change the answer
+  expect_equal(banded_ridge_weights(model, result, target_batch_size = 1L)$weights,
+               std$weights, tolerance = 1e-10)
+  expect_error(banded_ridge_weights(model, list()), "run_banded_ridge")
+  expect_error(banded_ridge_weights(list(), result), "banded_ridge_model")
+})
+
+test_that("families drive grouped drop-out, contrast weights and the shift null", {
+  set.seed(7304L)
+  n <- 120L
+  block <- rep(1:6, each = 20L)
+  ar <- function() as.numeric(stats::filter(rnorm(n), 0.6, "recursive"))
+  X <- cbind(m1 = ar(), p1 = ar(), v1 = ar(), ac = ar())
+  N <- cbind(drift = seq(-1, 1, length.out = n))
+  Y <- cbind(X[, "m1"] - X[, "p1"] + 3 * N[, 1L] + 0.3 * rnorm(n),   # phonology
+             ar())                                                   # nothing
+  sets <- c("manner", "place", "voicing", "acoustic")
+  fs <- feature_sets(
+    X, by_set(sets),
+    families = list(phonology = c("manner", "place", "voicing")),
+    contrasts = list(manner_vs_place = c(m1 = 1, p1 = -1))
+  )
+  design <- feature_sets_design(fs, block_var_train = block, time_series = TRUE)
+  candidates <- rMVPA:::.banded_ridge_candidates(
+    sets, c(0.01, 1), method = "fixed", theta = setNames(rep(0.25, 4), sets)
+  )
+  model <- banded_ridge_model(
+    .bra_test_dataset(Y), design, outer_crossval = 6L, tune_crossval = 2L,
+    candidates = candidates, delta_sets = "families", nuisance = N,
+    nuisance_fit = "within",
+    return_predictions = TRUE, purge = 2L, seed = 4L
+  )
+  expect_identical(model$delta_sets, c(sets, "phonology"))
+  result <- suppressWarnings(run_banded_ridge(model))
+  effects <- result$predictive_leave_one_band_out$effects
+  expect_gt(effects$delta_cv_r2_phonology[[1L]], 0.7)
+  expect_gt(effects$delta_cv_r2_phonology[[1L]],
+            max(effects$delta_cv_r2_manner[[1L]], effects$delta_cv_r2_place[[1L]]))
+  expect_lt(abs(effects$delta_cv_r2_acoustic[[1L]]), 0.05)
+
+  expect_identical(dim(result$observed), dim(result$predictions))
+  expect_equal(rMVPA:::.banded_ridge_score(result$observed, result$predictions)$r2,
+               result$metrics$r2, tolerance = 1e-12)
+
+  w <- banded_ridge_weights(model, result, standardized = FALSE)
+  expect_identical(dim(w$contrast_weights), c(1L, 2L))
+  expect_equal(w$contrast_weights[1L, 1L],
+               w$weights["m1", 1L] - w$weights["p1", 1L], tolerance = 1e-12)
+  expect_gt(w$contrast_weights[1L, 1L], 1.5)
+
+  null <- banded_ridge_null(model, result, n_perm = 199L, min_shift = 10L, seed = 9L)
+  expect_identical(null$voxel_index, model$active_response_ids)
+  expect_lt(null$p_value[[1L]], 0.01)
+  expect_gt(null$p_value[[2L]], 0.05)
+  expect_gt(null$z[[1L]], 3)
+  expect_identical(null, banded_ridge_null(model, result, n_perm = 199L,
+                                           min_shift = 10L, seed = 9L))
+  r2_null <- banded_ridge_null(model, result, n_perm = 49L, metric = "r2",
+                               strategy = "block_shuffle", seed = 2L)
+  expect_lt(r2_null$p_value[[1L]], 0.05)
+
+  no_pred <- banded_ridge_model(
+    .bra_test_dataset(Y), design, outer_crossval = 6L, tune_crossval = 2L,
+    candidates = candidates, nuisance = N, nuisance_fit = "within",
+    purge = 2L
+  )
+  expect_error(banded_ridge_null(no_pred, suppressWarnings(run_banded_ridge(no_pred))),
+               "return_predictions = TRUE")
+  plain <- feature_sets_design(feature_sets(X, by_set(sets)),
+                               block_var_train = block, time_series = TRUE)
+  expect_error(banded_ridge_model(.bra_test_dataset(Y), plain, outer_crossval = 6L,
+                                  candidates = candidates, delta_sets = "families"),
+               "requires feature_sets\\(families")
+})
+
+test_that("retained dual weights describe the nuisance-residualized fit", {
+  set.seed(8405L)
+  n <- 48L
+  block <- rep(1:4, each = 12L)
+  N <- cbind(drift = seq(-1, 1, length.out = n))
+  X <- cbind(rnorm(n) + 2 * N[, 1L], rnorm(n), rnorm(n))
+  Y <- cbind(X[, 1L] + 6 * N[, 1L] + rnorm(n, sd = 0.1),
+             X[, 2L] - X[, 3L] + rnorm(n, sd = 0.1))
+  sets <- c("a", "b", "b")
+  fs <- feature_sets(X, by_set(sets, order = c("a", "b")))
+  design <- feature_sets_design(fs, block_var_train = block, time_series = TRUE)
+  candidates <- rMVPA:::.banded_ridge_candidates(
+    c("a", "b"), 0.5, method = "fixed", theta = c(a = 0.5, b = 0.5)
+  )
+  for (solver in c("dual_kernel", "svd_primal")) {
+    model <- banded_ridge_model(
+      .bra_test_dataset(Y), design, outer_crossval = 4L, candidates = candidates,
+      nuisance = N, nuisance_fit = "within", weight_retention = "dual",
+      solver = solver, seed = 3L
+    )
+    result <- suppressWarnings(run_banded_ridge(model))
+    fold <- model$outer_folds[[1L]]
+    split <- rMVPA:::.brt_split_data(
+      X, Y, fold$train, fold$test,
+      rMVPA:::.brt_validate_nuisance(N, n, fit = "within")
+    )
+    reference <- rMVPA:::.banded_ridge_fit_dual_path(
+      split$X[split$train, ], split$Y[split$train, ], alphas = 0.5,
+      theta = c(a = 0.5, b = 0.5), groups = sets, recover_primal = FALSE
+    )$fits[[1L]]$dual_weights
+    for (jj in 1:2) {
+      kept <- result$weights[[jj]][[fold$id]]
+      expect_equal(as.numeric(kept$dual_weights), as.numeric(reference[, jj]),
+                   tolerance = 1e-8, info = solver)
+      expect_identical(kept$train, fold$train)
+    }
+  }
+})
+
+test_that("banded_ridge_weights gives the same weights with every solver", {
+  set.seed(8506L)
+  n <- 40L
+  block <- rep(1:4, each = 10L)
+  # more features than rows, the case the dual solver exists for
+  X <- matrix(rnorm(n * 60L), n, 60L, dimnames = list(NULL, paste0("f", 1:60)))
+  Y <- cbind(X[, 1L] - X[, 31L] + rnorm(n, sd = 0.2), rnorm(n))
+  sets <- rep(c("a", "b"), each = 30L)
+  design <- feature_sets_design(feature_sets(X, by_set(sets)),
+                                block_var_train = block, time_series = TRUE)
+  candidates <- rMVPA:::.banded_ridge_candidates(
+    c("a", "b"), c(1, 10), method = "fixed", theta = c(a = 0.5, b = 0.5)
+  )
+  weights <- lapply(c(direct = "direct", svd = "svd_primal", dual = "dual_kernel"),
+                    function(solver) {
+    model <- banded_ridge_model(
+      .bra_test_dataset(Y), design, outer_crossval = 4L, tune_crossval = 2L,
+      candidates = candidates, solver = solver, seed = 6L
+    )
+    expect_identical(model$solver, solver)
+    result <- suppressWarnings(run_banded_ridge(model))
+    list(std = banded_ridge_weights(model, result)$weights,
+         raw = banded_ridge_weights(model, result, standardized = FALSE)$weights)
+  })
+  for (kind in c("std", "raw")) {
+    expect_equal(weights$svd[[kind]], weights$direct[[kind]], tolerance = 1e-8)
+    expect_equal(weights$dual[[kind]], weights$direct[[kind]], tolerance = 1e-8)
+  }
+})

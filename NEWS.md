@@ -1,5 +1,6 @@
 # rMVPA (development version)
 
+
 * **Correctness fix:** `run_permutation_searchlight()` on a
   `naive_xdec_model()` no longer returns a null that reproduces the observed
   map. The model caches its training keys (`.fast_kernel`) when it is built,
@@ -11,6 +12,70 @@
   column that label permutation does not change, so no valid null exists and
   the call now stops with an explanation before the observed pass. Rerun any
   permutation results from `naive_xdec_model()`.
+
+* **Faster and parallel `run_banded_ridge()`.**
+  - Tuning fits every alpha of a theta in one solver pass instead of refitting
+    each alpha/theta candidate from scratch in every fold, and scores the
+    default objective directly. Results are unchanged; a 44-feature, 10-band,
+    180-candidate problem runs about four times faster with the SVD solver.
+  - `solver = "auto"` now chooses `svd_primal` for small feature matrices when
+    several alphas are tuned (it chose `direct`).
+  - Response batches run on [future] workers when the current
+    `future::plan()` has more than one, with results identical to a sequential
+    run. `result$provenance$workers` records how many groups were used.
+
+* **Correctness fix:** nuisance regressors in `banded_ridge_model()` and
+  `feature_decode_model()` no longer inflate accuracy for time series. The
+  nuisance coefficients fitted on the training rows are applied to the
+  held-out rows. With drift-like regressors and contiguous held-out blocks that
+  is an extrapolation: the extrapolated fit dominated features and responses
+  alike, and pure-noise responses reached held-out correlations above 0.9.
+  - The default, `nuisance_fit = "train"`, is unchanged in what it computes but
+    now stops with an error when held-out nuisance rows lie outside the range
+    of the training rows (largest leverage above one).
+  - `nuisance_fit = "within"` residualizes each held-out split with
+    coefficients fitted on that split. Nothing is carried between training and
+    held-out data and nothing is extrapolated. A held-out row's transformation
+    then depends on the other rows of its assessment set, so the accuracy is
+    conditional on each held-out block and is not that of a frozen
+    training-derived pipeline; choose it deliberately. Each held-out split
+    needs more rows than nuisance regressors.
+  - The mode is recorded in `result$provenance$nuisance_fit`.
+  - In `feature_decode_model(partial = TRUE)` the other feature columns are
+    removed with training-fit coefficients; only scan-level nuisance follows
+    `nuisance_fit`.
+
+* **Continuous encoding models.** `banded_ridge_model()` gains what a
+  time-resolved naturalistic analysis needs:
+  - **Correctness fix:** the default simplex grid (`theta_grid_points = 3`)
+    activated at most two bands in any candidate, so with three or more bands
+    the full model never contained every band and leave-band-out delta R2
+    compared the wrong models. Grids without an interior point now include the
+    equal-weight point.
+  - `nuisance =` regresses nuisance columns (with an intercept) out of features
+    and responses inside every inner and outer split, using training rows only.
+  - `delta_sets` accepts a named list of band vectors to drop groups of bands
+    together, and `"families"` to use the families declared in
+    `feature_sets(families = )`.
+  - `feature_sets()` gains `families` and `contrasts`, declared once and read
+    by every model.
+  - `banded_ridge_weights()` refits on all rows and returns a
+    features-by-responses weight matrix, with contrast projections.
+  - `banded_ridge_null()` tests held-out accuracy against time-shifted
+    predictions.
+  - A temporal `purge` without declared blocks now yields contiguous folds
+    instead of random row-wise folds.
+
+* **New model: `feature_decode_model()`.** The pattern-level complement of
+  `banded_ridge_model()`: within each region or searchlight it predicts the
+  feature columns of a `feature_sets_design()` from the local activity pattern
+  and reports held-out accuracy for every set, family and contrast declared on
+  the feature sets, optional partial accuracies (other features regressed out
+  of pattern and targets inside each training split) and optional time-shift
+  permutation p-values. It reuses the banded-ridge cross-validation, purge,
+  nuisance handling and solvers, and runs through `run_searchlight()` and
+  `run_regional()` unchanged.
+
 
 * **Correctness fix:** statistical maps no longer hold 0 at voxels that have
   no test result (#130). `run_permutation_searchlight()` returned `p_map` and

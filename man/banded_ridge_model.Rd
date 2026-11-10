@@ -30,7 +30,9 @@ banded_ridge_model(
   max_retained_mb = 1024,
   weight_overflow = c("error", "none"),
   seed = 1L,
-  memory_limit_mb = 1024
+  memory_limit_mb = 1024,
+  nuisance = NULL,
+  nuisance_fit = c("train", "within")
 )
 }
 \arguments{
@@ -88,7 +90,11 @@ constructs a small, deterministic simplex grid.}
 
 \item{theta}{Fixed named simplex vector/matrix for `theta_method = "fixed"`.}
 
-\item{theta_grid_points}{Grid resolution for simplex grid candidates.}
+\item{theta_grid_points}{Grid resolution for simplex grid candidates. A grid
+with fewer than `n_bands + 1` points has no candidate in which every band
+is active, so the equal-weight point is added automatically. With more
+than about three bands prefer `theta_method = "random"`, which samples the
+interior of the simplex.}
 
 \item{n_theta}{Number of deterministic random simplex points.}
 
@@ -100,8 +106,13 @@ constructs a small, deterministic simplex grid.}
 \item{fixed_alpha, fixed_theta}{Values required by corresponding fixed scopes.}
 
 \item{delta_sets}{Optional feature-band names, or `"all"`, for independently
-retuned predictive leave-one-band-out outer-OOF delta R2. `NULL` (the
-default) performs no reduced-model work.}
+retuned predictive leave-one-band-out outer-OOF delta R2. A named list of
+band-name vectors drops each entry's bands together, for example
+`list(phonology = c("manner", "place", "voicing"), manner = "manner")`,
+giving the unique contribution of a family of bands next to that of its
+members; results are labelled by the list names. `"families"` requests
+every band plus every family declared in `feature_sets(families = ...)`.
+`NULL` (the default) performs no reduced-model work.}
 
 \item{purge}{Non-negative temporal gap (in rows) around validation/test
 rows. Training rows within the gap are dropped when folds are constructed
@@ -114,7 +125,9 @@ it, never modified.}
 \item{target_batch_size}{Maximum responses evaluated together.}
 
 \item{return_predictions}{Retain the complete outer out-of-fold prediction
-matrix.}
+matrix. With nuisance regressors, the nuisance-residualized held-out
+responses the predictions are scored against are also returned, as
+`observed`.}
 
 \item{weight_retention}{Retain no weights, outer-fold primal coefficients, or
 outer-fold dual weights.}
@@ -136,6 +149,31 @@ independently. Once cached band Grams and eigendecompositions would exceed
 the cap, the least recently used entries are evicted and recomputed on
 demand. Results are unchanged at any value; only reuse is lost, and
 provenance reports `solver_cache_evictions` and `solver_cache_peak_mb`.}
+
+\item{nuisance}{Optional numeric matrix of nuisance regressors (rows =
+observations), for example motion parameters and drift terms. Within every
+inner and outer split an intercept and these columns are regressed out of
+both the features and the responses, separately for the training rows and
+the held-out rows (see `nuisance_fit`). Nuisance columns are never
+penalized and never contribute to the predictions, so all reported
+accuracies, including leave-band-out delta R2, describe variance in the
+nuisance-residualized held-out responses.}
+
+\item{nuisance_fit}{How held-out rows are residualized.
+`"train"` (default) applies the coefficients fitted on the training rows,
+so the transformation is fixed before the held-out rows are seen. This
+requires the held-out nuisance rows to lie within the range of the
+training rows. With drift-like regressors and contiguous held-out blocks
+they do not, the extrapolated fit would dominate features and responses
+alike and inflate accuracy, and the model stops with an error.
+`"within"` fits the nuisance coefficients on the held-out rows themselves.
+Nothing is carried between training and held-out data and nothing is
+extrapolated, but a held-out row's transformation then depends on the
+other rows of its assessment set, so the reported accuracy is conditional
+on each held-out block and is not the accuracy of a frozen
+training-derived pipeline. Each held-out split needs more rows than
+nuisance regressors. The mode used is recorded in
+`result$provenance$nuisance_fit`.}
 }
 \value{
 A `banded_ridge_model` specification for `run_banded_ridge()`.

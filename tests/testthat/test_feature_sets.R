@@ -163,3 +163,80 @@ test_that("feature_sets_design materializes and rejects target-builder outputs",
   expect_error(rMVPA:::.feature_sets_build_target_fold(feature_sets_design(train, n_test = 2), 1, 2),
                "does not have a target_builder")
 })
+
+test_that("feature_sets carries families and contrasts", {
+  X <- matrix(rnorm(40), 8, 5, dimnames = list(NULL, paste0("f", 1:5)))
+  sets <- c("manner", "manner", "place", "voicing", "acoustic")
+  fs <- feature_sets(
+    X, by_set(sets),
+    families = list(phonology = c("voicing", "manner", "place")),
+    contrasts = list(manner_vs_place = c(f1 = 0.5, f2 = 0.5, f3 = -1))
+  )
+  # members follow set order, not the order given
+  expect_identical(fs$families, list(phonology = c("manner", "place", "voicing")))
+  expect_identical(dim(fs$contrasts), c(5L, 1L))
+  expect_equal(fs$contrasts[, "manner_vs_place"],
+               c(f1 = 0.5, f2 = 0.5, f3 = -1, f4 = 0, f5 = 0))
+  expect_output(print(fs), "Families: +phonology")
+  expect_output(print(fs), "Contrasts: +manner_vs_place")
+
+  C <- cbind(a = c(1, -1, 0, 0, 0), b = c(0, 0, 0, 1, -1))
+  expect_identical(colnames(feature_sets(X, by_set(sets), contrasts = C)$contrasts),
+                   c("a", "b"))
+  expect_null(feature_sets(X, by_set(sets))$families)
+
+  expect_error(feature_sets(X, by_set(sets), families = list(c("manner"))),
+               "unique non-empty names")
+  expect_error(feature_sets(X, by_set(sets), families = list(p = "nope")),
+               "existing feature sets")
+  expect_error(feature_sets(X, by_set(sets), families = list(manner = c("manner", "place"))),
+               "named after a feature set")
+  expect_error(feature_sets(X, by_set(sets), contrasts = C[-1, ]), "one row per feature")
+  expect_error(feature_sets(X, by_set(sets), contrasts = list(k = c(zz = 1))),
+               "named by feature columns")
+  expect_error(feature_sets(X, by_set(sets), contrasts = cbind(manner = C[, 1])),
+               "must differ from set and family")
+  expect_error(feature_sets(X, by_set(sets), contrasts = cbind(z = rep(0, 5))),
+               "non-zero")
+})
+
+test_that("feature target scores summarise sets, families and contrasts", {
+  set.seed(71)
+  n <- 200
+  O <- matrix(rnorm(n * 4), n, 4, dimnames = list(NULL, paste0("f", 1:4)))
+  P <- O
+  P[, 3] <- rnorm(n)            # one feature is not predicted at all
+  P[, 4] <- O[, 4] + rnorm(n)   # one is predicted with noise
+  set <- c("a", "a", "b", "c")
+  C <- cbind(k = c(1, -1, 0, 0))
+  s <- rMVPA:::.feature_target_scores(O, P, set, list(fam = c("a", "b")), C)
+  expect_named(s, c(outer(c("_r2", "_cor"), c("all", "a", "b", "c", "fam", "k"),
+                          function(m, g) paste0(g, m))))
+  expect_equal(s[["a_r2"]], 1); expect_equal(s[["a_cor"]], 1)
+  expect_lt(s[["b_cor"]], 0.2)
+  expect_equal(s[["fam_cor"]], (2 * s[["a_cor"]] + s[["b_cor"]]) / 3)
+  expect_equal(s[["k_cor"]], 1)
+  expect_gt(s[["c_cor"]], 0.5); expect_lt(s[["c_cor"]], 0.9)
+
+  # time-shift null: aligned predictions beat it, unpredicted features do not
+  ar <- function() as.numeric(stats::filter(rnorm(n), 0.8, "recursive"))
+  O2 <- cbind(f1 = ar(), f2 = ar()); P2 <- cbind(O2[, 1] + 0.3 * rnorm(n), ar())
+  set.seed(5)
+  null <- rMVPA:::.feature_target_null(O2, P2, c("a", "b"), n_perm = 199L,
+                                       min_shift = 20L)
+  expect_identical(dim(null), c(199L, 6L))
+  p <- rMVPA:::.fts_p_values(rMVPA:::.feature_target_scores(O2, P2, c("a", "b")), null)
+  expect_lt(p[["a_cor"]], 0.01)
+  expect_gt(p[["b_cor"]], 0.05)
+})
+
+test_that("circular shifts respect min_shift", {
+  set.seed(3)
+  for (i in 1:200) {
+    idx <- rMVPA:::.br_perm_indices(50L, "circular_shift", min_shift = 10L)
+    shift <- (idx[[1L]] - 1L) %% 50L
+    expect_true(shift >= 10L && shift <= 40L)
+    expect_setequal(idx, 1:50)
+  }
+  expect_setequal(rMVPA:::.br_perm_indices(5L, "circular_shift", min_shift = 99L), 1:5)
+})

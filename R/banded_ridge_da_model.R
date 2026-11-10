@@ -672,37 +672,6 @@ grouped_ridge_da <- function(dataset,
   list(beta_enc = beta_enc, beta_rec = beta_rec, x_mu = xs$mu, x_sd = xs$sd, y_mu = yc$mu)
 }
 
-.br_perm_indices <- function(T_rec,
-                             strategy = c("circular_shift", "block_shuffle"),
-                             block_size = NULL) {
-  strategy <- match.arg(strategy)
-  idx <- seq_len(T_rec)
-  if (T_rec <= 2L) return(idx)
-
-  if (strategy == "circular_shift") {
-    shift <- sample.int(T_rec - 1L, 1L)
-    return(((idx - 1L + shift) %% T_rec) + 1L)
-  }
-
-  if (is.null(block_size)) {
-    block_size <- max(2L, floor(sqrt(T_rec)))
-  }
-  block_size <- as.integer(max(1L, min(T_rec, block_size)))
-
-  blocks <- split(idx, ceiling(idx / block_size))
-  if (length(blocks) <= 1L) {
-    return(sample(idx))
-  }
-
-  ord <- sample.int(length(blocks))
-  perm <- unlist(blocks[ord], use.names = FALSE)
-  if (identical(perm, idx)) {
-    ord <- sample.int(length(blocks))
-    perm <- unlist(blocks[ord], use.names = FALSE)
-  }
-  perm
-}
-
 .br_predict <- function(X, fit, mode = c("stacked", "coupled")) {
   mode <- match.arg(mode)
   Xs <- .br_center_scale_apply(X, fit$x_mu, fit$x_sd)
