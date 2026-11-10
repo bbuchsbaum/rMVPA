@@ -75,7 +75,7 @@ training blocks come exclusively from `feature_sets_design()`.</p>
 <span>  seed <span class="op">=</span> <span class="fl">1L</span>,</span>
 <span>  memory_limit_mb <span class="op">=</span> <span class="fl">1024</span>,</span>
 <span>  nuisance <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  nuisance_fit <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"train"</span>, <span class="st">"within"</span><span class="op">)</span></span>
+<span>  nuisance_fit <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"train"</span>, <span class="st">"within"</span>, <span class="st">"global"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -270,8 +270,23 @@ extrapolated, but a held-out row's transformation then depends on the
 other rows of its assessment set, so the reported accuracy is conditional
 on each held-out block and is not the accuracy of a frozen
 training-derived pipeline. Each held-out split needs more rows than
-nuisance regressors. The mode used is recorded in
-`result$provenance$nuisance_fit`.</p></dd>
+nuisance regressors.
+`"global"` removes the nuisance from features and responses once, over
+all rows, before the data are split, as much encoding work does in
+preprocessing. **It is not leak-free and its accuracies can be biased
+upward.** Held-out responses enter the nuisance coefficients that are then
+subtracted from the training responses, so training and held-out
+residuals are dependent, and responses with no relation to the features
+can show positive held-out accuracy. The bias grows with the number of
+nuisance and feature columns relative to the number of rows: in a
+374-volume run with 25 nuisance and 44 feature columns, unrelated
+responses gave held-out correlations of about .03 to .05 where `"within"`
+gave about zero, and when few residual degrees of freedom remain the fit
+becomes exact. Use it for exploration, or calibrate it against a null
+computed the same way (for example with time-shifted features); do not
+test its accuracies against zero. The model refuses when the features
+have as many columns as there are residual degrees of freedom.
+The mode used is recorded in `result$provenance$nuisance_fit`.</p></dd>
 
 </dl></div>
     <div class="section level2">

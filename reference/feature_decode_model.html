@@ -67,7 +67,7 @@ from the same held-out predictions, so they need no additional fits.</p>
 <span>  alphas <span class="op">=</span> <span class="fl">10</span><span class="op">^</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="op">-</span><span class="fl">1</span>, <span class="fl">5</span><span class="op">)</span>,</span>
 <span>  purge <span class="op">=</span> <span class="fl">0L</span>,</span>
 <span>  nuisance <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  nuisance_fit <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"train"</span>, <span class="st">"within"</span><span class="op">)</span>,</span>
+<span>  nuisance_fit <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"train"</span>, <span class="st">"within"</span>, <span class="st">"global"</span><span class="op">)</span>,</span>
 <span>  partial <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  n_perm <span class="op">=</span> <span class="fl">0L</span>,</span>
 <span>  perm_strategy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"circular_shift"</span>, <span class="st">"block_shuffle"</span><span class="op">)</span>,</span>
@@ -197,18 +197,18 @@ matrices exchanged. It implements [fit_roi()], so [run_searchlight()] and
 <span class="r-in"><span>                           time_series <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu">feature_decode_model</span><span class="op">(</span><span class="va">ds</span><span class="op">$</span><span class="va">dataset</span>, <span class="va">des</span>, outer_crossval <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="run_searchlight.html">run_searchlight</a></span><span class="op">(</span><span class="va">model</span>, radius <span class="op">=</span> <span class="fl">4</span>, method <span class="op">=</span> <span class="st">"standard"</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-10 13:39:22] Running standard searchlight with radius = 4</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-10 13:39:22] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-10 13:39:22] shard backend [volumetric]: shared 80 x 125 matrix (125 masked voxels)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-10 13:39:22] creating standard searchlight</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-10 13:39:22] running standard searchlight iterator</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-10 13:39:22] Using automatic searchlight batch size 125 for 125 centers (memory budget 512.0 MiB).</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-10 13:39:33] </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-10 13:50:10] Running standard searchlight with radius = 4</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-10 13:50:10] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-10 13:50:10] shard backend [volumetric]: shared 80 x 125 matrix (125 masked voxels)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-10 13:50:10] creating standard searchlight</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-10 13:50:10] running standard searchlight iterator</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-10 13:50:10] Using automatic searchlight batch size 125 for 125 centers (memory budget 512.0 MiB).</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-10 13:50:21] </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> MVPA Iteration Complete</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Total ROIs: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Processed: <span style="color: #0000BB;">125</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> - Skipped: <span style="color: #BBBB00;">0</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-10 13:39:33] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> INFO [2026-11-10 13:50:21] searchlight (standard): 125 ROIs processed (success=125, errors=0)</span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
     </div>
