@@ -181,6 +181,44 @@ print.naive_xdec_model <- function(x, ...) {
   list(key_tr = key_tr, key_te = key_te)
 }
 
+#' Does `link_by` select the training/test keys (rather than the labels)?
+#' Mirrors the branch in `.nx_resolve_keys()`.
+#' @keywords internal
+#' @noRd
+.nx_link_active <- function(design, link_by = NULL) {
+  !is.null(link_by) &&
+    link_by %in% colnames(design$train_design) &&
+    link_by %in% colnames(design$test_design)
+}
+
+#' Rebuild label-derived state for a permuted design
+#'
+#' The fast kernel caches the training keys at construction, so a permuted
+#' design must rebuild it; otherwise each permutation scores the observed
+#' labels again. With an active `link_by`, the keys come from a design column
+#' that label permutation does not touch, so no valid null exists and the
+#' permutation run is refused.
+#' @keywords internal
+#' @noRd
+.permuted_model_spec.naive_xdec_model <- function(model_spec, perm_design) {
+  if (.nx_link_active(perm_design, model_spec$link_by)) {
+    stop(sprintf(paste0(
+      "naive_xdec_model: permutation inference is not available with ",
+      "link_by = '%s'. Training keys are read from that design column, which ",
+      "label permutation leaves unchanged, so every permutation would ",
+      "reproduce the observed map. Use link_by = NULL, or test without permutations."),
+      model_spec$link_by), call. = FALSE)
+  }
+  model_spec$design <- perm_design
+  if (!is.null(model_spec$.fast_kernel)) {
+    model_spec$.fast_kernel <- .naive_xdec_prepare_fast_kernel(
+      design = perm_design,
+      link_by = model_spec$link_by
+    )
+  }
+  model_spec
+}
+
 #' @keywords internal
 .naive_xdec_prepare_fast_kernel <- function(design, link_by = NULL) {
   keys <- .nx_resolve_keys(design = design, link_by = link_by)

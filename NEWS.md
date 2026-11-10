@@ -14,6 +14,20 @@
   many columns as residual degrees of freedom. The mode is recorded in
   `result$provenance$nuisance_fit`.
 
+
+* **Correctness fix:** `run_permutation_searchlight()` on a
+  `naive_xdec_model()` no longer returns a null that reproduces the observed
+  map. The model caches its training keys (`.fast_kernel`) when it is built,
+  and each permutation replaced only the design, so every permutation scored
+  the original labels again. All null values equalled observed values and the
+  p-values were meaningless, on both the fast searchlight path and the
+  `fit_roi()` path. Each permutation now rebuilds the cache from the permuted
+  design. With an active `link_by`, the training keys come from a design
+  column that label permutation does not change, so no valid null exists and
+  the call now stops with an explanation before the observed pass. Rerun any
+  permutation results from `naive_xdec_model()`.
+
+
 * **Faster and parallel `run_banded_ridge()`.**
   - Tuning fits every alpha of a theta in one solver pass instead of refitting
     each alpha/theta candidate from scratch in every fold, and scores the
@@ -76,6 +90,7 @@
   permutation p-values. It reuses the banded-ridge cross-validation, purge,
   nuisance handling and solvers, and runs through `run_searchlight()` and
   `run_regional()` unchanged.
+
 
 * **Correctness fix:** statistical maps no longer hold 0 at voxels that have
   no test result (#130). `run_permutation_searchlight()` returned `p_map` and
