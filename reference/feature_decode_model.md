@@ -148,17 +148,17 @@ des <- feature_sets_design(fs, block_var_train = rep(1:4, each = 20),
                            time_series = TRUE)
 model <- feature_decode_model(ds$dataset, des, outer_crossval = 4)
 res <- run_searchlight(model, radius = 4, method = "standard")
-#> INFO [2026-11-10 02:21:41] Running standard searchlight with radius = 4
-#> INFO [2026-11-10 02:21:41] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)
-#> INFO [2026-11-10 02:21:41] shard backend [volumetric]: shared 80 x 125 matrix (125 masked voxels)
-#> INFO [2026-11-10 02:21:41] creating standard searchlight
-#> INFO [2026-11-10 02:21:41] running standard searchlight iterator
-#> INFO [2026-11-10 02:21:41] Using automatic searchlight batch size 125 for 125 centers (memory budget 512.0 MiB).
-#> INFO [2026-11-10 02:21:51] 
+#> INFO [2026-11-10 13:39:22] Running standard searchlight with radius = 4
+#> INFO [2026-11-10 13:39:22] shard backend: preparing shared memory for dataset (mvpa_image_dataset, mvpa_dataset, list)
+#> INFO [2026-11-10 13:39:22] shard backend [volumetric]: shared 80 x 125 matrix (125 masked voxels)
+#> INFO [2026-11-10 13:39:22] creating standard searchlight
+#> INFO [2026-11-10 13:39:22] running standard searchlight iterator
+#> INFO [2026-11-10 13:39:22] Using automatic searchlight batch size 125 for 125 centers (memory budget 512.0 MiB).
+#> INFO [2026-11-10 13:39:33] 
 #> MVPA Iteration Complete
 #> - Total ROIs: 125
 #> - Processed: 125
 #> - Skipped: 0
-#> INFO [2026-11-10 02:21:51] searchlight (standard): 125 ROIs processed (success=125, errors=0)
+#> INFO [2026-11-10 13:39:33] searchlight (standard): 125 ROIs processed (success=125, errors=0)
 # }
 ```

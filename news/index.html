@@ -36,7 +36,8 @@
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="development version" id="rmvpa-development-version">rMVPA (development version)<a class="anchor" aria-label="anchor" href="#rmvpa-development-version"></a></h2>
-<ul><li>
+<ul><li><p><strong>Correctness fix:</strong> <code><a href="../reference/run_permutation_searchlight.html">run_permutation_searchlight()</a></code> on a <code><a href="../reference/naive_xdec_model.html">naive_xdec_model()</a></code> no longer returns a null that reproduces the observed map. The model caches its training keys (<code>.fast_kernel</code>) when it is built, and each permutation replaced only the design, so every permutation scored the original labels again. All null values equalled observed values and the p-values were meaningless, on both the fast searchlight path and the <code><a href="../reference/fit_roi.html">fit_roi()</a></code> path. Each permutation now rebuilds the cache from the permuted design. With an active <code>link_by</code>, the training keys come from a design column that label permutation does not change, so no valid null exists and the call now stops with an explanation before the observed pass. Rerun any permutation results from <code><a href="../reference/naive_xdec_model.html">naive_xdec_model()</a></code>.</p></li>
+<li>
 <p><strong>Faster and parallel <code><a href="../reference/run_banded_ridge.html">run_banded_ridge()</a></code>.</strong></p>
 <ul><li>Tuning fits every alpha of a theta in one solver pass instead of refitting each alpha/theta candidate from scratch in every fold, and scores the default objective directly. Results are unchanged; a 44-feature, 10-band, 180-candidate problem runs about four times faster with the SVD solver.</li>
 <li>

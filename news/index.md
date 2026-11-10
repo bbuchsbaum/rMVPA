@@ -2,6 +2,24 @@
 
 ## rMVPA (development version)
 
+- **Correctness fix:**
+  [`run_permutation_searchlight()`](https://bbuchsbaum.github.io/rMVPA/reference/run_permutation_searchlight.md)
+  on a
+  [`naive_xdec_model()`](https://bbuchsbaum.github.io/rMVPA/reference/naive_xdec_model.md)
+  no longer returns a null that reproduces the observed map. The model
+  caches its training keys (`.fast_kernel`) when it is built, and each
+  permutation replaced only the design, so every permutation scored the
+  original labels again. All null values equalled observed values and
+  the p-values were meaningless, on both the fast searchlight path and
+  the
+  [`fit_roi()`](https://bbuchsbaum.github.io/rMVPA/reference/fit_roi.md)
+  path. Each permutation now rebuilds the cache from the permuted
+  design. With an active `link_by`, the training keys come from a design
+  column that label permutation does not change, so no valid null exists
+  and the call now stops with an explanation before the observed pass.
+  Rerun any permutation results from
+  [`naive_xdec_model()`](https://bbuchsbaum.github.io/rMVPA/reference/naive_xdec_model.md).
+
 - **Faster and parallel
   [`run_banded_ridge()`](https://bbuchsbaum.github.io/rMVPA/reference/run_banded_ridge.md).**
 
