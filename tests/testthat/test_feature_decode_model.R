@@ -176,3 +176,32 @@ test_that("feature_decode_model validates inputs and reports unusable regions", 
   expect_true(failed$error)
   expect_match(failed$error_message, "too few usable voxels")
 })
+
+test_that("feature_decode_model supports global nuisance removal with partial scores", {
+  f <- .fdm_fixture()
+  model <- feature_decode_model(f$dataset, f$design, outer_crossval = 6L,
+                                tune_crossval = 3L, purge = 2L,
+                                nuisance = f$drift, nuisance_fit = "global",
+                                partial = TRUE)
+  L <- .fdm_fit(model, f$Y, f$left)$metrics
+  R <- .fdm_fit(model, f$Y, !f$left)$metrics
+  expect_gt(L[["phonology_cor"]], 0.8)
+  expect_gt(R[["acoustic_cor"]], 0.8)
+  expect_lt(abs(L[["acoustic_partial_cor"]]), 0.25)
+  expect_lt(abs(R[["manner_partial_cor"]]), 0.25)
+  expect_gt(L[["manner_partial_cor"]], 0.5)
+
+  # the same as cleaning pattern and targets by hand and passing no nuisance
+  z <- cbind(1, f$drift)
+  clean <- function(M) { out <- qr.resid(qr(z), M); dimnames(out) <- dimnames(M); out }
+  fs <- f$design$X_train
+  cleaned_design <- feature_sets_design(
+    feature_sets(clean(fs$X), by_set(as.character(fs$set)), families = fs$families,
+                 contrasts = fs$contrasts),
+    block_var_train = f$block, time_series = TRUE
+  )
+  by_hand <- feature_decode_model(f$dataset, cleaned_design, outer_crossval = 6L,
+                                  tune_crossval = 3L, purge = 2L)
+  expect_equal(unname(L[by_hand$metric_names]),
+               unname(.fdm_fit(by_hand, clean(f$Y), f$left)$metrics), tolerance = 1e-8)
+})

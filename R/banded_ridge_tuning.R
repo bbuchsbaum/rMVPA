@@ -525,7 +525,7 @@
 .brt_validate_nuisance <- function(nuisance, n, context = "nuisance", fit = NULL) {
   if (is.null(nuisance)) return(NULL)
   fit <- fit %||% attr(nuisance, "fit") %||% "train"
-  fit <- match.arg(fit, c("train", "within"))
+  fit <- match.arg(fit, c("train", "within", "global"))
   if (is.data.frame(nuisance)) nuisance <- as.matrix(nuisance)
   if (is.numeric(nuisance) && is.null(dim(nuisance))) {
     nuisance <- matrix(nuisance, ncol = 1L)
@@ -583,9 +583,33 @@
 # on the other rows of its assessment set: accuracy is conditional on the
 # held-out block, not that of a frozen training-derived pipeline.
 #
+# With `fit = "global"` the nuisance has already been removed from every row
+# before the splits are made (see .brt_remove_global()), and this function
+# receives no nuisance.
+#
 # `covariates` are regressed out afterwards with training-fit coefficients;
 # they are for stimulus-level predictors whose held-out values lie within the
 # training range.
+# `fit = "global"`: regress the nuisance (with an intercept) out of X, Y and
+# the covariates once, over all rows, before any split is made. Held-out rows
+# then contribute to the nuisance fit, though never to the feature fit. For
+# the other modes the inputs are returned untouched.
+.brt_remove_global <- function(X, Y, nuisance = NULL, covariates = NULL) {
+  if (is.null(nuisance) || !identical(attr(nuisance, "fit"), "global")) {
+    return(list(X = X, Y = Y, nuisance = nuisance, covariates = covariates,
+                global = FALSE))
+  }
+  z <- cbind(rep(1, nrow(nuisance)), nuisance)
+  remove <- function(M) {
+    out <- .brt_remove(z, M, what = "the data")
+    dimnames(out) <- dimnames(M)
+    out
+  }
+  list(X = remove(X), Y = remove(Y), nuisance = NULL,
+       covariates = if (is.null(covariates)) NULL else remove(covariates),
+       global = TRUE)
+}
+
 .brt_split_data <- function(X, Y, train, test, nuisance = NULL, covariates = NULL) {
   if (is.null(nuisance) && is.null(covariates)) {
     return(list(X = X, Y = Y, train = train, test = test,
@@ -801,6 +825,15 @@
   if (adjusted && !is.matrix(X)) {
     stop("nuisance regressors require X to be a single numeric matrix.",
          call. = FALSE)
+  }
+  nuisance_fit <- if (is.null(nuisance)) NA_character_ else attr(nuisance, "fit")
+  n_nuisance <- if (is.null(nuisance)) 0L else ncol(nuisance)
+  cleaned <- .brt_remove_global(X, Y, nuisance, covariates)
+  if (cleaned$global) {
+    X <- cleaned$X; Y <- cleaned$Y
+    nuisance <- NULL; covariates <- cleaned$covariates
+    gx <- .brc_grouped_matrix(X, groups = feature_groups, context = "X")
+    adjusted <- !is.null(covariates)
   }
   blocks <- .brt_validate_blocks(blocks, n)
   candidates <- .brt_validate_candidates(candidates, gx$group_names)
@@ -1062,9 +1095,9 @@
   out <- list(
     predictions = oof,
     performance = .banded_ridge_score(oof_observed, oof),
-    observed = if (adjusted) oof_observed else NULL,
-    nuisance_fit = if (is.null(nuisance)) NA_character_ else attr(nuisance, "fit"),
-    n_nuisance = if (is.null(nuisance)) 0L else ncol(nuisance),
+    observed = if (adjusted || cleaned$global) oof_observed else NULL,
+    nuisance_fit = nuisance_fit,
+    n_nuisance = n_nuisance,
     fold_performance = fold_performance,
     selections = do.call(rbind, selection_rows),
     outer_results = outer_results,

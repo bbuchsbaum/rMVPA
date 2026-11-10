@@ -655,6 +655,8 @@
                                       nuisance = NULL) {
   out <- list()
   theta_columns <- paste0("theta_", nested$group_names)
+  cleaned <- .brt_remove_global(X, Y, nuisance)
+  X <- cleaned$X; Y <- cleaned$Y; nuisance <- cleaned$nuisance
   for (oo in seq_along(nested$outer_results)) {
     outer <- nested$outer_results[[oo]]
     selected <- outer$selected
@@ -782,8 +784,16 @@
 #'   other rows of its assessment set, so the reported accuracy is conditional
 #'   on each held-out block and is not the accuracy of a frozen
 #'   training-derived pipeline. Each held-out split needs more rows than
-#'   nuisance regressors. The mode used is recorded in
-#'   `result$provenance$nuisance_fit`.
+#'   nuisance regressors.
+#'   `"global"` removes the nuisance from features and responses once, over
+#'   all rows, before the data are split. This is the usual preprocessing step
+#'   of encoding analyses and the most efficient of the three, because no
+#'   held-out block has to support its own nuisance fit. It is not a
+#'   training-only transformation: held-out rows contribute to the nuisance
+#'   coefficients, though never to the feature weights or their tuning. Under
+#'   the null the dependence this creates between training and held-out
+#'   residuals is slightly negative, not optimistic.
+#'   The mode used is recorded in `result$provenance$nuisance_fit`.
 #' @param purge Non-negative temporal gap (in rows) around validation/test
 #'   rows. Training rows within the gap are dropped when folds are constructed
 #'   from an integer count or a `cross_validation` object; explicit fold lists
@@ -874,7 +884,7 @@ banded_ridge_model <- function(dataset,
                                seed = 1L,
                                memory_limit_mb = 1024,
                                nuisance = NULL,
-                               nuisance_fit = c("train", "within")) {
+                               nuisance_fit = c("train", "within", "global")) {
   nuisance_fit <- match.arg(nuisance_fit)
   if (!inherits(dataset, "mvpa_image_dataset")) {
     stop("banded_ridge_model currently supports image mvpa_dataset objects only.",

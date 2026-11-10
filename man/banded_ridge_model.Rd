@@ -32,7 +32,7 @@ banded_ridge_model(
   seed = 1L,
   memory_limit_mb = 1024,
   nuisance = NULL,
-  nuisance_fit = c("train", "within")
+  nuisance_fit = c("train", "within", "global")
 )
 }
 \arguments{
@@ -172,8 +172,16 @@ extrapolated, but a held-out row's transformation then depends on the
 other rows of its assessment set, so the reported accuracy is conditional
 on each held-out block and is not the accuracy of a frozen
 training-derived pipeline. Each held-out split needs more rows than
-nuisance regressors. The mode used is recorded in
-`result$provenance$nuisance_fit`.}
+nuisance regressors.
+`"global"` removes the nuisance from features and responses once, over
+all rows, before the data are split. This is the usual preprocessing step
+of encoding analyses and the most efficient of the three, because no
+held-out block has to support its own nuisance fit. It is not a
+training-only transformation: held-out rows contribute to the nuisance
+coefficients, though never to the feature weights or their tuning. Under
+the null the dependence this creates between training and held-out
+residuals is slightly negative, not optimistic.
+The mode used is recorded in `result$provenance$nuisance_fit`.}
 }
 \value{
 A `banded_ridge_model` specification for `run_banded_ridge()`.

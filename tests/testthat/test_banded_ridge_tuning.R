@@ -984,3 +984,69 @@ test_that("fitting every alpha of a theta in one pass matches candidate-by-candi
   expect_identical(part$dual_weights, fit$dual_weights[, c(2L, 4L), drop = FALSE])
   expect_identical(rMVPA:::.brt_subset_fit(fit, 1:5), fit)
 })
+
+test_that("nuisance_fit = 'global' removes nuisance once before the splits", {
+  f <- .brt_nuisance_fixture()
+  n <- nrow(f$X)
+  run <- function(X, Y, nuisance) {
+    rMVPA:::.banded_ridge_nested_cv(
+      X, Y, f$folds, f$candidates, feature_groups = f$groups,
+      inner_v = NA_integer_, alpha_scope = "fixed", theta_scope = "fixed",
+      fixed_alpha = 0.5, fixed_theta = c(a = 0.5, b = 0.5), nuisance = nuisance
+    )
+  }
+  got <- run(f$X, f$Y, rMVPA:::.brt_validate_nuisance(f$N, n, fit = "global"))
+  # by hand: residualize everything over all rows, then an ordinary run
+  z <- cbind(1, f$N)
+  clean <- function(M) {
+    out <- M - z %*% solve(crossprod(z), crossprod(z, M)); dimnames(out) <- dimnames(M); out
+  }
+  reference <- run(clean(f$X), clean(f$Y), NULL)
+  expect_equal(got$predictions, reference$predictions, tolerance = 1e-10)
+  expect_equal(got$performance, reference$performance, tolerance = 1e-10)
+  expect_equal(unname(got$observed), unname(clean(f$Y)), tolerance = 1e-10)
+  expect_identical(got$nuisance_fit, "global")
+  expect_identical(got$n_nuisance, 2L)
+  expect_null(reference$observed)
+  expect_gt(got$performance$r2[[1L]], 0.9)
+  expect_lt(got$performance$r2[[2L]], 0.05)
+  expect_error(
+    run(f$X, f$Y, rMVPA:::.brt_validate_nuisance(matrix(rnorm(n * (n - 1L)), n), n,
+                                                 fit = "global")),
+    "residual degrees of freedom in the data"
+  )
+})
+
+test_that("global nuisance removal neither inflates noise nor wastes signal", {
+  set.seed(9208L)
+  n <- 240L; v <- 30L
+  tt <- (seq_len(n) - 0.5) / n
+  N <- cbind(sapply(1:8, function(j) cos(pi * j * tt)), matrix(rnorm(n * 4), n, 4))
+  ar <- function(rho) as.numeric(stats::filter(rnorm(n), rho, "recursive"))
+  # slowly varying features, as convolved stimulus features are
+  X <- sapply(1:6, function(i) ar(0.9))
+  drift <- N %*% matrix(rnorm(ncol(N) * v, sd = 3), ncol(N), v)
+  noise <- sapply(seq_len(v), function(i) ar(0.4)) + drift
+  signal <- X %*% matrix(rnorm(6 * v), 6, v) + sapply(seq_len(v), function(i) 3 * ar(0.4)) + drift
+  groups <- rep(c("a", "b"), each = 3L)
+  blocks <- as.integer(cut(seq_len(n), 6L, labels = FALSE))
+  folds <- rMVPA:::.banded_ridge_make_folds(seq_len(n), 6L, blocks = blocks, purge = 3L)
+  candidates <- rMVPA:::.banded_ridge_candidates(
+    c("a", "b"), 10, method = "fixed", theta = c(a = 0.5, b = 0.5)
+  )
+  run <- function(Y, mode) {
+    rMVPA:::.banded_ridge_nested_cv(
+      X, Y, folds, candidates, feature_groups = groups, inner_v = NA_integer_,
+      alpha_scope = "fixed", theta_scope = "fixed", fixed_alpha = 10,
+      fixed_theta = c(a = 0.5, b = 0.5), blocks = blocks, purge = 3L,
+      nuisance = rMVPA:::.brt_validate_nuisance(N, n, fit = mode)
+    )$performance$correlation
+  }
+  # responses with no feature signal stay at chance
+  expect_lt(max(abs(run(noise, "global"))), 0.35)
+  expect_lt(abs(median(run(noise, "global"))), 0.1)
+  # with signal, one fit over the whole run keeps more of it than a separate
+  # twelve-regressor fit inside every 40-row held-out block
+  expect_gt(median(run(signal, "global")), median(run(signal, "within")) + 0.05)
+  expect_gt(median(run(signal, "global")), 0.4)
+})
