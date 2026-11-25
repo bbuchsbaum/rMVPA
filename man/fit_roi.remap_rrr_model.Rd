@@ -11,8 +11,8 @@ An \code{roi_result} object.
 }
 \description{
 Implements the end-to-end REMAP flow for one ROI/searchlight: build paired
-prototypes, whiten, fit reduced-rank mapping, transform source trials, train
-base classifier in the target domain, and classify target-domain trials.
+prototypes, fit the residual transformation, and classify target patterns
+by correlation with the transformed source templates.
 Emits a standard classification_result plus ROI-level performance.
 }
 \keyword{internal}

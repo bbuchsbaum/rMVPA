@@ -23,13 +23,13 @@ test_that("remap_rrr_model runs with identity fallback (rank=0)", {
   expect_true(is.list(res$vol_results))
 })
 
-test_that("remap_rrr_model LOKO path executes when rank>0 but rrpack missing", {
+test_that("remap_rrr_model fits automatic rank with few training keys", {
   skip_on_cran()
   set.seed(2)
   toy <- gen_sample_dataset(D = c(4,4,4), nobs = 48, nlevels = 3, blocks = 3, external_test = TRUE)
   mask <- neuroim2::NeuroVol(sample(1:2, size = length(toy$dataset$mask), replace = TRUE),
                              neuroim2::space(toy$dataset$mask))
-  # Ask for auto rank but if rrpack is unavailable, code should fallback gracefully
+  skip_if_not_installed("rrpack")
   mspec <- remap_rrr_model(
     dataset = toy$dataset,
     design  = toy$design,
@@ -40,6 +40,7 @@ test_that("remap_rrr_model LOKO path executes when rank>0 but rrpack missing", {
   )
   res <- run_regional(mspec, mask)
   expect_s3_class(res, "regional_mvpa_result")
+  expect_true(all(is.finite(res$performance_table$adapter_rank)))
 })
 
 test_that("remap_rrr_model runs randomized searchlight with niter=4", {
