@@ -1,5 +1,8 @@
 # rMVPA (development version)
 
+* `cv_manova_model()` estimates cross-validated MANOVA pattern distinctness
+  for named effects across independent runs in regional and searchlight analyses.
+
 * `banded_ridge_model()` and `feature_decode_model()` gain
   `nuisance_fit = "global"`: nuisance regressors are removed from features and
   responses once, over all rows, before the data are split, as much encoding

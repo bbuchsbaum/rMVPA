@@ -127,7 +127,8 @@ validate_analysis.mvpa_design <- function(x, crossval = NULL,
   }
 
   # ---- Check 3: Minimum observations per class ----
-  checks <- c(checks, .check_min_observations(y))
+  n_obs <- if (is.null(y) && !is.null(dataset)) nobs(dataset) else NROW(y)
+  checks <- c(checks, .check_min_observations(y, n_obs))
 
   # ---- Checks 4-7: Fold-level checks (require generating folds) ----
   if (!is.null(y)) {
@@ -379,7 +380,7 @@ validate_analysis.mvpa_design <- function(x, crossval = NULL,
 
 #' @keywords internal
 #' @noRd
-.check_min_observations <- function(y) {
+.check_min_observations <- function(y, n = NROW(y)) {
   checks <- list()
 
   if (is.factor(y)) {
@@ -413,11 +414,10 @@ validate_analysis.mvpa_design <- function(x, crossval = NULL,
       )))
     }
   } else {
-    n <- if (is.matrix(y)) nrow(y) else length(y)
     if (n < 10) {
       checks <- c(checks, list(.make_check(
         "min_observations", "warn",
-        sprintf("Only %d observations for regression. Results may be unreliable.", n)
+        sprintf("Only %d observations. Results may be unreliable.", n)
       )))
     } else {
       checks <- c(checks, list(.make_check(
