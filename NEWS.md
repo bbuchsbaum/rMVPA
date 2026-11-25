@@ -6,6 +6,8 @@
   assessment and a strict source-only comparison. REMAP now uses row-wise
   Pearson scores and reports a missing reduced-rank backend as an error.
 
+* `cv_manova_model()` estimates cross-validated MANOVA pattern distinctness
+  for named effects across independent runs in regional and searchlight analyses.
 
 * `banded_ridge_model()` and `feature_decode_model()` gain
   `nuisance_fit = "global"`: nuisance regressors are removed from features and
