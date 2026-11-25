@@ -75,13 +75,39 @@ Key points
   are estimated in an item‑wise cross‑validated fashion.
 - Correlation classification against predicted templates in the whitened space.
 
-> **LOKO vs single‑fit**  
-> LOKO (`leave_one_key_out = TRUE`) is primarily about unbiased adaptor **diagnostics** at the item level.
-> Test‑set classification metrics (accuracy/AUC on the external test set) are always computed on trials
-> that were not used to fit the adaptor, regardless of the LOKO setting. For large searchlight runs where
-> adaptor diagnostics are secondary and speed is critical, it is often reasonable to set
-> `leave_one_key_out = FALSE` and use a fixed rank, trading slightly more optimistic adaptor diagnostics
-> for much faster single‑fit adapters per ROI.
+## Predict an independent target run
+
+Split target observations by acquisition run before fitting. All three matrices
+below use the same features in the same order. The calibration run supplies
+labeled examples. The assessment run supplies only patterns to the predictor.
+
+```{r frozen_example}
+set.seed(12)
+keys <- rep(letters[1:4], each = 4)
+source <- matrix(rnorm(96), 16, 6)
+calibration <- source + matrix(rnorm(96, sd = .25), 16, 6)
+assessment <- matrix(rnorm(48), 8, 6)
+reference <- fit_remap(source, keys, shrink_whiten = FALSE)
+if (requireNamespace("rrpack", quietly = TRUE)) {
+  adapter <- fit_remap(source, keys, calibration, keys, rank = 1,
+                       shrink_whiten = FALSE)
+  scores <- predict(adapter, assessment, type = "scores")
+  reference_scores <- predict(reference, assessment, type = "scores")
+}
+```
+
+For regional and searchlight analyses set `calibration_rows` on
+`remap_rrr_model()`, e.g. `which(target_run %in% training_runs)`.
+Only the remaining target rows contribute to classification metrics.
+`compute_naive_baseline = TRUE` adds the source-only scores on those same
+rows. Repeat with different run splits to estimate a learning curve. Choose
+tuning parameters using training observations.
+
+Without an explicit split, single-fit metrics include the target observations
+used to build the calibration prototypes. Leave-one-key-out diagnostics
+evaluate unseen keys, and the scoring procedure uses each observed key to
+choose its adapter. In these legacy modes, `naive_` removes the correction
+while retaining joint whitening.
 
 > **Note**: For a complete introduction to naive cross-decoding (the baseline method), see [Naive Cross-Decoding](https://bbuchsbaum.github.io/rMVPA/articles/Naive_Cross_Decoding.html). That vignette explains the algorithm, use cases, and when domain adaptation is needed.
 
@@ -122,7 +148,7 @@ cat("\nREMAP regional metrics (first rows):\n"); peek(res_remap$performance_tabl
 ```
 
 Notes
-- If `rrpack` is not installed, set `rank = 0` (identity adapter) to recover naïve cross‑decoding.
+- Rank zero disables the correction. Omit calibration in `fit_remap()` for source-only whitening.
 - Provide `link_by` if you have per‑item pairing (e.g., `"ImageID"` in both
   train and test design tables). When `NULL`, pairing falls back to class means.
 
@@ -138,7 +164,7 @@ metrics and new REMAP diagnostics:
   - `delta_frob_mean`: Frobenius norm of λ·Δ (size of the learned correction).
   - `adapter_rank`, `adapter_sv1`, `adapter_mean_r2` remain for completeness.
 
-When `return_adapter = TRUE` (default), each ROI row also carries a rich
+When `return_adapter = TRUE`, each ROI row also carries a rich
 `predictor` object inside the `classification_result` containing diagnostic
 vectors. The easiest way to inspect it is to call `process_roi()` on a single
 ROI and examine the `result$predictor` field.

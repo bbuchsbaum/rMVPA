@@ -20,6 +20,7 @@ remap_rrr_model(
   return_adapter = FALSE,
   lambda_grid = c(0, 0.25, 0.5, 0.75, 1),
   compute_naive_baseline = FALSE,
+  calibration_rows = NULL,
   ...
 )
 }
@@ -44,7 +45,7 @@ for identity/no adaptation fallback.}
 
 \item{ridge_rrr_lambda}{Optional numeric lambda for `rrpack::rrs.fit` (ridge RRR) on the residuals.}
 
-\item{leave_one_key_out}{logical; if TRUE, use leave-one-key-out (LOKO) over items for adaptor learning (default TRUE).}
+\item{leave_one_key_out}{logical; if TRUE, use leave-one-key-out (LOKO) over items for adaptor learning (default FALSE).}
 
 \item{min_pairs}{Minimum number of paired prototypes required for adaptor fitting (default 5).}
 
@@ -55,6 +56,13 @@ for identity/no adaptation fallback.}
 \item{lambda_grid}{Numeric vector of candidate \eqn{\lambda} values for shrinkage toward naive; defaults to `c(0, .25, .5, .75, 1)`.}
 
 \item{compute_naive_baseline}{logical; if TRUE, also compute performance with \eqn{\lambda = 0} (no adaptor) to provide baseline metrics (default FALSE).}
+
+\item{calibration_rows}{Optional distinct row indices, or a logical selector, in
+the target dataset. Fit on these labeled rows and score only their complement.
+Select whole independent runs when evaluating run generalization. With
+this split, `compute_naive_baseline` adds strictly source-only metrics
+prefixed `source_only_`, and `return_adapter` retains a reusable fit.
+Incompatible with leave_one_key_out.}
 
 \item{...}{Additional arguments passed to `create_model_spec`.}
 }
@@ -97,7 +105,7 @@ If `return_adapter = TRUE`, the result also includes ROI-level diagnostics (e.g.
   \item Residual RRR learns a low-rank correction \eqn{\Delta} on \eqn{R_w = Y_w - X_w}.
   \item Automatic shrinkage to naive via \eqn{\lambda} selection on training items.
   \item Prediction/classification by correlation to \eqn{\hat Y_w} in the whitened space.
-  \item Fallback to naive cross-decoding when `rank = 0` or `rrpack` is unavailable.
+  \item Rank zero applies no residual correction. Positive and automatic ranks require rrpack.
 }
 }
 
@@ -107,12 +115,10 @@ When `leave_one_key_out = TRUE`, REMAP performs a leave-one-key-out (LOKO)
 loop over items to estimate adaptor diagnostics (e.g. per-voxel R2 and
 improvement over naive) in an item-wise cross-validated fashion. This is
 computationally heavy but yields less optimistic adaptor-level summaries.
-Test-set classification performance (accuracy/AUC on `dataset$test_data`)
-is always evaluated on trials that were not used to fit the adaptor, so
-standard train->test performance remains out-of-sample regardless of the
-LOKO setting. For large searchlight analyses where adaptor diagnostics are
-secondary, it is often practical to set `leave_one_key_out = FALSE` and use
-a fixed rank to obtain much faster single-fit adapters per ROI.
+Without a calibration split, the single-fit mode also scores the target
+rows used to estimate its prototypes. In key-wise mode the observed key
+selects the adapter, so its trial scores are conditional on that key.
+For independent prediction, use calibration_rows or \code{\link{fit_remap}}.
 }
 
 \examples{

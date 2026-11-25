@@ -22,12 +22,18 @@
 #'   for identity/no adaptation fallback.
 #' @param max_rank Upper bound on rank search (default 20).
 #' @param ridge_rrr_lambda Optional numeric lambda for `rrpack::rrs.fit` (ridge RRR) on the residuals.
-#' @param leave_one_key_out logical; if TRUE, use leave-one-key-out (LOKO) over items for adaptor learning (default TRUE).
+#' @param leave_one_key_out logical; if TRUE, use leave-one-key-out (LOKO) over items for adaptor learning (default FALSE).
 #' @param min_pairs Minimum number of paired prototypes required for adaptor fitting (default 5).
 #' @param save_fold_singulars logical; if TRUE, save singular values from each fold's adaptor (default FALSE).
 #' @param return_adapter logical; if TRUE, store diagnostics (e.g., per-voxel R2, per-fold stats) in `result$predictor`.
 #' @param lambda_grid Numeric vector of candidate \eqn{\lambda} values for shrinkage toward naive; defaults to `c(0, .25, .5, .75, 1)`.
 #' @param compute_naive_baseline logical; if TRUE, also compute performance with \eqn{\lambda = 0} (no adaptor) to provide baseline metrics (default FALSE).
+#' @param calibration_rows Optional distinct row indices, or a logical selector, in
+#'   the target dataset. Fit on these labeled rows and score only their complement.
+#'   Select whole independent runs when evaluating run generalization. With
+#'   this split, `compute_naive_baseline` adds strictly source-only metrics
+#'   prefixed `source_only_`, and `return_adapter` retains a reusable fit.
+#'   Incompatible with leave_one_key_out.
 #' @param ... Additional arguments passed to `create_model_spec`.
 #'
 #' @return A model spec of class `remap_rrr_model` compatible with `run_regional()` / `run_searchlight()`.
@@ -53,7 +59,7 @@
 #'   \item Residual RRR learns a low-rank correction \eqn{\Delta} on \eqn{R_w = Y_w - X_w}.
 #'   \item Automatic shrinkage to naive via \eqn{\lambda} selection on training items.
 #'   \item Prediction/classification by correlation to \eqn{\hat Y_w} in the whitened space.
-#'   \item Fallback to naive cross-decoding when `rank = 0` or `rrpack` is unavailable.
+#'   \item Rank zero applies no residual correction. Positive and automatic ranks require rrpack.
 #' }
 #'
 #' @section LOKO vs. single-fit adapters:
@@ -61,12 +67,10 @@
 #' loop over items to estimate adaptor diagnostics (e.g. per-voxel R2 and
 #' improvement over naive) in an item-wise cross-validated fashion. This is
 #' computationally heavy but yields less optimistic adaptor-level summaries.
-#' Test-set classification performance (accuracy/AUC on `dataset$test_data`)
-#' is always evaluated on trials that were not used to fit the adaptor, so
-#' standard train->test performance remains out-of-sample regardless of the
-#' LOKO setting. For large searchlight analyses where adaptor diagnostics are
-#' secondary, it is often practical to set `leave_one_key_out = FALSE` and use
-#' a fixed rank to obtain much faster single-fit adapters per ROI.
+#' Without a calibration split, the single-fit mode also scores the target
+#' rows used to estimate its prototypes. In key-wise mode the observed key
+#' selects the adapter, so its trial scores are conditional on that key.
+#' For independent prediction, use calibration_rows or \code{\link{fit_remap}}.
 #' @examples
 #' ds <- gen_sample_dataset(c(5, 5, 5), 20, external_test = TRUE)
 #' model <- remap_rrr_model(ds$dataset, ds$design, rank = 5)
@@ -87,7 +91,24 @@ remap_rrr_model <- function(dataset,
                             return_adapter = FALSE,
                             lambda_grid = c(0, 0.25, 0.5, 0.75, 1),
                             compute_naive_baseline = FALSE,
+                            calibration_rows = NULL,
                             ...) {
+
+  if (!is.null(calibration_rows)) {
+    n <- nrow(design$test_design)
+    if (is.null(n) || isTRUE(leave_one_key_out))
+      stop("calibration_rows requires a target design and leave_one_key_out = FALSE.")
+    if (is.logical(calibration_rows)) {
+      if (length(calibration_rows) != n || anyNA(calibration_rows))
+        stop("Logical calibration_rows must have one nonmissing entry per target row.")
+      calibration_rows <- which(calibration_rows)
+    }
+    if (!is.numeric(calibration_rows) || !length(calibration_rows) ||
+        any(!is.finite(calibration_rows)) || any(calibration_rows != trunc(calibration_rows)) ||
+        any(calibration_rows < 1 | calibration_rows > n) || anyDuplicated(calibration_rows) ||
+        length(calibration_rows) >= n)
+      stop("calibration_rows must identify a nonempty proper subset of distinct target rows.")
+  }
 
   # Decide performance function based on response type
   perf_fun <- if (is.numeric(design$y_train)) {
@@ -104,6 +125,8 @@ remap_rrr_model <- function(dataset,
     design = design,
     base_classifier = base_classifier,
     link_by = link_by,
+    calibration_rows = calibration_rows,
+    .preserve_roi_features = !is.null(calibration_rows),
     center = center,
     shrink_whiten = shrink_whiten,
     rank = rank,
@@ -129,9 +152,6 @@ remap_rrr_model <- function(dataset,
 # Residual REMAP helpers (joint whitening + low-rank correction)
 # ----------------------------------------------------------------------------
 
-#' @keywords internal
-.row_center <- function(X) sweep(X, 2, colMeans(X), "-")
-
 #' Joint whitening on stacked X/Y prototypes to place them in common coords
 #' Returns whitened fits for X and Y plus the whitening transform.
 #' @return A list with whitened data matrices.
@@ -145,65 +165,78 @@ remap_rrr_model <- function(dataset,
     mu <- rep(0, ncol(Z))
     Zc <- Z
   }
-  S <- try({
-    if (!isTRUE(do_shrink)) stats::cov(Zc) else {require_package("corpcor", "for shrinkage covariance"); corpcor::cov.shrink(Zc)}
-  }, silent = TRUE)
-  if (inherits(S, "try-error")) S <- stats::cov(Zc)
+  S <- if (isTRUE(do_shrink) && nrow(Zc) == 2L) {
+    # Two prototypes supply one covariance degree of freedom. Use the
+    # spherical target directly; corpcor cannot estimate shrinkage here.
+    diag(mean(matrixStats::colVars(Zc)), nrow = ncol(Zc))
+  } else if (isTRUE(do_shrink) && ncol(Zc) > 1L) {
+    require_package("corpcor", "for shrinkage whitening")
+    corpcor::cov.shrink(Zc, verbose = FALSE)
+  } else {
+    stats::cov(Zc)
+  }
   ee <- eigen(S, symmetric = TRUE)
-  W  <- ee$vectors %*% diag(1 / sqrt(pmax(ee$values, eps))) %*% t(ee$vectors)
+  W  <- ee$vectors %*% diag(1 / sqrt(pmax(ee$values, eps)), nrow = ncol(Zc)) %*% t(ee$vectors)
   Zw <- Zc %*% W
   nX <- nrow(X_fit)
   list(
     Xw_fit = Zw[seq_len(nX), , drop = FALSE],
-    Yw_fit = Zw[(nX + 1):nrow(Zw), , drop = FALSE],
+    Yw_fit = Zw[nX + seq_len(nrow(Y_fit)), , drop = FALSE],
     W = W,
     mu = mu
   )
-}
-
-#' Row-wise correlation of matrix rows with a vector
-#' @return A numeric vector of row-wise correlations.
-#' @keywords internal
-.row_cor <- function(A, v) {
-  A0 <- .row_center(A)
-  v0 <- v - mean(v)
-  den <- sqrt(rowSums(A0^2)) * sqrt(sum(v0^2))
-  as.numeric((A0 %*% v0) / pmax(den, .Machine$double.eps))
 }
 
 #' Residual reduced-rank regression: (Yw - Xw) ~ Xw
 #' @return A list with fitted residual RRR components.
 #' @keywords internal
 .fit_residual_rrr <- function(Xw, Yw, rank = "auto", max_rank = 20, ridge_lambda = NULL) {
+  whole <- function(x) is.numeric(x) && length(x) == 1L && is.finite(x) && x == trunc(x)
+  auto <- identical(rank, "auto")
+  if (!auto && (!whole(rank) || rank < 0)) stop("rank must be a nonnegative integer or 'auto'.")
+  if (!whole(max_rank) || max_rank < 1L) stop("max_rank must be a positive integer.")
+  if (!is.null(ridge_lambda) && (!is.numeric(ridge_lambda) || length(ridge_lambda) != 1L ||
+      !is.finite(ridge_lambda) || ridge_lambda < 0)) stop("Invalid ridge penalty.")
+  p <- ncol(Xw)
+  if (!auto && rank == 0) {
+    return(list(Delta = matrix(0, p, p), rank = 0L, Ad = numeric(0)))
+  }
+  require_package("rrpack", "for positive or automatic REMAP rank")
   stopifnot(nrow(Xw) == nrow(Yw))
   Rw <- Yw - Xw
-  n <- nrow(Xw); p <- ncol(Xw); q <- ncol(Yw)
-  max_rank <- max(1L, min(max_rank, p, q, max(1L, n - 1L)))
-
-  if (is.numeric(rank) && as.integer(rank) <= 0L) {
-    return(list(Delta = matrix(0, nrow = p, ncol = q), rank = 0L, Ad = numeric(0)))
-  }
-  if (!requireNamespace("rrpack", quietly = TRUE)) {
-    return(list(Delta = matrix(0, nrow = p, ncol = q), rank = 0L, Ad = numeric(0)))
-  }
-
+  n <- nrow(Xw)
+  feasible <- min(n, p, ncol(Yw))
+  max_rank <- min(max_rank, feasible, n - 1L)
+  if (!auto && rank > feasible) stop("Requested rank exceeds the training dimensions.")
   if (!is.null(ridge_lambda)) {
     fit <- rrpack::rrs.fit(Y = Rw, X = Xw, nrank = if (identical(rank, "auto")) max_rank else as.integer(rank),
                            lambda = ridge_lambda)
   } else if (identical(rank, "auto")) {
-    fit <- rrpack::cv.rrr(Y = Rw, X = Xw, nfold = min(5, max(2, floor(n/3))), maxrank = max_rank)
+    # rrpack::cv.rrr drops singleton folds to vectors. For tiny designs,
+    # use explicit leave-one-key-out fits with dimensions preserved.
+    if (n < 4L || p == 1L) {
+      errors <- numeric(max_rank + 1L)
+      errors[1L] <- sum(Rw^2)
+      for (r in seq_len(max_rank)) {
+        for (i in seq_len(n)) {
+          inner <- rrpack::rrr.fit(Rw[-i, , drop = FALSE], Xw[-i, , drop = FALSE], nrank = r)
+          residual <- Rw[i, , drop = FALSE] - Xw[i, , drop = FALSE] %*% inner$coef
+          errors[r + 1L] <- errors[r + 1L] + sum(residual^2)
+        }
+      }
+      return(.fit_residual_rrr(Xw, Yw, which.min(errors) - 1L, max_rank))
+    }
+    folds <- min(5L, max(2L, floor(n / 3)))
+    largest_fold <- max(round(n / folds), n - (folds - 1L) * round(n / folds))
+    fit <- rrpack::cv.rrr(Y = Rw, X = Xw, nfold = folds, maxrank = min(max_rank, n - largest_fold))
   } else {
     fit <- rrpack::rrr.fit(Y = Rw, X = Xw, nrank = as.integer(rank))
   }
 
-  # Try to extract coefficients and leading singulars consistently
-  Delta <- try({
-    if (!is.null(fit$coef)) fit$coef else stats::coef(fit)
-  }, silent = TRUE)
-  if (inherits(Delta, "try-error")) Delta <- matrix(0, nrow = p, ncol = q)
-  Ad <- tryCatch(as.numeric(fit$Ad), error = function(...) numeric(0))
-  r_used <- tryCatch({ if (!is.null(fit$rank)) fit$rank else if (length(Ad)) length(Ad) else NA_integer_ }, error = function(...) NA_integer_)
-  list(Delta = Delta, rank = r_used, Ad = Ad)
+  Delta <- fit$coef
+  if (!is.matrix(Delta) || !identical(dim(Delta), c(p, ncol(Yw))) || any(!is.finite(Delta)))
+    stop("The REMAP solver returned invalid coefficient estimates.")
+  list(Delta = Delta, rank = fit$rank %||% fit$nrank, Ad = as.numeric(fit$Ad))
 }
 
 #' Select lambda by prototype self-retrieval on training items
@@ -216,13 +249,8 @@ remap_rrr_model <- function(dataset,
   for (i in seq_along(lambda_grid)) {
     lam <- lambda_grid[i]
     Yhat_train <- Xw_fit + lam * (Xw_fit %*% Delta)
-    correct <- logical(n_train)
-    for (j in seq_len(n_train)) {
-      scores <- .row_cor(Yhat_train, Yw_fit[j, ])
-      pred   <- which.max(scores)
-      correct[j] <- (pred == j)
-    }
-    accs[i] <- mean(correct)
+    scores <- .remap_scores(Yw_fit, Yhat_train)
+    accs[i] <- mean(max.col(scores, ties.method = "first") == seq_len(n_train))
   }
   best <- which(accs == max(accs))
   lam_opt <- min(lambda_grid[best])
@@ -239,9 +267,9 @@ remap_rrr_model <- function(dataset,
     key_te <- factor(y_test)
   }
   # source (train) prototypes
-  Xp <- rowsum(train_mat, key_tr, reorder = TRUE) / as.vector(table(key_tr))
+  Xp <- .nx_rowsum_mean(train_mat, key_tr)
   # target (test) prototypes (average any repeats per key)
-  Ym <- rowsum(test_mat, key_te, reorder = TRUE) / pmax(1, as.vector(table(key_te)))
+  Ym <- .nx_rowsum_mean(test_mat, key_te)
   # Align common keys only
   common <- intersect(rownames(Xp), rownames(Ym))
   if (length(common) == 0L) {
@@ -271,8 +299,8 @@ output_schema.remap_rrr_model <- function(model) {
 #' Per-ROI REMAP fit
 #'
 #' Implements the end-to-end REMAP flow for one ROI/searchlight: build paired
-#' prototypes, whiten, fit reduced-rank mapping, transform source trials, train
-#' base classifier in the target domain, and classify target-domain trials.
+#' prototypes, fit the residual transformation, and classify target patterns
+#' by correlation with the transformed source templates.
 #' Emits a standard classification_result plus ROI-level performance.
 #'
 #' @return An \code{roi_result} object.
@@ -308,6 +336,16 @@ fit_roi.remap_rrr_model <- function(model, roi_data, context, ...) {
 
   .log_debug("REMAP ROI %s: start (train_dim=%s x %s, test_dim=%s x %s)",
                             id, nrow(Xtrain), ncol(Xtrain), nrow(Xtest), ncol(Xtest))
+
+  if (!is.null(model$calibration_rows)) {
+    if (!is.null(model$link_by)) {
+      if (!model$link_by %in% names(des$train_design) || !model$link_by %in% names(des$test_design))
+        stop("link_by must identify a column in both designs.")
+      ytr <- des$train_design[[model$link_by]]
+      yte <- des$test_design[[model$link_by]]
+    }
+    return(.remap_assess(model, Xtrain, ytr, Xtest, yte, ind, id))
+  }
 
   # Build paired prototypes and key factors
   pairs <- .remap_paired(Xtrain, Xtest, des$train_design, des$test_design,
@@ -376,19 +414,12 @@ fit_roi.remap_rrr_model <- function(model, roi_data, context, ...) {
       Xp_k <- Xp[keep, , drop = FALSE]
       Ym_k <- Ym[keep, , drop = FALSE]
 
-      # Joint whitening and residual RRR on training keys
-      JW <- .joint_whiten(Xp_k, Ym_k, do_shrink = model$shrink_whiten, center = model$center)
-      rf <- .fit_residual_rrr(JW$Xw_fit, JW$Yw_fit, rank = model$rank,
-                              max_rank = model$max_rank,
-                              ridge_lambda = model$ridge_rrr_lambda)
-      Delta <- rf$Delta
-      .log_debug("REMAP ROI %s LOKO heldout=%s: fit rank=%s", id, k,
-                                tryCatch(rf$rank, error = function(...) NA))
-
-      # Lambda selection on training keys
-      lam_res <- .select_lambda(JW$Xw_fit, JW$Yw_fit, Delta, model$lambda_grid)
-      lam_opt <- lam_res$lambda
-      .log_debug("REMAP ROI %s LOKO heldout=%s: lambda_opt=%.3f", id, k, lam_opt)
+      fit <- .remap_model_templates(model, Xp, Ym_k)
+      JW <- list(mu = fit$mu, W = fit$W,
+                 Xw_fit = sweep(Xp_k, 2L, fit$mu, "-") %*% fit$W,
+                 Yw_fit = sweep(Ym_k, 2L, fit$mu, "-") %*% fit$W)
+      Delta <- fit$Delta
+      lam_opt <- fit$lambda
 
       # ---- diagnostics in whitened space ----
       R_naive <- JW$Yw_fit - JW$Xw_fit
@@ -406,30 +437,16 @@ fit_roi.remap_rrr_model <- function(model, roi_data, context, ...) {
       delta_frob_vals <- c(delta_frob_vals, delta_frob)
       lambda_vals     <- c(lambda_vals, lam_opt)
 
-      # Build predicted templates for all items in whitened space
-      Xw_all <- (sweep(Xp[unique_keys, , drop = FALSE], 2, JW$mu, "-")) %*% JW$W
-      Yhat_all <- Xw_all + lam_opt * (Xw_all %*% Delta)
-
-      # Predict rows in test belonging to key k via correlation in whitened space
       rows_k <- which(as.character(key_te_full) == k)
-      if (length(rows_k) > 0L) {
-        for (rr in rows_k) {
-          y_w <- (Xtest[rr, , drop = FALSE] - matrix(JW$mu, nrow = 1)) %*% JW$W
-          scores <- .row_cor(Yhat_all, y_w[1, ])
-          # stable softmax over scores
-          sshift <- scores - max(scores)
-          w <- exp(sshift)
-          probs <- w / sum(w)
-          prob_all[rr, ]   <- probs
-          pred_all[rr]     <- unique_keys[which.max(scores)]
-          if (use_naive) {
-            scores_naive <- .row_cor(Xw_all, y_w[1, ])
-            sshift_n <- scores_naive - max(scores_naive)
-            w_naive <- exp(sshift_n)
-            probs_naive <- w_naive / sum(w_naive)
-            prob_naive[rr, ] <- probs_naive
-            pred_naive[rr]   <- unique_keys[which.max(scores_naive)]
-          }
+      if (length(rows_k)) {
+        test <- Xtest[rows_k, , drop = FALSE]
+        prob_all[rows_k, ] <- predict(fit, test, type = "prob")
+        pred_all[rows_k] <- unique_keys[max.col(prob_all[rows_k, , drop = FALSE], ties.method = "first")]
+        if (use_naive) {
+          raw <- sweep(Xp, 2L, fit$mu, "-") %*% fit$W
+          yw <- sweep(test, 2L, fit$mu, "-") %*% fit$W
+          prob_naive[rows_k, ] <- .nx_softmax(.remap_scores(yw, raw))
+          pred_naive[rows_k] <- unique_keys[max.col(prob_naive[rows_k, , drop = FALSE], ties.method = "first")]
         }
         keys_scored <- c(keys_scored, k)
       }
@@ -449,8 +466,8 @@ fit_roi.remap_rrr_model <- function(model, roi_data, context, ...) {
       }
 
       # Diagnostics
-      rk <- tryCatch({ if (!is.null(rf$rank)) rf$rank else if (!is.null(rf$Ad)) length(rf$Ad) else NA_integer_ }, error = function(...) NA_integer_)
-      sv <- tryCatch(as.numeric(rf$Ad), error = function(...) NULL)
+      rk <- fit$rank
+      sv <- fit$singular_values
       adapter_ranks <- c(adapter_ranks, rk)
       if (!is.null(sv) && length(sv)) adapter_svals <- c(adapter_svals, sv[1])
       rank_by_item[k] <- rk
@@ -475,35 +492,6 @@ fit_roi.remap_rrr_model <- function(model, roi_data, context, ...) {
           item_res_naive = item_res_naive,
           item_res_remap = item_res_remap
         )
-      }
-    }
-
-    # Handle any test rows whose key not in unique_keys: fit on all keys
-    leftover <- which(!(as.character(key_te_full) %in% unique_keys))
-    if (length(leftover) > 0L) {
-      JW <- .joint_whiten(Xp, Ym, do_shrink = model$shrink_whiten, center = model$center)
-      rf <- .fit_residual_rrr(JW$Xw_fit, JW$Yw_fit, rank = model$rank,
-                              max_rank = model$max_rank,
-                              ridge_lambda = model$ridge_rrr_lambda)
-      Delta <- rf$Delta
-      lam_opt <- .select_lambda(JW$Xw_fit, JW$Yw_fit, Delta, model$lambda_grid)$lambda
-      Xw_all <- (sweep(Xp[unique_keys, , drop = FALSE], 2, JW$mu, "-")) %*% JW$W
-      Yhat_all <- Xw_all + lam_opt * (Xw_all %*% Delta)
-      for (rr in leftover) {
-        y_w <- (Xtest[rr, , drop = FALSE] - matrix(JW$mu, nrow = 1)) %*% JW$W
-        scores <- .row_cor(Yhat_all, y_w[1, ])
-        sshift <- scores - max(scores)
-        w <- exp(sshift)
-        probs <- w / sum(w)
-        prob_all[rr, ] <- probs
-        pred_all[rr] <- unique_keys[which.max(scores)]
-        if (use_naive) {
-          scores_naive <- .row_cor(Xw_all, y_w[1, ])
-          sshift_n <- scores_naive - max(scores_naive)
-          w_naive <- exp(sshift_n)
-          prob_naive[rr, ] <- w_naive / sum(w_naive)
-          pred_naive[rr] <- unique_keys[which.max(scores_naive)]
-        }
       }
     }
 
@@ -574,14 +562,12 @@ fit_roi.remap_rrr_model <- function(model, roi_data, context, ...) {
   }
 
   # Non-LOKO single-fit path using joint whitening + residual RRR
-  JW <- .joint_whiten(Xp, Ym, do_shrink = model$shrink_whiten, center = model$center)
-  rf <- .fit_residual_rrr(JW$Xw_fit, JW$Yw_fit, rank = model$rank,
-                          max_rank = model$max_rank,
-                          ridge_lambda = model$ridge_rrr_lambda)
-  Delta <- rf$Delta
-  lam_opt <- .select_lambda(JW$Xw_fit, JW$Yw_fit, Delta, model$lambda_grid)$lambda
-  .log_debug("REMAP ROI %s: non-LOKO rank=%s, lambda_opt=%.3f", id,
-                            tryCatch(rf$rank, error = function(...) NA), lam_opt)
+  fit <- .remap_model_templates(model, Xp, Ym)
+  JW <- list(mu = fit$mu, W = fit$W,
+             Xw_fit = sweep(Xp, 2L, fit$mu, "-") %*% fit$W,
+             Yw_fit = sweep(Ym, 2L, fit$mu, "-") %*% fit$W)
+  Delta <- fit$Delta
+  lam_opt <- fit$lambda
 
   # Residual diagnostics (global fit)
   R_naive <- JW$Yw_fit - JW$Xw_fit
@@ -594,38 +580,13 @@ fit_roi.remap_rrr_model <- function(model, roi_data, context, ...) {
   .log_debug("REMAP ROI %s: roi_improv=%.3f, delta_frob=%.3f", id, roi_improv, delta_frob)
 
   # Templates for all keys and correlation-based classification
-  Xw_all <- (sweep(Xp[unique_keys, , drop = FALSE], 2, JW$mu, "-")) %*% JW$W
-  Yhat_all <- Xw_all + lam_opt * (Xw_all %*% Delta)
-  prob <- matrix(0, nrow(Xtest), length(unique_keys), dimnames = list(NULL, unique_keys))
-  if (use_naive) prob_naive <- matrix(0, nrow(Xtest), length(unique_keys), dimnames = list(NULL, unique_keys))
-  pred_chr <- character(nrow(Xtest))
-  if (use_naive) pred_naive_chr <- character(nrow(Xtest))
-  for (i in seq_len(nrow(Xtest))) {
-    y_w <- (Xtest[i, , drop = FALSE] - matrix(JW$mu, nrow = 1)) %*% JW$W
-    scores <- .row_cor(Yhat_all, y_w[1, ])
-    sshift <- scores - max(scores)
-    w <- exp(sshift); probs <- w / sum(w)
-    prob[i, ] <- probs
-    pred_chr[i] <- unique_keys[which.max(scores)]
-    if (use_naive) {
-      scores_naive <- .row_cor(Xw_all, y_w[1, ])
-      sshift_n <- scores_naive - max(scores_naive)
-      w_naive <- exp(sshift_n); probs_naive <- w_naive / sum(w_naive)
-      prob_naive[i, ] <- probs_naive
-      pred_naive_chr[i] <- unique_keys[which.max(scores_naive)]
-    }
-  }
-  pred <- factor(pred_chr, levels = unique_keys)
-  if (any(is.na(pred))) {
-    mc <- max.col(prob, ties.method = "first")
-    pred <- factor(unique_keys[mc], levels = unique_keys)
-  }
+  Xw_all <- JW$Xw_fit
+  prob <- predict(fit, Xtest, type = "prob")
+  pred <- factor(unique_keys[max.col(prob, ties.method = "first")], levels = unique_keys)
   if (use_naive) {
-    pred_naive <- factor(pred_naive_chr, levels = unique_keys)
-    if (any(is.na(pred_naive))) {
-      mc_naive <- max.col(prob_naive, ties.method = "first")
-      pred_naive <- factor(unique_keys[mc_naive], levels = unique_keys)
-    }
+    yw <- sweep(Xtest, 2L, fit$mu, "-") %*% fit$W
+    prob_naive <- .nx_softmax(.remap_scores(yw, Xw_all))
+    pred_naive <- factor(unique_keys[max.col(prob_naive, ties.method = "first")], levels = unique_keys)
   }
   obs <- factor(as.character(key_te_full), levels = unique_keys)
 
@@ -635,8 +596,8 @@ fit_roi.remap_rrr_model <- function(model, roi_data, context, ...) {
   Ym_centered <- scale(Ym[unique_keys, , drop = FALSE], center = TRUE, scale = FALSE)
   denom <- colSums(Ym_centered^2); denom[denom < .Machine$double.eps] <- .Machine$double.eps
   r2 <- 1 - colSums((Ym[unique_keys, , drop = FALSE] - Yhat_vox)^2) / denom
-  rnk <- tryCatch({ if (!is.null(rf$rank)) rf$rank else if (!is.null(rf$Ad)) length(rf$Ad) else NA_integer_ }, error = function(...) NA_integer_)
-  svals <- tryCatch(as.numeric(rf$Ad), error = function(...) NULL)
+  rnk <- fit$rank
+  svals <- fit$singular_values
 
   keep_rows <- which(!is.na(obs))
   cres <- classification_result(obs[keep_rows], pred[keep_rows], prob[keep_rows, , drop = FALSE],
@@ -670,3 +631,42 @@ fit_roi.remap_rrr_model <- function(model, roi_data, context, ...) {
 }
 
 
+
+.remap_model_templates <- function(model, source, target) {
+  .remap_fit_templates(source, target, model$rank, model$max_rank,
+                       model$ridge_rrr_lambda, model$lambda_grid,
+                       model$center, model$shrink_whiten)
+}
+
+# Assess one user-specified target split. Only the final performance calculation
+# sees assessment labels. Keep original target indices for prediction ledgers.
+.remap_assess <- function(model, source, source_key, target, target_key, indices, id) {
+  cal <- model$calibration_rows
+  test <- setdiff(seq_len(nrow(target)), cal)
+  fit <- fit_remap(source, source_key, target[cal, , drop = FALSE], target_key[cal],
+                   rank = model$rank, max_rank = model$max_rank,
+                   ridge_rrr_lambda = model$ridge_rrr_lambda, lambda_grid = model$lambda_grid,
+                   center = model$center, shrink_whiten = model$shrink_whiten)
+  assessment <- target[test, , drop = FALSE]
+  measured <- function(fitted) {
+    prob <- predict(fitted, assessment, type = "prob")
+    keys <- colnames(prob)
+    predicted <- factor(keys[max.col(prob, ties.method = "first")], levels = keys)
+    observed <- factor(as.character(target_key[test]), levels = keys)
+    if (anyNA(observed)) stop("Assessment labels must refer to known source keys.")
+    classification_result(observed, predicted, prob, testind = test,
+                          test_design = model$design$test_design[test, , drop = FALSE],
+                          predictor = if (isTRUE(model$return_adapter)) fitted else NULL)
+  }
+  result <- measured(fit)
+  metrics <- compute_performance(model, result)
+  if (isTRUE(model$compute_naive_baseline)) {
+    reference <- fit_remap(source, source_key, center = model$center,
+                           shrink_whiten = model$shrink_whiten)
+    baseline <- compute_performance(model, measured(reference))
+    metrics <- c(metrics, setNames(baseline, paste0("source_only_", names(baseline))))
+  }
+  roi_result(metrics = c(metrics, adapter_rank = fit$rank, lambda_mean = fit$lambda,
+                         n_pairs_used = length(fit$calibration_keys)),
+             indices = indices, id = id, result = result)
+}

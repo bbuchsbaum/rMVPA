@@ -1,5 +1,12 @@
 # rMVPA (development version)
 
+* `fit_remap()` learns a frozen decoder from source observations and an optional
+  labeled target calibration set. `predict()` scores independent observations.
+  Regional and searchlight REMAP accept `calibration_rows` for held-out target
+  assessment and a strict source-only comparison. REMAP now uses row-wise
+  Pearson scores and reports a missing reduced-rank backend as an error.
+
+
 * `banded_ridge_model()` and `feature_decode_model()` gain
   `nuisance_fit = "global"`: nuisance regressors are removed from features and
   responses once, over all rows, before the data are split, as much encoding

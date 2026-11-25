@@ -122,6 +122,7 @@ Collate:
     'pair_rsa_design.R'
     'model_space_connectivity.R'
     'naive_xdec_model.R'
+    'fit_remap.R'
     'remap_rrr_model.R'
     'run_searchlight_remap_rrr.R'
     'era_rsa_design.R'
